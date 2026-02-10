@@ -194,6 +194,7 @@ export interface CardGridBlok extends StoryblokBlok {
   columns?: number;
   gap?: string;
   equal_height_rows?: boolean;
+  full_width_cards?: boolean;
   enable_search?: boolean;
   search_placeholder?: string;
   enable_sort?: boolean;

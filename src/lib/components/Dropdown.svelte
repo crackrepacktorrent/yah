@@ -13,15 +13,18 @@
     items = [],
     trigger,
     onSelect,
+    align = "left",
     class: className = "",
   }: {
     items: DropdownItem[];
     trigger: any;
     onSelect?: (value: string) => void;
+    align?: "left" | "right";
     class?: string;
   } = $props();
 
   let isOpen = $state(false);
+  const anchorName = `--dropdown-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
 <div
@@ -30,12 +33,18 @@
   onmouseenter={() => isOpen = true}
   onmouseleave={() => isOpen = false}
 >
-  <div class="dropdown-trigger">
+  <div class="dropdown-trigger" style="anchor-name: {anchorName};">
     {@render trigger()}
   </div>
 
   {#if isOpen}
-    <div class="dropdown-menu" role="menu" transition:fly={{ y: -10, duration: 200 }}>
+    <div
+      class="dropdown-menu"
+      class:align-right={align === "right"}
+      role="menu"
+      style="position-anchor: {anchorName};"
+      transition:fly={{ y: -10, duration: 200 }}
+    >
       {#each items as item}
         {#if item.href}
           <a
@@ -67,7 +76,6 @@
 
 <style>
   .dropdown-wrapper {
-    position: relative;
     display: inline-block;
   }
 
@@ -80,22 +88,39 @@
 
   .dropdown-menu {
     position: absolute;
-    top: 100%;
-    left: 0;
-    padding: 0.5rem 0 0 0;
+    top: anchor(bottom);
+    left: anchor(left);
+    position-try-fallbacks: --flip-to-right;
+    margin-top: 0.5rem;
     background-color: transparent;
     border-radius: var(--radius-md);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    min-width: 100%;
+    min-width: anchor-size(inline);
     width: max-content;
     z-index: 50;
     overflow: hidden;
   }
 
+  .dropdown-menu.align-right {
+    left: auto;
+    right: anchor(right);
+    position-try-fallbacks: --flip-to-left;
+  }
+
+  @position-try --flip-to-right {
+    left: auto;
+    right: anchor(right);
+  }
+
+  @position-try --flip-to-left {
+    right: auto;
+    left: anchor(left);
+  }
+
   .dropdown-menu::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: -0.5rem;
     left: 0;
     right: 0;
     height: 0.5rem;
@@ -115,10 +140,6 @@
     background-color: white;
     transition: background-color 150ms ease-in-out;
     cursor: pointer;
-  }
-
-  .dropdown-item:first-child {
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 
   .dropdown-item:hover {

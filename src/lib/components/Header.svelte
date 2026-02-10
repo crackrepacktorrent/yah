@@ -96,6 +96,7 @@
           {#if hasDropdown}
             <!-- Dropdown button -->
             <Dropdown
+              align="right"
               items={cards.map(card => {
                 const url = card.link?.cached_url || card.link?.url || "#";
                 // Skip language prefix handling for external links and anchors

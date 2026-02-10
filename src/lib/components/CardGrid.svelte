@@ -9,6 +9,7 @@
   const columns = blok.columns ?? 3;
   const gap = blok.gap ?? "24px";
   const equalHeightRows = blok.equal_height_rows ?? false;
+  const fullWidthCards = blok.full_width_cards ?? false;
 
   const gridStyles = `grid-template-columns: repeat(${columns}, 1fr); gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''} ${blok.custom_styles ?? ''}`;
   const searchPlaceholder = blok.search_placeholder ?? "Search...";
@@ -87,7 +88,7 @@
 
   <div class="grid" style={gridStyles}>
     {#each filteredAndSortedItems as item (item._uid)}
-      <div class="grid-item">
+      <div class="grid-item" class:full-width={fullWidthCards}>
         <StoryblokComponent blok={item} />
       </div>
     {/each}
@@ -169,6 +170,10 @@
 
   .grid-item {
     display: flex;
+  }
+
+  .grid-item.full-width :global(.card) {
+    width: 100%;
   }
 
   .empty-state {
