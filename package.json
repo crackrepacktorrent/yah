@@ -39,6 +39,7 @@
 		"embla-carousel-autoplay": "^8.6.0",
 		"lucide-svelte": "^0.562.0",
 		"pdfjs-dist": "^5.4.530",
+		"qr-code-styling": "^1.9.2",
 		"tailwindcss": "^4.1.18"
 	}
 }

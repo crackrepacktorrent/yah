@@ -609,5 +609,34 @@
         "display_name": "End Date"
       }
     }
+  },
+  {
+    "name": "shortlink",
+    "display_name": "Shortlink",
+    "is_root": false,
+    "is_nestable": true,
+    "schema": {
+      "slug": {
+        "type": "text",
+        "display_name": "Path",
+        "required": true,
+        "description": "The URL path (e.g., 'donate' for y4h.org/donate)"
+      },
+      "destination_url": {
+        "type": "text",
+        "display_name": "Destination URL",
+        "required": true,
+        "description": "The full URL to redirect to"
+      },
+      "http_status": {
+        "type": "option",
+        "display_name": "Redirect Type",
+        "options": [
+          { "value": "301", "name": "Permanent (301)" },
+          { "value": "302", "name": "Temporary (302)" }
+        ],
+        "default_value": "301"
+      }
+    }
   }
 ]

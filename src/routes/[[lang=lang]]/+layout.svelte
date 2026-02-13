@@ -4,7 +4,6 @@
   import Header from "$lib/components/Header.svelte";
   import type { LayoutData } from "./$types";
   import { parse } from 'css-tree';
-
   let { data, children }: { data: LayoutData; children: any } = $props();
 
   let validatedCSS = $state('');
@@ -70,4 +69,5 @@
     max-width: var(--layout-max-width, 1200px);
     min-height: 100vh;
   }
+
 </style>
