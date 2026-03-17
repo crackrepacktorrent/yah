@@ -2,6 +2,13 @@
   import { page } from "$app/stores";
   import { Dialog, Tooltip } from "bits-ui";
   import { Logo } from "$lib/components/admin";
+  import { LayoutDashboard, Link, LogOut, Menu, X } from "lucide-svelte";
+  import type { Component } from "svelte";
+
+  const icons: Record<string, Component> = {
+    dashboard: LayoutDashboard,
+    link: Link,
+  };
 
   export type NavItem = { href: string; label: string; icon: string };
   export type NavSection = { label: string; items: NavItem[] };
@@ -24,21 +31,6 @@
   }
 </script>
 
-{#snippet icon(name: string)}
-  {#if name === "dashboard"}
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="7" height="7"></rect>
-      <rect x="14" y="3" width="7" height="7"></rect>
-      <rect x="3" y="14" width="7" height="7"></rect>
-      <rect x="14" y="14" width="7" height="7"></rect>
-    </svg>
-  {:else if name === "link"}
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-    </svg>
-  {/if}
-{/snippet}
 
 {#snippet sidebarContent()}
   <div class="sidebar-header">
@@ -58,7 +50,10 @@
             class:active={isActive(item.href)}
             onclick={() => (mobileOpen = false)}
           >
-            {@render icon(item.icon)}
+            {#if icons[item.icon]}
+              {@const Icon = icons[item.icon]}
+              <Icon size={18} />
+            {/if}
             <span>{item.label}</span>
           </a>
         {/each}
@@ -86,11 +81,7 @@
               onclick={onlogout}
               aria-label="Sign out"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
-              </svg>
+              <LogOut size={18} />
             </button>
           {/snippet}
         </Tooltip.Trigger>
@@ -117,11 +108,7 @@
     <Dialog.Trigger>
       {#snippet child({ props })}
         <button {...props} class="menu-toggle" aria-label="Open menu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
+          <Menu size={20} />
         </button>
       {/snippet}
     </Dialog.Trigger>
@@ -138,10 +125,7 @@
             <Dialog.Close>
               {#snippet child({ props: closeProps })}
                 <button {...closeProps} class="drawer-close">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+                  <X size={18} />
                 </button>
               {/snippet}
             </Dialog.Close>

@@ -79,7 +79,7 @@
     flex-direction: column;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1024px) {
     .top-row {
       grid-template-columns: 1fr 1fr;
     }
@@ -98,7 +98,7 @@
     align-items: start;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1024px) {
     .bottom-row {
       grid-template-columns: 1fr;
     }
