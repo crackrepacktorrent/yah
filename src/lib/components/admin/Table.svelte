@@ -18,12 +18,12 @@
 	.admin-table-wrapper {
 		overflow: hidden;
 		border-radius: var(--radius-lg);
-		box-shadow: var(--admin-shadow);
+		box-shadow: var(--shadow-sm);
 	}
 
 	.admin-table {
 		width: 100%;
-		background: #fff;
+		background: var(--color-surface);
 		border-collapse: collapse;
 		font-size: 0.9rem;
 	}
@@ -31,19 +31,19 @@
 	.admin-table :global(th) {
 		text-align: left;
 		padding: 0.75rem 1rem;
-		border-bottom: 1px solid var(--admin-border-medium);
+		border-bottom: 1px solid var(--color-border-medium);
 		font-weight: 600;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		font-size: 0.8rem;
 		text-transform: uppercase;
 		letter-spacing: 0.03em;
-		background: var(--admin-bg);
+		background: var(--color-input-bg);
 	}
 
 	.admin-table :global(td) {
 		padding: 0.75rem 1rem;
-		border-bottom: 1px solid var(--admin-border-light);
-		color: var(--color-yahblack);
+		border-bottom: 1px solid var(--color-border-light);
+		color: var(--color-foreground);
 	}
 
 	.admin-table :global(tr:last-child td) {

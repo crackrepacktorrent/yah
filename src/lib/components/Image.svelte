@@ -82,7 +82,7 @@
   .caption {
     font-size: 0.875rem;
     line-height: 1.25rem;
-    color: var(--primary-foreground);
+    color: var(--color-primary-foreground);
     text-align: center;
     margin: 0;
   }

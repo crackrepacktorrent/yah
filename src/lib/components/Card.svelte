@@ -71,7 +71,7 @@
 
 <style>
   .card {
-    background-color: var(--card);
+    background-color: var(--color-surface);
     border-radius: var(--radius-md);
     overflow: hidden;
     display: flex;
@@ -99,30 +99,30 @@
   }
 
   .card-title-link:hover {
-    color: var(--color-yahrange);
+    color: var(--color-primary);
   }
 
   .card-title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--foreground);
+    color: var(--color-foreground);
     margin: 0;
     line-height: 1.3;
   }
 
   .card-title-link:hover .card-title {
-    color: var(--color-yahrange);
+    color: var(--color-primary);
   }
 
   .card-date {
     font-size: 0.75rem;
-    color: var(--muted-foreground);
+    color: var(--color-muted);
     margin: 0;
   }
 
   .card-description {
     font-size: 0.875rem;
-    color: var(--muted-foreground);
+    color: var(--color-muted);
     line-height: 1.5;
     margin: 0;
   }
@@ -136,15 +136,15 @@
   .tag {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
-    background-color: var(--muted);
-    color: var(--muted-foreground);
+    background-color: var(--color-secondary);
+    color: var(--color-muted);
     border-radius: var(--radius-xs);
   }
 
   .card-link-text {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--color-yahrange);
+    color: var(--color-primary);
     margin-top: auto;
     display: inline-block;
     text-decoration: none;

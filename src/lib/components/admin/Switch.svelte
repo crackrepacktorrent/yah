@@ -32,7 +32,7 @@
 		gap: 0.75rem;
 		cursor: pointer;
 		font-size: 0.9rem;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.switch-track {
@@ -40,7 +40,7 @@
 		width: 40px;
 		height: 22px;
 		border-radius: 11px;
-		background: var(--admin-border);
+		background: var(--color-border);
 		border: none;
 		cursor: pointer;
 		transition: background-color 0.2s;
@@ -49,7 +49,7 @@
 	}
 
 	.switch-on {
-		background: var(--color-yahrange);
+		background: var(--color-primary);
 	}
 
 	.switch-thumb {
@@ -59,7 +59,7 @@
 		width: 18px;
 		height: 18px;
 		border-radius: 50%;
-		background: #fff;
+		background: var(--color-surface);
 		transition: transform 0.2s;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 	}

@@ -54,27 +54,27 @@
 	}
 
 	.btn-primary {
-		background-color: var(--color-yahrange);
-		color: #fff;
+		background-color: var(--color-primary);
+		color: var(--color-surface);
 	}
 
 	.btn-primary:hover:not(:disabled) {
-		background-color: var(--admin-primary-hover);
+		background-color: var(--color-primary-hover);
 	}
 
 	.btn-secondary {
-		background: #fff;
-		color: var(--color-yahblack);
-		border: 1px solid var(--admin-border);
+		background: var(--color-surface);
+		color: var(--color-foreground);
+		border: 1px solid var(--color-border);
 	}
 
 	.btn-secondary:hover:not(:disabled) {
-		background: var(--admin-border-light);
+		background: var(--color-border-light);
 	}
 
 	.btn-danger {
-		background-color: var(--destructive);
-		color: #fff;
+		background-color: var(--color-destructive);
+		color: var(--color-surface);
 	}
 
 	.btn-danger:hover:not(:disabled) {
@@ -82,22 +82,22 @@
 	}
 
 	.btn-danger-outline {
-		background: #fff;
-		color: var(--destructive);
-		border: 1px solid var(--destructive);
+		background: var(--color-surface);
+		color: var(--color-destructive);
+		border: 1px solid var(--color-destructive);
 	}
 
 	.btn-danger-outline:hover:not(:disabled) {
-		background: var(--destructive-bg);
+		background: var(--color-destructive-bg);
 	}
 
 	.btn-ghost {
 		background: none;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		padding: 0.5rem 1rem;
 	}
 
 	.btn-ghost:hover:not(:disabled) {
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 </style>

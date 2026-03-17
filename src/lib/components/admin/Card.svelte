@@ -19,9 +19,9 @@
 
 <style>
 	.admin-card {
-		background: #fff;
+		background: var(--color-surface);
 		border-radius: var(--radius-lg);
 		padding: 1.5rem;
-		box-shadow: var(--admin-shadow);
+		box-shadow: var(--shadow-sm);
 	}
 </style>

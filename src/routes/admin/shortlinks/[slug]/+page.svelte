@@ -79,7 +79,7 @@
 					</FormField>
 
 					<FormField label="Expires">
-						<input {...editShortUrl.fields.validUntil.as('text')} type="date" class="admin-input" min={new Date().toISOString().slice(0, 10)} value={data.shortUrl.meta.validUntil?.slice(0, 10) ?? ''} />
+						<input {...editShortUrl.fields.validUntil.as('text')} type="date" class="admin-input" min={new Date().toLocaleDateString('en-CA')} value={data.shortUrl.meta.validUntil?.slice(0, 10) ?? ''} />
 					</FormField>
 				</div>
 
@@ -227,7 +227,7 @@
 
 <style>
 	.loading {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.header {
@@ -239,29 +239,29 @@
 
 	.back {
 		font-size: 0.85rem;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		text-decoration: none;
 		transition: color 0.15s;
 	}
 
 	.back:hover {
-		color: var(--color-yahrange);
+		color: var(--color-primary);
 	}
 
 	h1 {
 		margin: 0.25rem 0 0;
 		font-size: 1.5rem;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.code {
 		font-family: monospace;
-		color: var(--color-yahrange);
+		color: var(--color-primary);
 	}
 
 	.title {
 		font-weight: 400;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		font-size: 1.1rem;
 	}
 
@@ -272,13 +272,13 @@
 	}
 
 	.alert-error {
-		color: var(--destructive);
-		background: var(--destructive-bg);
+		color: var(--color-destructive);
+		background: var(--color-destructive-bg);
 	}
 
 	.alert-success {
-		color: var(--success);
-		background: var(--success-bg);
+		color: var(--color-success);
+		background: var(--color-success-bg);
 	}
 
 	/* Detail view */
@@ -289,18 +289,24 @@
 		margin-bottom: 2rem;
 	}
 
+	@media (max-width: 640px) {
+		.detail-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
 	.label {
 		display: block;
 		font-size: 0.75rem;
 		text-transform: uppercase;
 		letter-spacing: 0.03em;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		margin-bottom: 0.25rem;
 	}
 
 	.long-url {
 		font-size: 0.9rem;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 		word-break: break-all;
 	}
 
@@ -331,12 +337,12 @@
 	h2 {
 		font-size: 1.1rem;
 		margin-bottom: 1rem;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.date {
 		white-space: nowrap;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.referer {
@@ -344,7 +350,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.ua {
@@ -352,19 +358,19 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		font-size: 0.8rem;
 	}
 
 	.more {
 		text-align: center;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		font-size: 0.85rem;
 		margin-top: 0.75rem;
 	}
 
 	.empty {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	/* Edit form */
@@ -380,6 +386,12 @@
 		gap: 1rem;
 	}
 
+	@media (max-width: 640px) {
+		.row {
+			grid-template-columns: 1fr;
+		}
+	}
+
 	.switches {
 		display: flex;
 		flex-direction: column;
@@ -388,17 +400,17 @@
 
 	hr {
 		border: none;
-		border-top: 1px solid var(--admin-border-medium);
+		border-top: 1px solid var(--color-border-medium);
 		margin: 2rem 0;
 	}
 
 	/* Danger zone */
 	:global(.danger-card) {
-		border: 1px solid #fecaca;
+		border: 1px solid var(--color-destructive-border);
 	}
 
 	.danger-title {
-		color: var(--destructive);
+		color: var(--color-destructive);
 		font-size: 0.95rem;
 		margin: 0 0 1rem;
 	}

@@ -337,8 +337,8 @@
     align-items: center;
     gap: 0.25rem;
     padding: 0.5rem 1rem;
-    background-color: var(--background);
-    color: var(--color-yahrange);
+    background-color: var(--color-background);
+    color: var(--color-primary);
     border-radius: var(--radius-md);
     font-weight: 500;
     font-size: 0.875rem;
@@ -348,7 +348,7 @@
   }
 
   .nav-button:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--color-border-light);
   }
 
   :global(.nav-chevron) {
@@ -372,20 +372,20 @@
     margin-bottom: 0;
     padding: 0 0.25rem;
     font-size: 0.875rem;
-    color: var(--primary-foreground);
+    color: var(--color-primary-foreground);
     text-decoration: none;
   }
 
   .lang-link.active {
-    background-color: var(--background);
+    background-color: var(--color-background);
     border-radius: var(--radius-sm);
-    color: var(--color-yahrange);
+    color: var(--color-primary);
   }
 
   .lang-divider {
     width: 1px;
     height: 0.75rem;
-    background-color: var(--primary-foreground);
+    background-color: var(--color-primary-foreground);
   }
 
   /* Mobile menu trigger */
@@ -394,7 +394,7 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-lg);
-    background-color: var(--background);
+    background-color: var(--color-background);
     padding: 0.5rem;
     border: none;
     cursor: pointer;
@@ -402,7 +402,7 @@
 
   :global(.mobile-menu-trigger:focus-visible) {
     outline: none;
-    box-shadow: 0 0 0 2px var(--ring);
+    box-shadow: 0 0 0 2px var(--color-ring);
   }
 
   @media (min-width: 1024px) {
@@ -414,7 +414,7 @@
   :global(.mobile-menu-icon) {
     width: 2.25rem;
     height: 2.25rem;
-    color: var(--color-yahrange);
+    color: var(--color-primary);
   }
 
   /* Sheet overlay */
@@ -422,7 +422,7 @@
     position: fixed;
     inset: 0;
     z-index: 50;
-    background-color: var(--overlay);
+    background-color: var(--color-overlay);
   }
 
   /* Sheet panel — no horizontal padding so hovers go edge-to-edge */
@@ -434,7 +434,7 @@
     z-index: 50;
     width: 75%;
     max-width: 24rem;
-    background-color: var(--background);
+    background-color: var(--color-background);
     box-shadow: var(--shadow-lg);
     overflow-y: auto;
   }
@@ -452,20 +452,20 @@
     justify-content: center;
     padding: 0 1rem 0.75rem;
     margin-bottom: 0.25rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .mobile-lang-link {
     padding: 0.25rem 0.75rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--color-yahrange);
+    color: var(--color-primary);
     text-decoration: none;
   }
 
   .mobile-lang-link.active {
-    background-color: var(--color-yahrange);
-    color: var(--primary-foreground);
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
     border-radius: var(--radius-sm);
   }
 
@@ -476,13 +476,13 @@
     align-items: center;
     padding: 0.625rem 1rem;
     transition: background-color 150ms ease-in-out;
-    color: var(--color-yahrange);
+    color: var(--color-primary);
     text-decoration: none;
     font-weight: 500;
   }
 
   .mobile-menu-link-expandable:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--color-border-light);
   }
 
   .mobile-expandable-header {
@@ -494,7 +494,7 @@
     padding: 0.625rem;
     border: none;
     background: none;
-    color: var(--color-yahrange);
+    color: var(--color-primary);
     cursor: pointer;
     transition: background-color 150ms ease-in-out;
     display: flex;
@@ -503,7 +503,7 @@
   }
 
   .mobile-chevron-button:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--color-border-light);
   }
 
   :global(.mobile-chevron) {
@@ -519,26 +519,26 @@
   .mobile-dropdown-item {
     display: block;
     padding: 0.5rem 1rem 0.5rem 2rem;
-    color: var(--color-yahrange);
+    color: var(--color-primary);
     text-decoration: none;
     transition: background-color 150ms ease-in-out;
     font-size: 0.875rem;
   }
 
   .mobile-dropdown-item:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--color-border-light);
   }
 
   .mobile-menu-link {
     display: block;
     padding: 0.625rem 1rem;
     transition: background-color 150ms ease-in-out;
-    color: var(--color-yahrange);
+    color: var(--color-primary);
     text-decoration: none;
     font-weight: 500;
   }
 
   .mobile-menu-link:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--color-border-light);
   }
 </style>

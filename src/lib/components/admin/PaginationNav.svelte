@@ -64,23 +64,23 @@
 
 	.pagination-btn {
 		background: none;
-		border: 1px solid var(--admin-border);
+		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
 		padding: 0.4rem 0.75rem;
 		cursor: pointer;
 		font-size: 0.85rem;
-		color: var(--color-yahrange);
+		color: var(--color-primary);
 		transition: background 0.15s;
 	}
 
 	.pagination-btn:hover:not(:disabled) {
-		background: var(--admin-border-light);
+		background: var(--color-border-light);
 	}
 
 	.pagination-btn:disabled {
 		opacity: 0.4;
 		cursor: not-allowed;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.pagination-pages {
@@ -101,27 +101,27 @@
 		background: none;
 		cursor: pointer;
 		font-size: 0.85rem;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		transition: background 0.15s, color 0.15s;
 	}
 
 	.pagination-page:hover {
-		background: var(--admin-border-light);
-		color: var(--color-yahblack);
+		background: var(--color-border-light);
+		color: var(--color-foreground);
 	}
 
 	.pagination-page-active {
-		background: var(--color-yahrange);
-		color: #fff;
+		background: var(--color-primary);
+		color: var(--color-surface);
 	}
 
 	.pagination-page-active:hover {
-		background: var(--admin-primary-hover);
-		color: #fff;
+		background: var(--color-primary-hover);
+		color: var(--color-surface);
 	}
 
 	.pagination-ellipsis {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		padding: 0 0.25rem;
 	}
 </style>

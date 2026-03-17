@@ -53,7 +53,7 @@
 
   .social-link {
     display: flex;
-    color: var(--primary-foreground);
+    color: var(--color-primary-foreground);
     text-decoration: none;
     transition: opacity 150ms ease-in-out;
   }
@@ -63,7 +63,7 @@
   }
 
   .copyright {
-    color: var(--primary-foreground);
+    color: var(--color-primary-foreground);
     font-size: 0.75rem;
     text-align: center;
     margin-top: 0.5rem;

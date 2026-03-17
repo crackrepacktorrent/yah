@@ -35,12 +35,12 @@
     cursor: pointer;
     border: 2px solid transparent;
     letter-spacing: 0.025em;
-    background-color: var(--background);
-    color: var(--color-yahrange);
+    background-color: var(--color-background);
+    color: var(--color-primary);
   }
 
   .button:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--color-border-light);
   }
 
   /* Sizes */

@@ -122,12 +122,12 @@
     width: 100%;
     text-align: left;
     padding: 0.625rem 1rem;
-    color: var(--color-yahrange);
+    color: var(--color-primary);
     font-size: 0.875rem;
     font-weight: 500;
     text-decoration: none;
     border: none;
-    background-color: var(--background);
+    background-color: var(--color-background);
     transition: background-color 150ms ease-in-out;
     cursor: pointer;
   }
@@ -137,6 +137,6 @@
   }
 
   .dropdown-item:hover {
-    background-color: var(--hover-bg);
+    background-color: var(--color-border-light);
   }
 </style>

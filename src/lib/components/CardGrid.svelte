@@ -121,7 +121,7 @@
     border: 2px solid var(--grid-input-border, rgba(255, 255, 255, 0.3));
     border-radius: var(--radius-sm);
     background-color: var(--grid-input-bg, rgba(255, 255, 255, 0.1));
-    color: var(--grid-input-color, var(--primary-foreground));
+    color: var(--grid-input-color, var(--color-primary-foreground));
     outline: none;
     transition: border-color 150ms ease-in-out, background-color 150ms ease-in-out;
   }
@@ -131,7 +131,7 @@
   }
 
   .search-input:focus {
-    border-color: var(--grid-input-border-focus, var(--primary-foreground));
+    border-color: var(--grid-input-border-focus, var(--color-primary-foreground));
     background-color: var(--grid-input-bg-focus, rgba(255, 255, 255, 0.15));
   }
 
@@ -142,14 +142,14 @@
     border: 2px solid var(--grid-input-border, rgba(255, 255, 255, 0.3));
     border-radius: var(--radius-sm);
     background-color: var(--grid-input-bg, rgba(255, 255, 255, 0.1));
-    color: var(--grid-input-color, var(--primary-foreground));
+    color: var(--grid-input-color, var(--color-primary-foreground));
     outline: none;
     cursor: pointer;
     transition: border-color 150ms ease-in-out, background-color 150ms ease-in-out;
   }
 
   .sort-button:focus {
-    border-color: var(--grid-input-border-focus, var(--primary-foreground));
+    border-color: var(--grid-input-border-focus, var(--color-primary-foreground));
     background-color: var(--grid-input-bg-focus, rgba(255, 255, 255, 0.15));
   }
 
@@ -180,7 +180,7 @@
   .empty-state {
     text-align: center;
     padding: 3rem;
-    color: var(--primary-foreground);
+    color: var(--color-primary-foreground);
   }
 
   .empty-state p {

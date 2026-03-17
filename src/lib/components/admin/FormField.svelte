@@ -29,7 +29,7 @@
 		gap: 0.25rem;
 		font-weight: 500;
 		font-size: 0.9rem;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.form-field-label {
@@ -40,12 +40,12 @@
 	}
 
 	.required-mark {
-		color: var(--destructive);
+		color: var(--color-destructive);
 	}
 
 	.form-field-hint {
 		font-weight: 400;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		font-size: 0.8rem;
 	}
 </style>

@@ -87,7 +87,7 @@
 			<Tooltip.Root>
 				<Tooltip.Trigger>
 					{#snippet child({ props })}
-						<button {...props} class="logout-btn" onclick={handleLogout}>
+						<button {...props} class="logout-btn" onclick={handleLogout} aria-label="Sign out">
 							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
 								<polyline points="16 17 21 12 16 7"></polyline>
@@ -122,7 +122,7 @@
 			<Dialog.Root bind:open={mobileOpen}>
 				<Dialog.Trigger>
 					{#snippet child({ props })}
-						<button {...props} class="menu-toggle">
+						<button {...props} class="menu-toggle" aria-label="Open menu">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<line x1="3" y1="6" x2="21" y2="6"></line>
 								<line x1="3" y1="12" x2="21" y2="12"></line>
@@ -170,15 +170,15 @@
 	.admin-layout {
 		display: flex;
 		min-height: 100vh;
-		background: #f5f5f7;
+		background: var(--color-page-bg);
 	}
 
 	/* ─── Sidebar ──────────────────────────────────────────────────────── */
 
 	.sidebar {
 		width: 240px;
-		background: #fff;
-		border-right: 1px solid var(--admin-border-light);
+		background: var(--color-surface);
+		border-right: 1px solid var(--color-border-light);
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
@@ -188,7 +188,7 @@
 
 	.sidebar-header {
 		padding: 1.5rem 1rem;
-		border-bottom: 1px solid var(--admin-border-light);
+		border-bottom: 1px solid var(--color-border-light);
 		display: flex;
 		justify-content: center;
 	}
@@ -222,7 +222,7 @@
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.nav-item {
@@ -233,24 +233,24 @@
 		border-radius: var(--radius-md);
 		text-decoration: none;
 		font-size: 0.875rem;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		transition: background 0.15s, color 0.15s;
 	}
 
 	.nav-item:hover {
-		background: var(--admin-border-light);
-		color: var(--color-yahblack);
+		background: var(--color-border-light);
+		color: var(--color-foreground);
 	}
 
 	.nav-item.active {
-		background: var(--admin-border-light);
-		color: var(--color-yahblack);
+		background: var(--color-border-light);
+		color: var(--color-foreground);
 		font-weight: 600;
 	}
 
 	.nav-tooltip {
-		background: var(--color-yahblack);
-		color: #fff;
+		background: var(--color-foreground);
+		color: var(--color-surface);
 		padding: 0.3rem 0.6rem;
 		border-radius: var(--radius-sm);
 		font-size: 0.8rem;
@@ -262,7 +262,7 @@
 
 	.sidebar-footer {
 		padding: 0.75rem 1rem;
-		border-top: 1px solid var(--admin-border-light);
+		border-top: 1px solid var(--color-border-light);
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -280,8 +280,8 @@
 		width: 32px;
 		height: 32px;
 		border-radius: 50%;
-		background: var(--color-yahrange);
-		color: #fff;
+		background: var(--color-primary);
+		color: var(--color-surface);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -300,7 +300,7 @@
 	.user-name {
 		font-size: 0.8rem;
 		font-weight: 600;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -308,7 +308,7 @@
 
 	.user-email {
 		font-size: 0.7rem;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -319,7 +319,7 @@
 		border: none;
 		padding: 0.4rem;
 		cursor: pointer;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		border-radius: var(--radius-sm);
 		transition: color 0.15s, background 0.15s;
 		flex-shrink: 0;
@@ -328,8 +328,8 @@
 	}
 
 	.logout-btn:hover {
-		color: var(--destructive);
-		background: var(--destructive-bg);
+		color: var(--color-destructive);
+		background: var(--color-destructive-bg);
 	}
 
 	/* ─── Main content ─────────────────────────────────────────────────── */
@@ -369,14 +369,14 @@
 		background: none;
 		border: none;
 		cursor: pointer;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		padding: 0.25rem;
 		border-radius: var(--radius-sm);
 		z-index: 1;
 	}
 
 	.drawer-close:hover {
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	@media (max-width: 768px) {
@@ -396,8 +396,8 @@
 			align-items: center;
 			gap: 0.75rem;
 			padding: 0.75rem 1rem;
-			background: #fff;
-			border-bottom: 1px solid var(--admin-border-light);
+			background: var(--color-surface);
+			border-bottom: 1px solid var(--color-border-light);
 			position: sticky;
 			top: 0;
 			z-index: 30;
@@ -408,7 +408,7 @@
 			border: none;
 			padding: 0.25rem;
 			cursor: pointer;
-			color: var(--color-yahblack);
+			color: var(--color-foreground);
 			display: flex;
 			align-items: center;
 		}

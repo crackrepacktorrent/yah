@@ -54,7 +54,7 @@
 <style>
 	.login-page {
 		min-height: 100vh;
-		background: #f5f5f7;
+		background: var(--color-page-bg);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -79,15 +79,15 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-		background: #fff;
+		background: var(--color-surface);
 		padding: 2rem;
 		border-radius: var(--radius-lg);
-		box-shadow: var(--admin-shadow-lg);
+		box-shadow: var(--shadow-md);
 		width: 100%;
 	}
 
 	.error {
-		color: var(--destructive);
+		color: var(--color-destructive);
 		margin: 0;
 		font-size: 0.9rem;
 	}

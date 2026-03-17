@@ -54,11 +54,11 @@
 <style>
 	h1 {
 		margin-bottom: 1.5rem;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.loading {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.stats-grid {
@@ -84,12 +84,12 @@
 	h2 {
 		font-size: 1.1rem;
 		margin: 0;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.view-all {
 		font-size: 0.85rem;
-		color: var(--color-yahrange);
+		color: var(--color-primary);
 		text-decoration: none;
 		font-weight: 500;
 	}
@@ -100,7 +100,7 @@
 
 	.code {
 		font-family: monospace;
-		color: var(--color-yahrange);
+		color: var(--color-primary);
 		text-decoration: none;
 		font-weight: 600;
 	}
@@ -111,7 +111,7 @@
 
 	.title {
 		font-size: 0.8rem;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.long-url {
@@ -119,7 +119,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.clicks {
@@ -127,14 +127,14 @@
 	}
 
 	.date {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.empty {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.empty a {
-		color: var(--color-yahrange);
+		color: var(--color-primary);
 	}
 </style>

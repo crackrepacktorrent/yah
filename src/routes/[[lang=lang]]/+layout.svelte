@@ -41,7 +41,7 @@
 </svelte:head>
 
 {#if cssError}
-  <div style="position: fixed; bottom: 1rem; right: 1rem; background: var(--destructive); color: var(--destructive-foreground); padding: 1rem; border-radius: var(--radius-lg); max-width: 400px; z-index: 9999; font-family: monospace; font-size: 0.875rem;">
+  <div style="position: fixed; bottom: 1rem; right: 1rem; background: var(--color-destructive); color: var(--color-destructive-foreground); padding: 1rem; border-radius: var(--radius-lg); max-width: 400px; z-index: 9999; font-family: monospace; font-size: 0.875rem;">
     <strong>Custom CSS Error:</strong><br/>
     {cssError}
   </div>
@@ -65,8 +65,8 @@
 
 <style>
   :global(body) {
-    background-color: var(--color-yahrange);
-    color: #ffffff;
+    background-color: var(--color-primary);
+    color: var(--color-surface);
   }
 
   .layout-container {

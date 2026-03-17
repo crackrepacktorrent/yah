@@ -15,23 +15,23 @@
 
 <style>
 	.stat-card {
-		background: #fff;
+		background: var(--color-surface);
 		border-radius: var(--radius-lg);
 		padding: 1.25rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
-		box-shadow: var(--admin-shadow);
+		box-shadow: var(--shadow-sm);
 	}
 
 	.stat-value {
 		font-size: 1.75rem;
 		font-weight: 700;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.stat-label {
 		font-size: 0.85rem;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 </style>

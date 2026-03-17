@@ -15,10 +15,10 @@
 <style>
 	.badge {
 		display: inline-block;
-		background: var(--admin-border-light);
+		background: var(--color-border-light);
 		padding: 0.15rem 0.5rem;
 		border-radius: 100px;
 		font-size: 0.75rem;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 </style>

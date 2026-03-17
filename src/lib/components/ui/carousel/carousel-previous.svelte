@@ -35,7 +35,7 @@
 		height: 2rem;
 		touch-action: manipulation;
 		border-radius: 9999px;
-		background-color: var(--background);
+		background-color: var(--color-background);
 		box-shadow: var(--shadow-sm);
 		transition: background-color 150ms ease-in-out;
 		cursor: pointer;
@@ -44,7 +44,7 @@
 	}
 
 	.carousel-nav-btn:hover {
-		background-color: var(--hover-bg);
+		background-color: var(--color-border-light);
 	}
 
 	.carousel-nav-btn[aria-disabled="true"] {
@@ -67,6 +67,6 @@
 	:global(.carousel-nav-icon) {
 		width: 1.5rem;
 		height: 1.5rem;
-		color: var(--color-yahrange);
+		color: var(--color-primary);
 	}
 </style>

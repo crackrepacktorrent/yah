@@ -96,7 +96,7 @@
 
 	h1 {
 		margin: 0;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.search-bar {
@@ -106,12 +106,12 @@
 	}
 
 	.loading {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.code {
 		font-family: monospace;
-		color: var(--color-yahrange);
+		color: var(--color-primary);
 		text-decoration: none;
 		font-weight: 600;
 	}
@@ -122,7 +122,7 @@
 
 	.title {
 		font-size: 0.8rem;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.long-url {
@@ -130,7 +130,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 	.tags {
@@ -144,12 +144,12 @@
 	}
 
 	.date {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 		white-space: nowrap;
 	}
 
 	.empty {
-		color: var(--admin-muted);
+		color: var(--color-muted);
 	}
 
 </style>

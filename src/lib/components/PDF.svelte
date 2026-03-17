@@ -89,13 +89,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--muted);
-    border: 2px dashed var(--border);
+    background-color: var(--color-secondary);
+    border: 2px dashed var(--color-border);
     border-radius: var(--radius-md);
   }
 
   .pdf-placeholder p {
-    color: var(--muted-foreground);
+    color: var(--color-muted);
     margin: 0;
   }
 </style>

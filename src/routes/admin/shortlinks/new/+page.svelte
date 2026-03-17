@@ -35,7 +35,7 @@
 			</FormField>
 
 			<FormField label="Expires" hint="(optional)">
-				<input {...createShortUrl.fields.validUntil.as('text')} type="date" class="admin-input" min={new Date().toISOString().slice(0, 10)} />
+				<input {...createShortUrl.fields.validUntil.as('text')} type="date" class="admin-input" min={new Date().toLocaleDateString('en-CA')} />
 			</FormField>
 		</div>
 
@@ -56,7 +56,7 @@
 <style>
 	h1 {
 		margin-bottom: 1.5rem;
-		color: var(--color-yahblack);
+		color: var(--color-foreground);
 	}
 
 	.create-form {
@@ -71,6 +71,12 @@
 		gap: 1rem;
 	}
 
+	@media (max-width: 640px) {
+		.row {
+			grid-template-columns: 1fr;
+		}
+	}
+
 	.switches {
 		display: flex;
 		flex-direction: column;
@@ -78,7 +84,7 @@
 	}
 
 	.error {
-		color: var(--destructive);
+		color: var(--color-destructive);
 		margin: 0;
 		font-size: 0.9rem;
 	}
