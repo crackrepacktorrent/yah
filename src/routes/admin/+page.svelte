@@ -1,6 +1,14 @@
 <script lang="ts">
-	import { StatCard, Table, EmptyState, Spinner } from '$lib/components/admin';
+	import { StatCard, Table, EmptyState, Spinner, Section } from '$lib/components/admin';
 	import { getDashboard } from './shortlinks.remote';
+	import { getSiteStats } from './analytics.remote';
+
+	function formatDuration(seconds: number) {
+		if (seconds < 60) return `${seconds}s`;
+		const m = Math.floor(seconds / 60);
+		const s = seconds % 60;
+		return `${m}m ${s}s`;
+	}
 </script>
 
 <h1>Dashboard</h1>
@@ -51,6 +59,38 @@
 			</Table>
 		{/if}
 	</section>
+{/await}
+
+{#await getSiteStats() then stats}
+	{#if stats}
+		<section class="site-analytics">
+			<div class="section-header">
+				<h2>Site Analytics</h2>
+			</div>
+
+			<div class="analytics-periods">
+				<div class="period">
+					<h3>Last 24 Hours</h3>
+					<div class="stats-grid">
+						<StatCard value={stats.today.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
+						<StatCard value={stats.today.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
+						<StatCard value="{stats.today.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
+						<StatCard value={formatDuration(stats.today.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
+					</div>
+				</div>
+
+				<div class="period">
+					<h3>Last 30 Days</h3>
+					<div class="stats-grid">
+						<StatCard value={stats.month.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
+						<StatCard value={stats.month.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
+						<StatCard value="{stats.month.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
+						<StatCard value={formatDuration(stats.month.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
+					</div>
+				</div>
+			</div>
+		</section>
+	{/if}
 {/await}
 
 <style>
@@ -123,4 +163,35 @@
 		color: var(--color-muted);
 	}
 
+	.site-analytics {
+		margin-top: 2rem;
+	}
+
+	.analytics-periods {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
+	}
+
+	.period h3 {
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--color-muted);
+		margin: 0 0 0.75rem;
+	}
+
+	.period .stats-grid {
+		grid-template-columns: repeat(2, 1fr);
+		margin-bottom: 0;
+	}
+
+	@media (max-width: 768px) {
+		.analytics-periods {
+			grid-template-columns: 1fr;
+		}
+
+		.period .stats-grid {
+			grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+		}
+	}
 </style>

@@ -19,6 +19,7 @@
         items: [
           { href: "/admin", label: "Dashboard", icon: "dashboard" },
           { href: "/admin/shortlinks", label: "Shortlinks", icon: "link" },
+          { href: "/admin/analytics", label: "Analytics", icon: "chart" },
         ],
       },
     ];
@@ -65,7 +66,19 @@
     />
 
     <main>
-      {@render children()}
+      <svelte:boundary onerror={(e) => console.error('[admin]', e)}>
+        {@render children()}
+        {#snippet failed(error: unknown, reset: () => void)}
+          <div class="error-boundary">
+            <h2>Something went wrong</h2>
+            <p>{error instanceof Error ? error.message : 'An unexpected error occurred.'}</p>
+            <div class="error-actions">
+              <button class="error-btn" onclick={reset}>Try again</button>
+              <a href="/admin" class="error-link">Back to Dashboard</a>
+            </div>
+          </div>
+        {/snippet}
+      </svelte:boundary>
     </main>
   </div>
 {/if}
@@ -121,5 +134,58 @@
     main {
       padding: 1.25rem 1rem;
     }
+  }
+
+  .error-boundary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    gap: 0.75rem;
+  }
+
+  .error-boundary h2 {
+    margin: 0;
+    color: var(--color-foreground);
+    font-size: 1.25rem;
+  }
+
+  .error-boundary p {
+    margin: 0;
+    color: var(--color-muted);
+    max-width: 400px;
+  }
+
+  .error-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 0.5rem;
+  }
+
+  .error-btn {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-foreground);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .error-btn:hover {
+    background: var(--color-hover);
+  }
+
+  .error-link {
+    color: var(--color-primary);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+
+  .error-link:hover {
+    text-decoration: underline;
   }
 </style>
