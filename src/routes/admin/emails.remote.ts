@@ -37,3 +37,24 @@ export const updateTemplate = command(
 		return getListmonk().updateTemplate(id, { name, subject, body });
 	},
 );
+
+export const createTemplate = command(
+	v.object({
+		name: v.pipe(v.string(), v.nonEmpty('Name is required')),
+		type: v.optional(v.string()),
+		subject: v.optional(v.string()),
+		body: v.pipe(v.string(), v.nonEmpty('Body is required')),
+	}),
+	async ({ name, type, subject, body }) => {
+		await requireRole('owner');
+		return getListmonk().createTemplate({ name, type, subject, body });
+	},
+);
+
+export const setDefaultTemplate = command(
+	v.number(),
+	async (id) => {
+		await requireRole('owner');
+		await getListmonk().setDefaultTemplate(id);
+	},
+);

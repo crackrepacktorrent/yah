@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Button, Input, Badge, Tooltip, PaginationNav, FormField, Switch, EmptyState, Spinner, DataTable } from '$lib/components/admin';
+	import { Button, Input, Badge, Tooltip, PaginationNav, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
-	import { createColumnHelper, getCoreRowModel, type SortingState } from '@tanstack/table-core';
+	import { createColumnHelper, getCoreRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
 	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
-	import { listShortUrls, createShortUrl } from '../shortlinks.remote';
+	import { listShortUrls, createShortUrl, deleteShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
 	let role = $derived(getSession().current?.role);
 
@@ -24,6 +24,35 @@
 
 	let createOpen = $state(false);
 	let createPending = $state(false);
+
+	// Row selection
+	let rowSelection = $state<RowSelectionState>({});
+	let selectedRows = $derived.by(() => {
+		if (!data) return [];
+		return Object.keys(rowSelection)
+			.filter((k) => rowSelection[k])
+			.map((k) => data.shortUrls[Number(k)])
+			.filter(Boolean);
+	});
+	let selectedCount = $derived(selectedRows.length);
+	let confirmDelete = $state(false);
+
+	function clearSelection() {
+		rowSelection = {};
+	}
+
+	async function handleDelete() {
+		try {
+			for (const url of selectedRows) {
+				await deleteShortUrl(url.shortCode);
+			}
+			toast.success(`${selectedCount} shortlink${selectedCount > 1 ? 's' : ''} deleted.`);
+			clearSelection();
+			listShortUrls({ page: currentPage, search, orderBy }).refresh();
+		} catch (err: any) {
+			toast.error(err?.message || 'Failed to delete shortlink.');
+		}
+	}
 
 	async function handleCreate(e: SubmitEvent) {
 		e.preventDefault();
@@ -109,6 +138,12 @@
 	const columnHelper = createColumnHelper<ShortUrl>();
 
 	const columns = [
+		columnHelper.display({
+			id: 'select',
+			header: (info) => renderSnippet(selectAllCell, info.table),
+			cell: (info) => renderSnippet(selectRowCell, info.row),
+			enableSorting: false,
+		}),
 		columnHelper.accessor('shortCode', {
 			header: 'Short URL',
 			cell: (info) => renderSnippet(shortCodeCell, info.row.original),
@@ -137,6 +172,14 @@
 		}),
 	];
 </script>
+
+{#snippet selectAllCell(table: any)}
+	<input type="checkbox" class="row-checkbox" checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onchange={table.getToggleAllRowsSelectedHandler()} />
+{/snippet}
+
+{#snippet selectRowCell(row: any)}
+	<input type="checkbox" class="row-checkbox" checked={row.getIsSelected()} onchange={row.getToggleSelectedHandler()} />
+{/snippet}
 
 {#snippet shortCodeCell(url: ShortUrl)}
 	<a href="/admin/shortlinks/{url.shortCode}" class="code">{url.shortCode}</a>
@@ -184,13 +227,27 @@
 		{@const table = createSvelteTable({
 			data: data.shortUrls,
 			columns,
-			state: { sorting },
+			state: { sorting, rowSelection },
 			onSortingChange,
+			onRowSelectionChange: (updater) => {
+				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+			},
 			getCoreRowModel: getCoreRowModel(),
 			manualSorting: true,
 			manualPagination: true,
 			enableSortingRemoval: false,
-})}
+		})}
+
+		{#if selectedCount > 0 && (role === 'admin' || role === 'owner')}
+			<div class="action-bar">
+				<span class="action-bar-count">{selectedCount} selected</span>
+				<div class="action-bar-actions">
+					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+					<button class="action-bar-clear" onclick={clearSelection}>Clear</button>
+				</div>
+			</div>
+		{/if}
+
 		<DataTable {table} />
 
 		{#if data.pagination.pagesCount > 1}
@@ -203,6 +260,14 @@
 		{/if}
 	{/if}
 {/if}
+
+<ConfirmDialog
+	bind:open={confirmDelete}
+	title="Delete Shortlink{selectedCount > 1 ? 's' : ''}"
+	description="Permanently delete {selectedCount} shortlink{selectedCount > 1 ? 's' : ''}? This cannot be undone."
+	confirmLabel="Yes, delete"
+	onconfirm={handleDelete}
+/>
 
 {#if role === 'admin' || role === 'owner'}
 <!-- Create Shortlink Dialog -->
@@ -334,6 +399,53 @@
 	.date {
 		color: var(--color-muted);
 		white-space: nowrap;
+	}
+
+	:global(.row-checkbox) {
+		width: 1rem;
+		height: 1rem;
+		accent-color: var(--color-primary);
+		cursor: pointer;
+	}
+
+	.action-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.5rem;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+	}
+
+	.action-bar-count {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--color-foreground);
+		white-space: nowrap;
+	}
+
+	.action-bar-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.action-bar-clear {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--color-muted);
+		font-size: 0.8rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: var(--radius-sm);
+	}
+
+	.action-bar-clear:hover {
+		color: var(--color-foreground);
+		background: var(--color-hover);
 	}
 
 	/* ─── Dialog ───────────────────────────────────────────────────────── */

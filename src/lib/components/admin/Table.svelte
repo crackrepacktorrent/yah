@@ -16,7 +16,8 @@
 
 <style>
 	.admin-table-wrapper {
-		overflow: hidden;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-sm);
 	}

@@ -1,8 +1,12 @@
 <script lang="ts">
   import { page } from "$app/stores";
-  import { Dialog, Tooltip } from "bits-ui";
+  import { Collapsible, Dialog, Tooltip } from "bits-ui";
   import { Logo } from "$lib/components/admin";
-  import { BarChart3, LayoutDashboard, Link, LogOut, Mail, Menu, Users, X } from "lucide-svelte";
+  import {
+    AlertCircle, BarChart3, ChevronRight, Contact,
+    LayoutDashboard, Link, ListChecks, LogOut, Mail,
+    Menu, Shield, Users, X,
+  } from "lucide-svelte";
 
   const icons: Record<string, any> = {
     dashboard: LayoutDashboard,
@@ -10,9 +14,18 @@
     chart: BarChart3,
     mail: Mail,
     users: Users,
+    contact: Contact,
+    'list-checks': ListChecks,
+    'alert-circle': AlertCircle,
+    shield: Shield,
   };
 
-  export type NavItem = { href: string; label: string; icon: string };
+  export type NavItem = {
+    href: string;
+    label: string;
+    icon: string;
+    children?: { href: string; label: string; icon?: string }[];
+  };
   export type NavSection = { label: string; items: NavItem[] };
 
   let {
@@ -27,11 +40,94 @@
 
   let mobileOpen = $state(false);
 
-  function isActive(href: string) {
-    if (href === "/admin") return $page.url.pathname === "/admin";
-    return $page.url.pathname.startsWith(href);
+  // Track collapsible open state per nav item, keyed by href
+  let collapsibleOpen = $state<Record<string, boolean>>({});
+
+  function isCollapsibleOpen(href: string) {
+    return collapsibleOpen[href] ?? false;
   }
+
+  function setCollapsibleOpen(href: string, value: boolean) {
+    collapsibleOpen[href] = value;
+  }
+
+  function isActive(href: string) {
+    const path = $page.url.pathname;
+    if (href === "/admin") return path === "/admin";
+    return path === href;
+  }
+
+  function hasActiveChild(item: NavItem) {
+    if (!item.children?.length) return false;
+    const path = $page.url.pathname;
+    return item.children.some((child) => path === child.href);
+  }
+
+  // Auto-open collapsibles when navigating to a child route
+  $effect(() => {
+    for (const section of sections) {
+      for (const item of section.items) {
+        if (item.children?.length && hasActiveChild(item)) {
+          collapsibleOpen[item.href] = true;
+        }
+      }
+    }
+  });
 </script>
+
+{#snippet navItem(item: NavItem)}
+  {#if item.children?.length}
+    <!-- Collapsible parent with sub-items -->
+    <Collapsible.Root open={isCollapsibleOpen(item.href)} onOpenChange={(v) => setCollapsibleOpen(item.href, v)}>
+      <Collapsible.Trigger>
+        {#snippet child({ props })}
+          <button
+            {...props}
+            class="nav-item nav-collapsible-trigger"
+            class:active={hasActiveChild(item)}
+          >
+            {#if icons[item.icon]}
+              {@const Icon = icons[item.icon]}
+              <Icon size={18} />
+            {/if}
+            <span class="nav-item-label">{item.label}</span>
+            <ChevronRight size={14} class="nav-chevron" />
+          </button>
+        {/snippet}
+      </Collapsible.Trigger>
+      <Collapsible.Content class="nav-sub">
+        {#each item.children ?? [] as child}
+          <a
+            href={child.href}
+            class="nav-sub-item"
+            class:active={isActive(child.href)}
+            onclick={() => (mobileOpen = false)}
+          >
+            {#if child.icon && icons[child.icon]}
+              {@const SubIcon = icons[child.icon]}
+              <SubIcon size={14} />
+            {/if}
+            <span>{child.label}</span>
+          </a>
+        {/each}
+      </Collapsible.Content>
+    </Collapsible.Root>
+  {:else}
+    <!-- Simple nav link -->
+    <a
+      href={item.href}
+      class="nav-item"
+      class:active={isActive(item.href)}
+      onclick={() => (mobileOpen = false)}
+    >
+      {#if icons[item.icon]}
+        {@const Icon = icons[item.icon]}
+        <Icon size={18} />
+      {/if}
+      <span class="nav-item-label">{item.label}</span>
+    </a>
+  {/if}
+{/snippet}
 
 {#snippet sidebarContent()}
   <div class="sidebar-header">
@@ -45,18 +141,7 @@
       <div class="nav-section">
         <span class="nav-section-label">{section.label}</span>
         {#each section.items as item}
-          <a
-            href={item.href}
-            class="nav-item"
-            class:active={isActive(item.href)}
-            onclick={() => (mobileOpen = false)}
-          >
-            {#if icons[item.icon]}
-              {@const Icon = icons[item.icon]}
-              <Icon size={18} />
-            {/if}
-            <span>{item.label}</span>
-          </a>
+          {@render navItem(item)}
         {/each}
       </div>
     {/each}
@@ -177,7 +262,7 @@
   .nav-section {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
   }
 
   .nav-section-label {
@@ -188,6 +273,8 @@
     letter-spacing: 0.05em;
     color: var(--brand-brown-lighter);
   }
+
+  /* ─── Nav items (links + collapsible triggers) ─────────────────────── */
 
   .nav-item {
     display: flex;
@@ -213,6 +300,73 @@
     color: var(--brand-amber-light);
     font-weight: 600;
   }
+
+  .nav-item-label {
+    flex: 1;
+  }
+
+  /* ─── Collapsible trigger ──────────────────────────────────────────── */
+
+  .nav-collapsible-trigger {
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+  }
+
+  .nav-collapsible-trigger :global(.nav-chevron) {
+    flex-shrink: 0;
+    color: var(--brand-brown-lighter);
+    transition: transform 0.2s ease;
+  }
+
+  :global([data-state="open"]) > :global(.nav-chevron) {
+    transform: rotate(90deg);
+  }
+
+  /* ─── Sub-items (collapsible children) ─────────────────────────────── */
+
+  :global(.nav-sub[data-state="open"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  :global(.nav-sub) {
+    margin-top: 2px;
+    margin-left: 1.25rem;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--brand-brown-hover);
+  }
+
+  .nav-sub-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-size: 0.825rem;
+    color: var(--brand-warm-200);
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+
+  .nav-sub-item:hover {
+    background: var(--brand-brown-hover);
+    color: var(--brand-cream);
+  }
+
+  .nav-sub-item.active {
+    background: var(--brand-brown-active);
+    color: var(--brand-amber-light);
+    font-weight: 600;
+  }
+
+  /* ─── Tooltip ──────────────────────────────────────────────────────── */
 
   .nav-tooltip {
     background: var(--brand-brown);

@@ -20,7 +20,17 @@
           { href: "/admin", label: "Dashboard", icon: "dashboard" },
           { href: "/admin/shortlinks", label: "Shortlinks", icon: "link" },
           { href: "/admin/analytics", label: "Analytics", icon: "chart" },
-          { href: "/admin/emails", label: "Emails", icon: "mail" },
+          {
+            href: "/admin/emails",
+            label: "Email",
+            icon: "mail",
+            children: [
+              { href: "/admin/emails", label: "Templates", icon: "mail" },
+              { href: "/admin/emails/subscribers", label: "Subscribers", icon: "contact" },
+              { href: "/admin/emails/lists", label: "Lists", icon: "list-checks" },
+              { href: "/admin/emails/bounces", label: "Bounces", icon: "alert-circle" },
+            ],
+          },
         ],
       },
     ];
@@ -30,6 +40,7 @@
         label: "Organization",
         items: [
           { href: "/admin/members", label: "Members", icon: "users" },
+          { href: "/admin/roles", label: "Roles", icon: "shield" },
         ],
       });
     }

@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
-	import { createColumnHelper, getCoreRowModel, getSortedRowModel, type SortingState } from '@tanstack/table-core';
+	import { createColumnHelper, getCoreRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
 	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
-	import { listTemplates, getTemplate, updateTemplate, deleteTemplate } from '../emails.remote';
+	import { listTemplates, getTemplate, updateTemplate, deleteTemplate, createTemplate, setDefaultTemplate } from '../emails.remote';
 	import { getSession } from '../session.remote';
 
 	let role = $derived(getSession().current?.role);
@@ -18,8 +18,34 @@
 	let editSubject = $state('');
 	let editBody = $state('');
 	let showPreview = $state(false);
+	let editIsDefault = $state(false);
 
-	let confirmDelete = $state<{ open: boolean; id: number; name: string }>({ open: false, id: 0, name: '' });
+	let confirmDelete = $state(false);
+
+	// Row selection
+	let rowSelection = $state<RowSelectionState>({});
+	let selectedRows = $derived.by(() => {
+		const data = templatesQuery.current;
+		if (!data) return [];
+		return Object.keys(rowSelection)
+			.filter((k) => rowSelection[k])
+			.map((k) => data.templates[Number(k)])
+			.filter(Boolean);
+	});
+	let selectedCount = $derived(selectedRows.length);
+	let canDelete = $derived(role === 'owner' && selectedRows.every((t) => !t.is_default));
+
+	function clearSelection() {
+		rowSelection = {};
+	}
+
+	// Create dialog
+	let createOpen = $state(false);
+	let createPending = $state(false);
+	let createName = $state('');
+	let createType = $state('tx');
+	let createSubject = $state('');
+	let createBody = $state('');
 
 	async function openEdit(id: number) {
 		editLoading = true;
@@ -31,6 +57,7 @@
 			editName = tpl.name;
 			editSubject = tpl.subject;
 			editBody = tpl.body;
+			editIsDefault = tpl.is_default;
 		} catch (err: any) {
 			toast.error(err?.message || 'Failed to load template.');
 			editOpen = false;
@@ -53,10 +80,46 @@
 		}
 	}
 
+	function openCreateTemplate() {
+		createName = '';
+		createType = 'tx';
+		createSubject = '';
+		createBody = '';
+		createOpen = true;
+	}
+
+	async function handleCreateTemplate() {
+		createPending = true;
+		try {
+			await createTemplate({ name: createName, type: createType, subject: createSubject || undefined, body: createBody });
+			createOpen = false;
+			toast.success('Template created.');
+			listTemplates().refresh();
+		} catch (err: any) {
+			toast.error(err?.message || 'Failed to create template.');
+		} finally {
+			createPending = false;
+		}
+	}
+
+	async function handleSetDefault() {
+		try {
+			await setDefaultTemplate(editId);
+			editIsDefault = true;
+			toast.success('Default template updated.');
+			listTemplates().refresh();
+		} catch (err: any) {
+			toast.error(err?.message || 'Failed to set default template.');
+		}
+	}
+
 	async function handleDelete() {
 		try {
-			await deleteTemplate(confirmDelete.id);
-			toast.success('Template deleted.');
+			for (const tpl of selectedRows) {
+				await deleteTemplate(tpl.id);
+			}
+			toast.success(`${selectedCount} template${selectedCount > 1 ? 's' : ''} deleted.`);
+			clearSelection();
 			listTemplates().refresh();
 		} catch (err: any) {
 			toast.error(err?.message || 'Failed to delete template.');
@@ -101,9 +164,15 @@
 	let sorting = $state<SortingState>([]);
 
 	const columns = [
+		columnHelper.display({
+			id: 'select',
+			header: (info) => renderSnippet(selectAllCell, info.table),
+			cell: (info) => renderSnippet(selectRowCell, info.row),
+			enableSorting: false,
+		}),
 		columnHelper.accessor('name', {
 			header: 'Name',
-			cell: (info) => info.getValue(),
+			cell: (info) => renderSnippet(nameCell, info.row.original),
 		}),
 		columnHelper.accessor('type', {
 			header: 'Type',
@@ -117,13 +186,20 @@
 			header: 'Updated',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
 		}),
-		columnHelper.display({
-			id: 'actions',
-			header: 'Actions',
-			cell: (info) => renderSnippet(actionsCell, info.row.original),
-		}),
 	];
 </script>
+
+{#snippet selectAllCell(table: any)}
+	<input type="checkbox" class="row-checkbox" checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onchange={table.getToggleAllRowsSelectedHandler()} />
+{/snippet}
+
+{#snippet selectRowCell(row: any)}
+	<input type="checkbox" class="row-checkbox" checked={row.getIsSelected()} onchange={row.getToggleSelectedHandler()} />
+{/snippet}
+
+{#snippet nameCell(tpl: Template)}
+	<button class="name-link" onclick={() => openEdit(tpl.id)}>{tpl.name}</button>
+{/snippet}
 
 {#snippet typeCell(tpl: Template)}
 	<Badge variant={typeBadgeVariant(tpl.type)}>{typeLabel(tpl.type)}</Badge>
@@ -140,21 +216,12 @@
 	<span class="date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
-{#snippet actionsCell(tpl: Template)}
-	<div class="template-actions">
-		<Button variant="secondary" onclick={() => openEdit(tpl.id)}>
-			{role === 'owner' ? 'Edit' : 'View'}
-		</Button>
-		{#if role === 'owner' && !tpl.is_default}
-			<Button variant="danger-outline" onclick={() => (confirmDelete = { open: true, id: tpl.id, name: tpl.name })}>
-				Delete
-			</Button>
-		{/if}
-	</div>
-{/snippet}
 
 <div class="header">
 	<h1>Email Templates</h1>
+	{#if role === 'owner'}
+		<Button variant="primary" onclick={openCreateTemplate}>+ New Template</Button>
+	{/if}
 </div>
 
 {#await templatesQuery}
@@ -166,24 +233,102 @@
 		{@const table = createSvelteTable({
 			data: data.templates,
 			columns,
-			state: { sorting },
+			state: { sorting, rowSelection },
 			onSortingChange: (updater) => {
 				sorting = typeof updater === 'function' ? updater(sorting) : updater;
 			},
+			onRowSelectionChange: (updater) => {
+				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+			},
 			getCoreRowModel: getCoreRowModel(),
 			getSortedRowModel: getSortedRowModel(),
-})}
+		})}
+
+		{#if selectedCount > 0 && canDelete}
+			<div class="action-bar">
+				<span class="action-bar-count">{selectedCount} selected</span>
+				<div class="action-bar-actions">
+					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+					<button class="action-bar-clear" onclick={clearSelection}>Clear</button>
+				</div>
+			</div>
+		{/if}
+
 		<DataTable {table} />
 	{/if}
 {/await}
 
 <ConfirmDialog
-	bind:open={confirmDelete.open}
-	title="Delete Template"
-	description="Permanently delete the template &quot;{confirmDelete.name}&quot;? This cannot be undone."
+	bind:open={confirmDelete}
+	title="Delete Template{selectedCount > 1 ? 's' : ''}"
+	description="Permanently delete {selectedCount} template{selectedCount > 1 ? 's' : ''}? This cannot be undone."
 	confirmLabel="Yes, delete"
 	onconfirm={handleDelete}
 />
+
+<!-- Create Template Dialog -->
+<Dialog.Root bind:open={createOpen}>
+	<Dialog.Portal>
+		<Dialog.Overlay>
+			{#snippet child({ props })}
+				<div {...props} class="dialog-overlay"></div>
+			{/snippet}
+		</Dialog.Overlay>
+		<Dialog.Content>
+			{#snippet child({ props })}
+				<div {...props} class="dialog-content">
+					<div class="dialog-header">
+						<h2>New Template</h2>
+						<Dialog.Close>
+							{#snippet child({ props: closeProps })}
+								<button {...closeProps} class="dialog-close">
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<line x1="18" y1="6" x2="6" y2="18"></line>
+										<line x1="6" y1="6" x2="18" y2="18"></line>
+									</svg>
+								</button>
+							{/snippet}
+						</Dialog.Close>
+					</div>
+
+					<div class="edit-form">
+						<FormField label="Name" required>
+							<Input bind:value={createName} placeholder="Template name" />
+						</FormField>
+
+						<FormField label="Type">
+							<select class="type-select" bind:value={createType}>
+								<option value="tx">Transactional</option>
+								<option value="campaign">Campaign</option>
+							</select>
+						</FormField>
+
+						<FormField label="Subject" hint="Use {'{{ .Tx.Data.field }}'} for template variables">
+							<Input bind:value={createSubject} placeholder="Email subject" />
+						</FormField>
+
+						<div class="body-field">
+							<span class="body-label">Body (HTML)</span>
+							<textarea
+								class="body-editor"
+								bind:value={createBody}
+								rows="12"
+								placeholder="<html>...</html>"
+							></textarea>
+						</div>
+
+						<div class="actions">
+							<button class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+							<Button variant="primary" onclick={handleCreateTemplate} disabled={createPending}>
+								{createPending ? 'Creating...' : 'Create'}
+							</Button>
+						</div>
+					</div>
+				</div>
+			{/snippet}
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
 
 <!-- Edit Template Dialog -->
 <Dialog.Root bind:open={editOpen}>
@@ -245,10 +390,15 @@
 
 							{#if role === 'owner'}
 								<div class="actions">
-									<button class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
-									<Button variant="primary" onclick={handleSave} disabled={savePending}>
-										{savePending ? 'Saving...' : 'Save'}
-									</Button>
+									{#if !editIsDefault}
+										<Button variant="ghost" onclick={handleSetDefault}>Set as Default</Button>
+									{/if}
+									<div class="actions-right">
+										<button class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
+										<Button variant="primary" onclick={handleSave} disabled={savePending}>
+											{savePending ? 'Saving...' : 'Save'}
+										</Button>
+									</div>
 								</div>
 							{/if}
 						</div>
@@ -283,9 +433,67 @@
 		white-space: nowrap;
 	}
 
-	.template-actions {
+	:global(.row-checkbox) {
+		width: 1rem;
+		height: 1rem;
+		accent-color: var(--color-primary);
+		cursor: pointer;
+	}
+
+	.name-link {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--color-primary);
+		font-weight: 600;
+		font-size: inherit;
+		padding: 0;
+		text-decoration: none;
+	}
+
+	.name-link:hover {
+		text-decoration: underline;
+	}
+
+	.action-bar {
 		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.5rem;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+	}
+
+	.action-bar-count {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--color-foreground);
+		white-space: nowrap;
+	}
+
+	.action-bar-actions {
+		display: flex;
+		align-items: center;
 		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.action-bar-clear {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--color-muted);
+		font-size: 0.8rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: var(--radius-sm);
+	}
+
+	.action-bar-clear:hover {
+		color: var(--color-foreground);
+		background: var(--color-hover);
 	}
 
 	/* ─── Dialog ───────────────────────────────────────────────────────── */
@@ -428,8 +636,14 @@
 		display: flex;
 		gap: 0.75rem;
 		align-items: center;
-		justify-content: flex-end;
+		justify-content: space-between;
 		margin-top: 0.25rem;
+	}
+
+	.actions-right {
+		display: flex;
+		gap: 0.75rem;
+		align-items: center;
 	}
 
 	.cancel-btn {
@@ -445,5 +659,21 @@
 	.cancel-btn:hover {
 		color: var(--color-foreground);
 		background: var(--color-hover);
+	}
+
+	.type-select {
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		background: var(--color-surface);
+		color: var(--color-foreground);
+		font-size: 0.9rem;
+	}
+
+	.type-select:focus {
+		outline: none;
+		border-color: var(--color-primary);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
 	}
 </style>
