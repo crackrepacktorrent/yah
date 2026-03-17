@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section } from "$lib/components/admin";
-  import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl } from "../../../shortlinks.remote";
+  import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
   import { toast } from "svelte-sonner";
 
   let {
@@ -32,7 +32,7 @@
     try {
       const result = await resetShortUrlVisits(shortUrl.shortCode);
       toast.success(`Deleted ${result.deletedCount} visit(s).`);
-      getShortUrl(slug).refresh();
+      getShortUrlVisits(slug).refresh();
     } catch (err) {
       toast.error("Failed to reset visits.");
     }

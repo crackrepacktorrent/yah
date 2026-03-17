@@ -49,22 +49,25 @@ export const getShortUrl = query(
 		const shlink = getShlink();
 
 		try {
-			const [shortUrl, visitsRes] = await Promise.all([
-				shlink.getShortUrl(shortCode),
-				shlink.getShortUrlVisits(shortCode, { itemsPerPage: 20, excludeBots: true }),
-			]);
-
-			return {
-				shortUrl,
-				visits: visitsRes.visits.data,
-				visitsPagination: visitsRes.visits.pagination,
-			};
+			return await shlink.getShortUrl(shortCode);
 		} catch (err) {
 			if (err instanceof ShlinkApiError && err.status === 404) {
 				error(404, 'Shortlink not found');
 			}
 			throw err;
 		}
+	},
+);
+
+export const getShortUrlVisits = query(
+	v.string(),
+	async (shortCode) => {
+		const shlink = getShlink();
+		const res = await shlink.getShortUrlVisits(shortCode, { itemsPerPage: 20, excludeBots: true });
+		return {
+			visits: res.visits.data,
+			pagination: res.visits.pagination,
+		};
 	},
 );
 

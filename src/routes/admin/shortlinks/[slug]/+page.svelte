@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { Card, QRCode, Breadcrumb, Section, Spinner } from "$lib/components/admin";
-  import { getShortUrl } from "../../shortlinks.remote";
+  import { getShortUrl, getShortUrlVisits } from "../../shortlinks.remote";
 
   import ShortlinkStats from "./components/ShortlinkStats.svelte";
   import ShortlinkDetails from "./components/ShortlinkDetails.svelte";
@@ -9,43 +9,46 @@
   import ShortlinkVisits from "./components/ShortlinkVisits.svelte";
 
   let slug = $derived($page.params.slug);
-  let query = $derived(slug ? getShortUrl(slug) : null);
+  let shortUrlQuery = $derived(slug ? getShortUrl(slug) : null);
+  let visitsQuery = $derived(slug ? getShortUrlVisits(slug) : null);
 </script>
 
-{#if query}
-  {#if query.current}
-    {@const data = query.current}
+{#if shortUrlQuery}
+  {#if shortUrlQuery.current}
+    {@const shortUrl = shortUrlQuery.current}
 
     <Breadcrumb
       items={[
         { label: "Shortlinks", href: "/admin/shortlinks" },
-        { label: data.shortUrl.title || data.shortUrl.shortCode },
+        { label: shortUrl.title || shortUrl.shortCode },
       ]}
     />
 
     <div class="top-row">
-      <ShortlinkStats shortUrl={data.shortUrl} />
-      <ShortlinkDetails shortUrl={data.shortUrl} />
+      <ShortlinkStats {shortUrl} />
+      <ShortlinkDetails {shortUrl} />
       <Section title="QR Code">
         <Card class="qr-card">
-          <QRCode url={data.shortUrl.shortUrl} title={data.shortUrl.shortCode} />
+          <QRCode url={shortUrl.shortUrl} title={shortUrl.shortCode} />
         </Card>
       </Section>
     </div>
 
     <div class="bottom-row">
       <ShortlinkEditor
-        shortUrl={data.shortUrl}
+        {shortUrl}
         {slug}
       />
-      <ShortlinkVisits
-        visits={data.visits}
-        pagination={data.visitsPagination}
-      />
+      {#if visitsQuery?.current}
+        <ShortlinkVisits
+          visits={visitsQuery.current.visits}
+          pagination={visitsQuery.current.pagination}
+        />
+      {/if}
     </div>
-  {:else if query.loading}
+  {:else if shortUrlQuery.loading}
     <Spinner size={48} centered />
-  {:else if query.error}
+  {:else if shortUrlQuery.error}
     <p class="alert alert-error">Failed to load shortlink.</p>
   {/if}
 {/if}
