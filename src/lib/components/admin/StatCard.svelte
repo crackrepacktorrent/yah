@@ -2,13 +2,15 @@
 	let {
 		value,
 		label,
+		accent,
 	}: {
 		value: string | number;
 		label: string;
+		accent?: string;
 	} = $props();
 </script>
 
-<div class="stat-card">
+<div class="stat-card" style:border-top-color={accent}>
 	<span class="stat-value">{value}</span>
 	<span class="stat-label">{label}</span>
 </div>
@@ -22,6 +24,7 @@
 		flex-direction: column;
 		gap: 0.25rem;
 		box-shadow: var(--shadow-sm);
+		border-top: 3px solid transparent;
 	}
 
 	.stat-value {

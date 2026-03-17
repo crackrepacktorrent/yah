@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Table, Section } from "$lib/components/admin";
+  import { Table, Section, EmptyState } from "$lib/components/admin";
 
   let {
     visits,
@@ -12,7 +12,7 @@
 
 <Section title="Recent Visits">
   {#if visits.length === 0}
-    <p class="empty">No visits yet.</p>
+    <EmptyState message="No visits yet." />
   {:else}
     <Table>
       <thead>
@@ -76,7 +76,4 @@
     margin-top: 0.75rem;
   }
 
-  .empty {
-    color: var(--color-muted);
-  }
 </style>

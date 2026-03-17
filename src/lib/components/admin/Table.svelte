@@ -51,6 +51,6 @@
 	}
 
 	.admin-table :global(tbody tr:hover) {
-		background: var(--color-border-light);
+		background: var(--color-hover);
 	}
 </style>

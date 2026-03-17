@@ -1,16 +1,15 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { Card, Button, FormField, Switch, ConfirmDialog, Section } from "$lib/components/admin";
+  import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section } from "$lib/components/admin";
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl } from "../../../shortlinks.remote";
+  import { toast } from "svelte-sonner";
 
   let {
     shortUrl,
     slug,
-    oneditSuccess,
   }: {
     shortUrl: any;
     slug: string;
-    oneditSuccess: () => void;
   } = $props();
 
   let unlocked = $state(false);
@@ -18,9 +17,6 @@
   let confirmUnlock = $state(false);
   let confirmDelete = $state(false);
   let confirmReset = $state(false);
-
-  let resetForm: HTMLFormElement;
-  let deleteForm: HTMLFormElement;
 
   function markDirty() {
     dirty = true;
@@ -31,6 +27,26 @@
     unlocked = false;
     dirty = false;
   });
+
+  async function handleReset() {
+    try {
+      const result = await resetShortUrlVisits(shortUrl.shortCode);
+      toast.success(`Deleted ${result.deletedCount} visit(s).`);
+      getShortUrl(slug).refresh();
+    } catch (err) {
+      toast.error("Failed to reset visits.");
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      await deleteShortUrl(shortUrl.shortCode);
+      toast.success("Shortlink deleted.");
+      goto("/admin/shortlinks");
+    } catch (err) {
+      toast.error("Failed to delete shortlink.");
+    }
+  }
 </script>
 
 <Section title="Settings">
@@ -62,17 +78,23 @@
         description="Are you sure you want to edit the settings for this shortlink?"
         confirmLabel="Yes, edit"
         variant="primary"
-        onconfirm={() => { unlocked = true; confirmUnlock = false; }}
+        onconfirm={() => { unlocked = true; }}
       />
 
       <form
         {...editShortUrl.enhance(async ({ submit }) => {
-          await submit();
-          if (editShortUrl.result?.success) {
-            unlocked = false;
-            dirty = false;
-            oneditSuccess();
-            getShortUrl(slug).refresh();
+          try {
+            await submit();
+            if (editShortUrl.result?.success) {
+              unlocked = false;
+              dirty = false;
+              toast.success("Shortlink updated.");
+              getShortUrl(slug).refresh();
+            } else if (editShortUrl.fields.longUrl.issues().length > 0) {
+              toast.error(editShortUrl.fields.longUrl.issues()[0].message);
+            }
+          } catch (err) {
+            toast.error("Failed to save changes.");
           }
         })}
         class="edit-form"
@@ -83,24 +105,24 @@
 
         <fieldset disabled={!unlocked} class="edit-fieldset">
           <FormField label="Destination URL">
-            <input {...editShortUrl.fields.longUrl.as("url")} class="admin-input" value={shortUrl.longUrl} required />
+            <Input {...editShortUrl.fields.longUrl.as("url")} value={shortUrl.longUrl} required />
           </FormField>
 
           <FormField label="Title">
-            <input {...editShortUrl.fields.title.as("text")} class="admin-input" value={shortUrl.title ?? ""} />
+            <Input {...editShortUrl.fields.title.as("text")} value={shortUrl.title ?? ""} />
           </FormField>
 
           <FormField label="Tags" hint="(comma-separated)">
-            <input {...editShortUrl.fields.tags.as("text")} class="admin-input" value={shortUrl.tags.join(", ")} />
+            <Input {...editShortUrl.fields.tags.as("text")} value={shortUrl.tags.join(", ")} />
           </FormField>
 
           <div class="row">
             <FormField label="Max Visits">
-              <input {...editShortUrl.fields.maxVisits.as("text")} class="admin-input" value={shortUrl.meta.maxVisits ?? ""} placeholder="Unlimited" />
+              <Input {...editShortUrl.fields.maxVisits.as("text")} value={shortUrl.meta.maxVisits ?? ""} placeholder="Unlimited" />
             </FormField>
 
             <FormField label="Expires">
-              <input {...editShortUrl.fields.validUntil.as("text")} type="date" class="admin-input" min={new Date().toLocaleDateString("en-CA")} value={shortUrl.meta.validUntil?.slice(0, 10) ?? ""} />
+              <Input {...editShortUrl.fields.validUntil.as("text")} type="date" min={new Date().toLocaleDateString("en-CA")} value={shortUrl.meta.validUntil?.slice(0, 10) ?? ""} />
             </FormField>
           </div>
 
@@ -114,8 +136,8 @@
           <Button variant="primary" type="submit" disabled={!unlocked || !dirty || editShortUrl.pending}>
             {editShortUrl.pending ? "Saving..." : "Save Changes"}
           </Button>
-          <Button variant="danger-outline" disabled={!unlocked} onclick={() => (confirmReset = true)}>Reset Visits</Button>
-          <Button variant="danger-outline" disabled={!unlocked} onclick={() => (confirmDelete = true)}>Delete</Button>
+          <Button variant="danger-outline" type="button" disabled={!unlocked} onclick={() => (confirmReset = true)}>Reset Visits</Button>
+          <Button variant="danger-outline" type="button" disabled={!unlocked} onclick={() => (confirmDelete = true)}>Delete</Button>
         </div>
       </form>
     </div>
@@ -126,7 +148,7 @@
     title="Reset Visit Stats"
     description="Reset all visit stats for this shortlink? This cannot be undone."
     confirmLabel="Yes, reset visits"
-    onconfirm={() => resetForm?.requestSubmit()}
+    onconfirm={handleReset}
   />
 
   <ConfirmDialog
@@ -134,31 +156,8 @@
     title="Delete Shortlink"
     description="Permanently delete {shortUrl.shortCode}? This cannot be undone."
     confirmLabel="Yes, delete"
-    onconfirm={() => deleteForm?.requestSubmit()}
+    onconfirm={handleDelete}
   />
-
-  <form
-    bind:this={resetForm}
-    {...resetShortUrlVisits.enhance(async ({ submit }) => {
-      await submit();
-      confirmReset = false;
-      getShortUrl(slug).refresh();
-    })}
-    hidden
-  >
-    <input {...resetShortUrlVisits.fields.shortCode.as("text")} type="hidden" value={shortUrl.shortCode} />
-  </form>
-
-  <form
-    bind:this={deleteForm}
-    {...deleteShortUrl.enhance(async ({ submit }) => {
-      await submit();
-      goto("/admin/shortlinks");
-    })}
-    hidden
-  >
-    <input {...deleteShortUrl.fields.shortCode.as("text")} type="hidden" value={shortUrl.shortCode} />
-  </form>
 </Section>
 
 <style>

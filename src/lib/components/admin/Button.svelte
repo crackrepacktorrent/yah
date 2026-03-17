@@ -6,7 +6,7 @@
 		variant = 'primary',
 		href,
 		disabled = false,
-		type,
+		type = 'button',
 		class: className = '',
 		onclick,
 		...rest
@@ -74,7 +74,7 @@
 	}
 
 	.btn-secondary:hover:not(:disabled) {
-		background: var(--color-border-light);
+		background: var(--color-hover);
 	}
 
 	.btn-danger {

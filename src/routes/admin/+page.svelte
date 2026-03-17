@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { StatCard, Table } from '$lib/components/admin';
+	import { StatCard, Table, EmptyState, Spinner } from '$lib/components/admin';
 	import { getDashboard } from './shortlinks.remote';
 </script>
 
 <h1>Dashboard</h1>
 
 {#await getDashboard()}
-	<p class="loading">Loading...</p>
+	<Spinner size={48} centered />
 {:then data}
 	<div class="stats-grid">
-		<StatCard value={data.totalShortUrls} label="Short URLs" />
-		<StatCard value={data.visits.nonOrphanVisits.total.toLocaleString()} label="Total Clicks" />
-		<StatCard value={data.visits.nonOrphanVisits.nonBots.toLocaleString()} label="Human Clicks" />
-		<StatCard value={data.visits.nonOrphanVisits.bots.toLocaleString()} label="Bot Clicks" />
+		<StatCard value={data.totalShortUrls} label="Short URLs" accent="var(--brand-orange)" />
+		<StatCard value={data.visits.nonOrphanVisits.total.toLocaleString()} label="Total Clicks" accent="var(--brand-amber)" />
+		<StatCard value={data.visits.nonOrphanVisits.nonBots.toLocaleString()} label="Human Clicks" accent="var(--brand-olive)" />
+		<StatCard value={data.visits.nonOrphanVisits.bots.toLocaleString()} label="Bot Clicks" accent="var(--brand-magenta)" />
 	</div>
 
 	<section class="recent">
@@ -22,7 +22,9 @@
 		</div>
 
 		{#if data.recentShortUrls.length === 0}
-			<p class="empty">No shortlinks yet. <a href="/admin/shortlinks/new">Create one</a>.</p>
+			<EmptyState message="No shortlinks yet.">
+				<a href="/admin/shortlinks/new">Create one</a>
+			</EmptyState>
 		{:else}
 			<Table>
 				<thead>
@@ -55,10 +57,6 @@
 	h1 {
 		margin-bottom: 1.5rem;
 		color: var(--color-foreground);
-	}
-
-	.loading {
-		color: var(--color-muted);
 	}
 
 	.stats-grid {
@@ -116,19 +114,13 @@
 		color: var(--color-muted);
 	}
 
-	.clicks {
+	:global(td).clicks {
 		font-weight: 600;
+		color: var(--brand-amber-dark);
 	}
 
 	.date {
 		color: var(--color-muted);
 	}
 
-	.empty {
-		color: var(--color-muted);
-	}
-
-	.empty a {
-		color: var(--color-primary);
-	}
 </style>

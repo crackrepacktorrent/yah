@@ -6,6 +6,7 @@
   import { authClient } from "$lib/auth-client";
   import { goto } from "$app/navigation";
   import { Dialog, Tooltip } from "bits-ui";
+  import { Toaster } from "svelte-sonner";
 
   let { data, children }: { data: LayoutData; children: any } = $props();
 
@@ -71,7 +72,7 @@
 {#snippet sidebarContent()}
   <div class="sidebar-header">
     <a href="/admin" class="brand">
-      <Logo fill="#ff6f00" height={64} />
+      <Logo fill="var(--brand-cream)" height={72} />
     </a>
   </div>
 
@@ -142,6 +143,19 @@
     </Tooltip.Provider>
   </div>
 {/snippet}
+
+<Toaster
+  position="bottom-right"
+  toastOptions={{
+    style: 'font-family: inherit;',
+    classes: {
+      success: 'toast-success',
+      error: 'toast-error',
+      warning: 'toast-warning',
+      info: 'toast-info',
+    },
+  }}
+/>
 
 {#if $page.url.pathname === "/admin/login"}
   {@render children()}
@@ -220,6 +234,35 @@
 {/if}
 
 <style>
+  /* ─── Toast theming (global — renders in portal) ─────────────────── */
+
+  :global(.toast-success) {
+    --normal-bg: var(--color-success-bg) !important;
+    --normal-border: var(--brand-olive-light) !important;
+    --normal-text: var(--brand-olive-dark) !important;
+    border: 1px solid var(--brand-olive-light) !important;
+  }
+
+  :global(.toast-error) {
+    --normal-bg: var(--color-destructive-bg) !important;
+    --normal-border: var(--brand-magenta-light) !important;
+    --normal-text: var(--brand-magenta-dark) !important;
+    border: 1px solid var(--brand-magenta-light) !important;
+  }
+
+  :global(.toast-warning) {
+    --normal-bg: var(--color-warning-bg) !important;
+    --normal-border: var(--brand-amber) !important;
+    --normal-text: var(--brand-amber-dark) !important;
+    border: 1px solid var(--brand-amber) !important;
+  }
+
+  :global(.toast-info) {
+    --normal-bg: var(--color-surface) !important;
+    --normal-border: var(--color-border) !important;
+    --normal-text: var(--color-foreground) !important;
+    border: 1px solid var(--color-border) !important;
+  }
   .admin-layout {
     display: flex;
     min-height: 100vh;
@@ -230,8 +273,7 @@
 
   .sidebar {
     width: 240px;
-    background: var(--color-surface);
-    border-right: 1px solid var(--color-border-light);
+    background: var(--brand-brown);
     display: flex;
     flex-direction: column;
     height: 100vh;
@@ -241,7 +283,7 @@
 
   .sidebar-header {
     padding: 1.5rem 1rem;
-    border-bottom: 1px solid var(--color-border-light);
+    background: var(--brand-brown-dark);
     display: flex;
     justify-content: center;
   }
@@ -250,6 +292,12 @@
     text-decoration: none;
     display: flex;
     align-items: center;
+    transition: transform 300ms;
+    transform: perspective(1px) translateZ(0);
+  }
+
+  .brand:hover {
+    transform: scale(1.1) rotate(1deg);
   }
 
   .sidebar-nav {
@@ -270,7 +318,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--color-muted);
+    color: var(--brand-brown-lighter);
   }
 
   .nav-item {
@@ -281,26 +329,26 @@
     border-radius: var(--radius-md);
     text-decoration: none;
     font-size: 0.875rem;
-    color: var(--color-muted);
+    color: var(--brand-warm-200);
     transition:
       background 0.15s,
       color 0.15s;
   }
 
   .nav-item:hover {
-    background: var(--color-border-light);
-    color: var(--color-foreground);
+    background: var(--brand-brown-hover);
+    color: var(--brand-cream);
   }
 
   .nav-item.active {
-    background: var(--color-border-light);
-    color: var(--color-foreground);
+    background: var(--brand-brown-active);
+    color: var(--brand-amber-light);
     font-weight: 600;
   }
 
   .nav-tooltip {
-    background: var(--color-foreground);
-    color: var(--color-surface);
+    background: var(--brand-brown);
+    color: var(--brand-cream);
     padding: 0.3rem 0.6rem;
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
@@ -312,7 +360,7 @@
 
   .sidebar-footer {
     padding: 0.75rem 1rem;
-    border-top: 1px solid var(--color-border-light);
+    background: var(--brand-brown-dark);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -330,8 +378,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--color-primary);
-    color: var(--color-surface);
+    background: var(--brand-amber);
+    color: var(--brand-brown);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -350,7 +398,7 @@
   .user-name {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--color-foreground);
+    color: var(--brand-cream);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -358,7 +406,7 @@
 
   .user-email {
     font-size: 0.7rem;
-    color: var(--color-muted);
+    color: var(--brand-brown-lighter);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -369,7 +417,7 @@
     border: none;
     padding: 0.4rem;
     cursor: pointer;
-    color: var(--color-muted);
+    color: var(--brand-brown-lighter);
     border-radius: var(--radius-sm);
     transition:
       color 0.15s,
@@ -380,8 +428,8 @@
   }
 
   .logout-btn:hover {
-    color: var(--color-destructive);
-    background: var(--color-destructive-bg);
+    color: var(--brand-magenta-light);
+    background: var(--brand-magenta-muted);
   }
 
   /* ─── Main content ─────────────────────────────────────────────────── */
@@ -401,7 +449,7 @@
   .drawer-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--brand-brown-muted);
     z-index: 45;
   }
 
@@ -411,7 +459,7 @@
     left: 0;
     bottom: 0;
     z-index: 50;
-    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.1);
+    box-shadow: 4px 0 16px var(--brand-brown-muted);
   }
 
   .drawer-close {
@@ -421,14 +469,14 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--color-muted);
+    color: var(--brand-brown-lighter);
     padding: 0.25rem;
     border-radius: var(--radius-sm);
     z-index: 1;
   }
 
   .drawer-close:hover {
-    color: var(--color-foreground);
+    color: var(--brand-cream);
   }
 
   @media (max-width: 768px) {
@@ -448,8 +496,8 @@
       align-items: center;
       gap: 0.75rem;
       padding: 0.75rem 1rem;
-      background: var(--color-surface);
-      border-bottom: 1px solid var(--color-border-light);
+      background: var(--brand-brown);
+      border-bottom: none;
       position: sticky;
       top: 0;
       z-index: 30;
@@ -460,7 +508,7 @@
       border: none;
       padding: 0.25rem;
       cursor: pointer;
-      color: var(--color-foreground);
+      color: var(--brand-cream);
       display: flex;
       align-items: center;
     }

@@ -20,11 +20,12 @@
 		padding: 0.15rem 0.5rem;
 		border-radius: 100px;
 		font-size: 0.75rem;
+		font-weight: 500;
 	}
 
 	.badge-default {
-		background: var(--color-border-light);
-		color: var(--color-muted);
+		background: var(--brand-olive-muted);
+		color: var(--brand-olive-dark);
 	}
 
 	.badge-success {
@@ -38,12 +39,12 @@
 	}
 
 	.badge-warning {
-		background: #fef3c7;
-		color: #92400e;
+		background: var(--color-warning-bg);
+		color: var(--brand-amber-dark);
 	}
 
 	.badge-info {
-		background: #dbeafe;
-		color: #1e40af;
+		background: var(--brand-amber-lighter);
+		color: var(--brand-brown);
 	}
 </style>

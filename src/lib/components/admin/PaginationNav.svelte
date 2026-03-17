@@ -74,7 +74,7 @@
 	}
 
 	.pagination-btn:hover:not(:disabled) {
-		background: var(--color-border-light);
+		background: var(--color-hover);
 	}
 
 	.pagination-btn:disabled {
@@ -106,7 +106,7 @@
 	}
 
 	.pagination-page:hover {
-		background: var(--color-border-light);
+		background: var(--color-hover);
 		color: var(--color-foreground);
 	}
 

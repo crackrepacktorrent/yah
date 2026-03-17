@@ -348,7 +348,7 @@
   }
 
   .nav-button:hover {
-    background-color: var(--color-border-light);
+    background-color: var(--color-hover);
   }
 
   :global(.nav-chevron) {
@@ -482,7 +482,7 @@
   }
 
   .mobile-menu-link-expandable:hover {
-    background-color: var(--color-border-light);
+    background-color: var(--color-hover);
   }
 
   .mobile-expandable-header {
@@ -503,7 +503,7 @@
   }
 
   .mobile-chevron-button:hover {
-    background-color: var(--color-border-light);
+    background-color: var(--color-hover);
   }
 
   :global(.mobile-chevron) {
@@ -526,7 +526,7 @@
   }
 
   .mobile-dropdown-item:hover {
-    background-color: var(--color-border-light);
+    background-color: var(--color-hover);
   }
 
   .mobile-menu-link {
@@ -539,6 +539,6 @@
   }
 
   .mobile-menu-link:hover {
-    background-color: var(--color-border-light);
+    background-color: var(--color-hover);
   }
 </style>

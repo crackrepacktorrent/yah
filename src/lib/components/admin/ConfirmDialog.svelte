@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
 	import { AlertDialog } from 'bits-ui';
 
 	let {
@@ -9,16 +8,26 @@
 		confirmLabel = 'Confirm',
 		variant = 'danger',
 		onconfirm,
-		children,
 	}: {
 		open: boolean;
 		title: string;
 		description: string;
 		confirmLabel?: string;
 		variant?: 'danger' | 'primary';
-		onconfirm?: () => void;
-		children?: Snippet;
+		onconfirm: () => void | Promise<void>;
 	} = $props();
+
+	let pending = $state(false);
+
+	async function handleConfirm() {
+		pending = true;
+		try {
+			await onconfirm();
+			open = false;
+		} finally {
+			pending = false;
+		}
+	}
 </script>
 
 <AlertDialog.Root bind:open>
@@ -42,23 +51,19 @@
 						{/snippet}
 					</AlertDialog.Description>
 
-					{#if children}
-						{@render children()}
-					{/if}
-
 					<div class="confirm-actions">
 						<AlertDialog.Cancel>
 							{#snippet child({ props: cancelProps })}
-								<button {...cancelProps} class="confirm-cancel">Cancel</button>
+								<button {...cancelProps} class="confirm-cancel" disabled={pending}>Cancel</button>
 							{/snippet}
 						</AlertDialog.Cancel>
-						<AlertDialog.Action>
-							{#snippet child({ props: actionProps })}
-								<button {...actionProps} class="confirm-action confirm-action-{variant}" onclick={() => onconfirm?.()}>
-									{confirmLabel}
-								</button>
-							{/snippet}
-						</AlertDialog.Action>
+						<button
+							class="confirm-action confirm-action-{variant}"
+							onclick={handleConfirm}
+							disabled={pending}
+						>
+							{pending ? "..." : confirmLabel}
+						</button>
 					</div>
 				</div>
 			{/snippet}
@@ -70,7 +75,7 @@
 	.confirm-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
+		background: var(--color-overlay);
 		z-index: 60;
 	}
 
@@ -85,13 +90,13 @@
 		max-width: 420px;
 		width: 90%;
 		z-index: 61;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+		box-shadow: var(--shadow-lg);
 	}
 
 	.confirm-title {
 		font-size: 1.1rem;
 		font-weight: 700;
-		color: var(--brand-darkblue);
+		color: var(--color-foreground);
 		margin: 0 0 0.5rem;
 	}
 
@@ -119,7 +124,12 @@
 	}
 
 	.confirm-cancel:hover {
-		background: var(--color-border-light);
+		background: var(--color-hover);
+	}
+
+	.confirm-cancel:disabled {
+		opacity: 0.5;
+		pointer-events: none;
 	}
 
 	.confirm-action {
@@ -130,6 +140,11 @@
 		font-weight: 600;
 		cursor: pointer;
 		color: var(--color-surface);
+	}
+
+	.confirm-action:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
 	}
 
 	.confirm-action-danger {

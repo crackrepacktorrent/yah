@@ -40,7 +40,7 @@
   }
 
   .button:hover {
-    background-color: var(--color-border-light);
+    background-color: var(--color-hover);
   }
 
   /* Sizes */

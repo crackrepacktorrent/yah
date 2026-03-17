@@ -1,4 +1,4 @@
-import { query, form } from '$app/server';
+import { query, form, command } from '$app/server';
 import * as v from 'valibot';
 import { getShlink, ShlinkApiError } from '$lib/server/shlink';
 import { error, invalid, redirect } from '@sveltejs/kit';
@@ -70,7 +70,7 @@ export const getShortUrl = query(
 
 // ─── Forms ────────────────────────────────────────────────────────────────────
 
-export const createShortUrl = form(
+export const createShortUrl = command(
 	v.object({
 		longUrl: v.pipe(v.string(), v.nonEmpty('Destination URL is required'), v.url()),
 		customSlug: v.optional(v.string(), ''),
@@ -79,33 +79,26 @@ export const createShortUrl = form(
 		maxVisits: v.optional(v.string(), ''),
 		validUntil: v.optional(v.string(), ''),
 		crawlable: v.optional(v.boolean(), false),
-		forwardQuery: v.optional(v.boolean(), false),
+		forwardQuery: v.optional(v.boolean(), true),
 	}),
-	async (data, issue) => {
+	async (data) => {
 		const tags = data.tags
 			.split(',')
-			.map((t) => t.trim())
+			.map((t: string) => t.trim())
 			.filter(Boolean);
 
-		try {
-			const shlink = getShlink();
-			const result = await shlink.createShortUrl({
-				longUrl: data.longUrl,
-				customSlug: data.customSlug || undefined,
-				title: data.title || undefined,
-				tags: tags.length > 0 ? tags : undefined,
-				crawlable: data.crawlable,
-				forwardQuery: data.forwardQuery,
-				maxVisits: data.maxVisits ? Number(data.maxVisits) : undefined,
-				validUntil: data.validUntil || undefined,
-			});
-			redirect(303, `/admin/shortlinks/${result.shortCode}`);
-		} catch (err) {
-			if (err instanceof ShlinkApiError) {
-				invalid(issue.longUrl(err.detail));
-			}
-			throw err;
-		}
+		const shlink = getShlink();
+		const result = await shlink.createShortUrl({
+			longUrl: data.longUrl,
+			customSlug: data.customSlug || undefined,
+			title: data.title || undefined,
+			tags: tags.length > 0 ? tags : undefined,
+			crawlable: data.crawlable,
+			forwardQuery: data.forwardQuery,
+			maxVisits: data.maxVisits ? Number(data.maxVisits) : undefined,
+			validUntil: data.validUntil || undefined,
+		});
+		return { shortCode: result.shortCode };
 	},
 );
 
@@ -147,38 +140,19 @@ export const editShortUrl = form(
 	},
 );
 
-export const deleteShortUrl = form(
-	v.object({
-		shortCode: v.string(),
-	}),
-	async (data, issue) => {
-		try {
-			const shlink = getShlink();
-			await shlink.deleteShortUrl(data.shortCode);
-			redirect(303, '/admin/shortlinks');
-		} catch (err) {
-			if (err instanceof ShlinkApiError) {
-				invalid(issue.shortCode(err.detail));
-			}
-			throw err;
-		}
+export const deleteShortUrl = command(
+	v.string(),
+	async (shortCode) => {
+		const shlink = getShlink();
+		await shlink.deleteShortUrl(shortCode);
 	},
 );
 
-export const resetShortUrlVisits = form(
-	v.object({
-		shortCode: v.string(),
-	}),
-	async (data, issue) => {
-		try {
-			const shlink = getShlink();
-			const result = await shlink.deleteShortUrlVisits(data.shortCode);
-			return { deletedCount: result.deletedVisits };
-		} catch (err) {
-			if (err instanceof ShlinkApiError) {
-				invalid(issue.shortCode(err.detail));
-			}
-			throw err;
-		}
+export const resetShortUrlVisits = command(
+	v.string(),
+	async (shortCode) => {
+		const shlink = getShlink();
+		const result = await shlink.deleteShortUrlVisits(shortCode);
+		return { deletedCount: result.deletedVisits };
 	},
 );

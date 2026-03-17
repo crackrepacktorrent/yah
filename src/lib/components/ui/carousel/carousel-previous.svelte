@@ -44,7 +44,7 @@
 	}
 
 	.carousel-nav-btn:hover {
-		background-color: var(--color-border-light);
+		background-color: var(--color-hover);
 	}
 
 	.carousel-nav-btn[aria-disabled="true"] {
