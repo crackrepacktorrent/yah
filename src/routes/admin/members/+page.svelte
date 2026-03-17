@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { Button, Input, FormField, Table, Badge, Card, EmptyState, Spinner, ConfirmDialog } from '$lib/components/admin';
+	import { Button, Input, FormField, Badge, EmptyState, Spinner, ConfirmDialog, DataTable } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listMembers, listInvitations, inviteMember, updateMemberRole, removeMember, cancelInvitation } from '../members.remote';
@@ -72,7 +74,117 @@
 			default: return 'default';
 		}
 	}
+
+	// ─── Members table ────────────────────────────────────────────────
+
+	type Member = {
+		id: string;
+		role: string;
+		user: { name: string | null; email: string };
+	};
+
+	const memberColumnHelper = createColumnHelper<Member>();
+
+	const memberColumns = [
+		memberColumnHelper.accessor((row) => row.user.name, {
+			id: 'name',
+			header: 'Name',
+			cell: (info) => info.getValue() ?? '—',
+		}),
+		memberColumnHelper.accessor((row) => row.user.email, {
+			id: 'email',
+			header: 'Email',
+			cell: (info) => renderSnippet(emailCell, info.getValue()),
+		}),
+		memberColumnHelper.accessor('role', {
+			header: 'Role',
+			cell: (info) => renderSnippet(roleBadgeCell, info.getValue()),
+		}),
+		memberColumnHelper.display({
+			id: 'actions',
+			header: 'Actions',
+			cell: (info) => renderSnippet(memberActionsCell, info.row.original),
+		}),
+	];
+
+	// ─── Invitations table ────────────────────────────────────────────
+
+	type Invitation = {
+		id: string;
+		email: string;
+		role: string;
+		status: string;
+	};
+
+	const inviteColumnHelper = createColumnHelper<Invitation>();
+
+	const inviteColumns = [
+		inviteColumnHelper.accessor('email', {
+			header: 'Email',
+			cell: (info) => renderSnippet(emailCell, info.getValue()),
+		}),
+		inviteColumnHelper.accessor('role', {
+			header: 'Role',
+			cell: (info) => renderSnippet(roleBadgeCell, info.getValue()),
+		}),
+		inviteColumnHelper.accessor('status', {
+			header: 'Status',
+			cell: (info) => renderSnippet(statusCell, info.getValue()),
+		}),
+		inviteColumnHelper.display({
+			id: 'actions',
+			header: 'Actions',
+			cell: (info) => renderSnippet(inviteActionsCell, info.row.original),
+		}),
+	];
 </script>
+
+{#snippet emailCell(email: string)}
+	<span class="email">{email}</span>
+{/snippet}
+
+{#snippet roleBadgeCell(role: string)}
+	<Badge variant={roleBadgeVariant(role)}>{role}</Badge>
+{/snippet}
+
+{#snippet statusCell(status: string)}
+	<Badge>{status}</Badge>
+{/snippet}
+
+{#snippet memberActionsCell(member: Member)}
+	<div class="actions-cell">
+		{#if member.user.email !== currentSession?.user.email}
+			<select
+				value={member.role}
+				onchange={(e) => handleRoleChange(member.id, (e.target as HTMLSelectElement).value)}
+				class="role-select"
+			>
+				<option value="owner">Owner</option>
+				<option value="admin">Admin</option>
+				<option value="member">Member</option>
+			</select>
+			<button
+				class="remove-btn"
+				onclick={() => (confirmRemove = { open: true, memberId: member.id, name: member.user.name ?? member.user.email })}
+			>
+				Remove
+			</button>
+		{:else}
+			<span class="you-label">You</span>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet inviteActionsCell(invitation: Invitation)}
+	{#if invitation.status === 'pending'}
+		<button
+			class="remove-btn"
+			onclick={() => (confirmCancelInvite = { open: true, id: invitation.id, email: invitation.email })}
+		>
+			Cancel
+		</button>
+	{/if}
+{/snippet}
 
 <div class="header">
 	<h1>Members</h1>
@@ -89,48 +201,12 @@
 		{#if members.length === 0}
 			<EmptyState message="No members yet." />
 		{:else}
-			<Table>
-				<thead>
-					<tr>
-						<th>Name</th>
-						<th>Email</th>
-						<th>Role</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each members as member}
-						<tr>
-							<td>{member.user.name ?? '—'}</td>
-							<td class="email">{member.user.email}</td>
-							<td>
-								<Badge variant={roleBadgeVariant(member.role)}>{member.role}</Badge>
-							</td>
-							<td class="actions">
-								{#if member.user.email !== currentSession?.user.email}
-									<select
-										value={member.role}
-										onchange={(e) => handleRoleChange(member.id, (e.target as HTMLSelectElement).value)}
-										class="role-select"
-									>
-										<option value="owner">Owner</option>
-										<option value="admin">Admin</option>
-										<option value="member">Member</option>
-									</select>
-									<button
-										class="remove-btn"
-										onclick={() => (confirmRemove = { open: true, memberId: member.id, name: member.user.name ?? member.user.email })}
-									>
-										Remove
-									</button>
-								{:else}
-									<span class="you-label">You</span>
-								{/if}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</Table>
+			{@const table = createSvelteTable(() => ({
+				data: members,
+				columns: memberColumns,
+				getCoreRowModel: getCoreRowModel(),
+			}))}
+			<DataTable {table} />
 		{/if}
 	{/await}
 </section>
@@ -144,35 +220,12 @@
 		{#if data.invitations.length === 0}
 			<EmptyState message="No pending invitations." />
 		{:else}
-			<Table>
-				<thead>
-					<tr>
-						<th>Email</th>
-						<th>Role</th>
-						<th>Status</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.invitations as invitation}
-						<tr>
-							<td class="email">{invitation.email}</td>
-							<td><Badge variant={roleBadgeVariant(invitation.role)}>{invitation.role}</Badge></td>
-							<td><Badge>{invitation.status}</Badge></td>
-							<td>
-								{#if invitation.status === 'pending'}
-									<button
-										class="remove-btn"
-										onclick={() => (confirmCancelInvite = { open: true, id: invitation.id, email: invitation.email })}
-									>
-										Cancel
-									</button>
-								{/if}
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</Table>
+			{@const table = createSvelteTable(() => ({
+				data: data.invitations,
+				columns: inviteColumns,
+				getCoreRowModel: getCoreRowModel(),
+			}))}
+			<DataTable {table} />
 		{/if}
 	{/await}
 </section>
@@ -214,7 +267,7 @@
 							</select>
 						</FormField>
 
-						<div class="actions">
+						<div class="dialog-actions">
 							<button type="button" class="cancel-btn" onclick={() => (inviteOpen = false)}>Cancel</button>
 							<Button variant="primary" type="submit" disabled={invitePending}>
 								{invitePending ? 'Sending...' : 'Send Invitation'}
@@ -270,7 +323,7 @@
 		color: var(--color-muted);
 	}
 
-	.actions {
+	.actions-cell {
 		display: flex;
 		gap: 0.5rem;
 		align-items: center;
@@ -370,7 +423,7 @@
 		gap: 1rem;
 	}
 
-	.actions {
+	.dialog-actions {
 		display: flex;
 		gap: 0.75rem;
 		align-items: center;

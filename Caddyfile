@@ -1,0 +1,18 @@
+y4h.org, www.y4h.org {
+	@www host www.y4h.org
+	redir @www https://y4h.org{uri} permanent
+
+	reverse_proxy sveltekit:3000
+}
+
+y4h.link {
+	reverse_proxy shlink:8080
+}
+
+analytics.y4h.org {
+	reverse_proxy umami:3000
+}
+
+preview.y4h.org {
+	reverse_proxy sveltekit-preview:3001
+}

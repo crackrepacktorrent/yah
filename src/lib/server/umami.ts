@@ -25,10 +25,14 @@ async function getToken(): Promise<string> {
 	return data.token;
 }
 
+function init() {
+	if (!env.UMAMI_URL || !env.UMAMI_USERNAME || !env.UMAMI_PASSWORD || !env.UMAMI_WEBSITE_ID) {
+		throw new Error('UMAMI_URL, UMAMI_USERNAME, UMAMI_PASSWORD, and UMAMI_WEBSITE_ID must be set');
+	}
+}
+
 function getWebsiteId(): string {
-	const id = env.UMAMI_WEBSITE_ID;
-	if (!id) throw new Error('UMAMI_WEBSITE_ID not configured');
-	return id;
+	return env.UMAMI_WEBSITE_ID!;
 }
 
 async function umamiGet(path: string, params?: Record<string, string>): Promise<any> {
@@ -71,11 +75,8 @@ export interface UmamiPageview {
 	y: number;
 }
 
-export function isUmamiConfigured(): boolean {
-	return !!(env.UMAMI_URL && env.UMAMI_USERNAME && env.UMAMI_PASSWORD && env.UMAMI_WEBSITE_ID);
-}
-
 export async function getWebsiteStats(startAt: number, endAt: number): Promise<UmamiStats> {
+	init();
 	return umamiGet(`/websites/${getWebsiteId()}/stats`, {
 		startAt: String(startAt),
 		endAt: String(endAt),

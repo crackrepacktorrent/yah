@@ -20,6 +20,7 @@
           { href: "/admin", label: "Dashboard", icon: "dashboard" },
           { href: "/admin/shortlinks", label: "Shortlinks", icon: "link" },
           { href: "/admin/analytics", label: "Analytics", icon: "chart" },
+          { href: "/admin/emails", label: "Emails", icon: "mail" },
         ],
       },
     ];

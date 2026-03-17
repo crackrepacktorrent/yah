@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { StatCard, EmptyState, Spinner, Card, Section } from '$lib/components/admin';
+	import { StatCard, EmptyState, Spinner, Card, DataTable } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { ToggleGroup } from 'bits-ui';
 	import { getAnalytics } from '../analytics.remote';
+	import { staleWhileRevalidate } from '$lib/utils/stale-query.svelte';
 
 	let period = $state<'24h' | '7d' | '30d'>('7d');
 	let analyticsQuery = $derived(getAnalytics({ period }));
-	let data = $derived(analyticsQuery.current);
+	let { current: data } = staleWhileRevalidate(() => analyticsQuery.current);
 	let chartMax = $derived(data ? Math.max(...data.pageviews.map((p: any) => p.y), 1) : 1);
 
 	function formatDuration(seconds: number) {
@@ -20,7 +23,54 @@
 		if (p === '24h') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 		return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 	}
+
+	type MetricRow = { x: string; y: number };
+
+	const columnHelper = createColumnHelper<MetricRow>();
+
+	function metricColumns(label: string, mono: boolean, emptyLabel?: string) {
+		return [
+			columnHelper.accessor('x', {
+				header: label,
+				cell: (info) => {
+					const val = info.getValue() || emptyLabel || 'Unknown';
+					return mono
+						? renderSnippet(monoCell, val)
+						: val;
+				},
+			}),
+			columnHelper.accessor('y', {
+				header: 'Visitors',
+				cell: (info) => renderSnippet(numCell, info.getValue()),
+			}),
+		];
+	}
+
+	function createMetricTable(items: MetricRow[], label: string, mono: boolean, emptyLabel?: string) {
+		return createSvelteTable(() => ({
+			data: items,
+			columns: metricColumns(label, mono, emptyLabel),
+			getCoreRowModel: getCoreRowModel(),
+		}));
+	}
+
+	const sections = [
+		{ title: 'Top Pages', key: 'pages' as const, label: 'Page', mono: true },
+		{ title: 'Referrers', key: 'referrers' as const, label: 'Source', mono: true, emptyLabel: '(direct)' },
+		{ title: 'Browsers', key: 'browsers' as const, label: 'Browser', mono: false },
+		{ title: 'Operating Systems', key: 'os' as const, label: 'Operating System', mono: false },
+		{ title: 'Devices', key: 'devices' as const, label: 'Device', mono: false },
+		{ title: 'Countries', key: 'countries' as const, label: 'Country', mono: false },
+	] as const;
 </script>
+
+{#snippet monoCell(value: string)}
+	<span class="path">{value}</span>
+{/snippet}
+
+{#snippet numCell(value: number)}
+	<span class="num">{value}</span>
+{/snippet}
 
 <div class="header">
 	<h1>Analytics</h1>
@@ -53,8 +103,6 @@
 
 {#if !data && analyticsQuery.loading}
 	<Spinner size={48} centered />
-{:else if data === null}
-	<EmptyState message="Analytics not configured. Set UMAMI env vars to enable." />
 {:else if data}
 	<div class="stats-grid">
 		<StatCard value={data.stats.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
@@ -85,37 +133,15 @@
 	{/if}
 
 	<div class="metrics-grid">
-		{#each [
-			{ title: 'Top Pages', items: data.pages, fallback: 'No page data yet.', mono: true },
-			{ title: 'Referrers', items: data.referrers, fallback: 'No referrer data yet.', mono: true, emptyLabel: '(direct)' },
-			{ title: 'Browsers', items: data.browsers, fallback: 'No browser data yet.' },
-			{ title: 'Operating Systems', items: data.os, fallback: 'No OS data yet.' },
-			{ title: 'Devices', items: data.devices, fallback: 'No device data yet.' },
-			{ title: 'Countries', items: data.countries, fallback: 'No country data yet.' },
-		] as section}
+		{#each sections as section}
+			{@const items = data[section.key]}
 			<div class="metric-section">
 				<h3>{section.title}</h3>
-				{#if section.items.length === 0}
-					<EmptyState message={section.fallback} />
+				{#if items.length === 0}
+					<EmptyState message="No {section.title.toLowerCase()} data yet." />
 				{:else}
-					<Card>
-						<table class="metric-table">
-							<thead>
-								<tr>
-									<th>{section.title === 'Top Pages' ? 'Page' : section.title === 'Referrers' ? 'Source' : section.title.replace(/s$/, '')}</th>
-									<th class="num">Visitors</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each section.items as row}
-									<tr>
-										<td class:path={section.mono}>{row.x || section.emptyLabel || 'Unknown'}</td>
-										<td class="num">{row.y}</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</Card>
+					{@const table = createMetricTable(items, section.label, section.mono, 'emptyLabel' in section ? section.emptyLabel : undefined)}
+					<DataTable {table} />
 				{/if}
 			</div>
 		{/each}
@@ -268,47 +294,21 @@
 		color: var(--color-foreground);
 	}
 
-	.metric-table {
-		width: 100%;
-		border-collapse: collapse;
-		font-size: 0.875rem;
-	}
-
-	.metric-table th {
-		text-align: left;
-		font-weight: 600;
-		color: var(--color-muted);
-		font-size: 0.75rem;
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
-		padding: 0.5rem 0.75rem;
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.metric-table td {
-		padding: 0.45rem 0.75rem;
-		border-bottom: 1px solid var(--color-border-light, var(--color-border));
-		color: var(--color-foreground);
-	}
-
-	.metric-table tr:last-child td {
-		border-bottom: none;
-	}
-
-	.metric-table .num {
-		text-align: right;
-		font-weight: 600;
-		color: var(--brand-amber-dark);
-		white-space: nowrap;
-	}
-
-	.metric-table .path {
+	.path {
+		display: block;
 		max-width: 250px;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		font-family: monospace;
 		font-size: 0.8rem;
+	}
+
+	.num {
+		font-weight: 600;
+		color: var(--brand-amber-dark);
+		white-space: nowrap;
+		text-align: right;
 	}
 
 	/* ─── Loading overlay ──────────────────────────────────────────────── */

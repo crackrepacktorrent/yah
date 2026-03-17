@@ -1,17 +1,23 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Button, Input, Table, Badge, Tooltip, PaginationNav, FormField, Switch, EmptyState, Spinner } from '$lib/components/admin';
+	import { Button, Input, Badge, Tooltip, PaginationNav, FormField, Switch, EmptyState, Spinner, DataTable } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createColumnHelper, getCoreRowModel, type SortingState } from '@tanstack/table-core';
 	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listShortUrls, createShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
+	import { staleWhileRevalidate } from '$lib/utils/stale-query.svelte';
 
 	let role = $derived(getSession().current?.role);
 
 	let search = $state($page.url.searchParams.get('search') || '');
 	let currentPage = $derived(Number($page.url.searchParams.get('page')) || 1);
 	let orderBy = $derived($page.url.searchParams.get('orderBy') || 'dateCreated-DESC');
+
+	let shortlinksQuery = $derived(listShortUrls({ page: currentPage, search, orderBy }));
+	let { current: data } = staleWhileRevalidate(() => shortlinksQuery.current);
 
 	let createOpen = $state(false);
 	let createPending = $state(false);
@@ -60,7 +66,99 @@
 		params.set('page', String(p));
 		return `/admin/shortlinks?${params.toString()}`;
 	}
+
+	const sortFieldMap: Record<string, string> = {
+		dateCreated: 'dateCreated',
+		shortCode: 'shortCode',
+		longUrl: 'longUrl',
+		visits: 'visits',
+	};
+
+	let sorting = $derived.by<SortingState>(() => {
+		const [field, dir] = orderBy.split('-');
+		if (sortFieldMap[field]) {
+			return [{ id: sortFieldMap[field], desc: dir === 'DESC' }];
+		}
+		return [];
+	});
+
+	function onSortingChange(updater: any) {
+		const next: SortingState = typeof updater === 'function' ? updater(sorting) : updater;
+		if (next.length > 0) {
+			const { id, desc } = next[0];
+			const field = sortFieldMap[id] || id;
+			const params = new URLSearchParams($page.url.searchParams);
+			params.set('orderBy', `${field}-${desc ? 'DESC' : 'ASC'}`);
+			params.delete('page');
+			goto(`/admin/shortlinks?${params.toString()}`);
+		}
+	}
+
+	type ShortUrl = {
+		shortCode: string;
+		longUrl: string;
+		title?: string | null;
+		tags: string[];
+		visitsSummary: { total: number };
+		dateCreated: string;
+	};
+
+	const columnHelper = createColumnHelper<ShortUrl>();
+
+	const columns = [
+		columnHelper.accessor('shortCode', {
+			header: 'Short URL',
+			cell: (info) => renderSnippet(shortCodeCell, info.row.original),
+			enableSorting: true,
+		}),
+		columnHelper.accessor('longUrl', {
+			header: 'Destination',
+			cell: (info) => renderSnippet(longUrlCell, info.getValue()),
+			enableSorting: true,
+		}),
+		columnHelper.accessor('tags', {
+			header: 'Tags',
+			cell: (info) => renderSnippet(tagsCell, info.getValue()),
+			enableSorting: false,
+		}),
+		columnHelper.accessor((row) => row.visitsSummary.total, {
+			id: 'visits',
+			header: 'Clicks',
+			cell: (info) => renderSnippet(clicksCell, info.getValue()),
+			enableSorting: true,
+		}),
+		columnHelper.accessor('dateCreated', {
+			header: 'Created',
+			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableSorting: true,
+		}),
+	];
 </script>
+
+{#snippet shortCodeCell(url: ShortUrl)}
+	<a href="/admin/shortlinks/{url.shortCode}" class="code">{url.shortCode}</a>
+	{#if url.title}<br /><span class="title">{url.title}</span>{/if}
+{/snippet}
+
+{#snippet longUrlCell(longUrl: string)}
+	<span class="long-url"><Tooltip text={longUrl}>{longUrl}</Tooltip></span>
+{/snippet}
+
+{#snippet tagsCell(tags: string[])}
+	<div class="tags">
+		{#each tags as tag}
+			<Badge>{tag}</Badge>
+		{/each}
+	</div>
+{/snippet}
+
+{#snippet clicksCell(total: number)}
+	<span class="clicks">{total}</span>
+{/snippet}
+
+{#snippet dateCell(date: string)}
+	<span class="date">{new Date(date).toLocaleDateString()}</span>
+{/snippet}
 
 <div class="header">
 	<h1>Shortlinks</h1>
@@ -74,45 +172,23 @@
 	<Button variant="secondary" type="submit">Search</Button>
 </form>
 
-{#await listShortUrls({ page: currentPage, search, orderBy })}
+{#if !data && shortlinksQuery.loading}
 	<Spinner size={48} centered />
-{:then data}
+{:else if data}
 	{#if data.shortUrls.length === 0}
 		<EmptyState message="No shortlinks found." />
 	{:else}
-		<Table>
-			<thead>
-				<tr>
-					<th>Short URL</th>
-					<th>Destination</th>
-					<th>Tags</th>
-					<th>Clicks</th>
-					<th>Created</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.shortUrls as url}
-					<tr>
-						<td>
-							<a href="/admin/shortlinks/{url.shortCode}" class="code">{url.shortCode}</a>
-							{#if url.title}<br /><span class="title">{url.title}</span>{/if}
-						</td>
-						<td class="long-url">
-								<Tooltip text={url.longUrl}>{url.longUrl}</Tooltip>
-							</td>
-						<td>
-							<div class="tags">
-								{#each url.tags as tag}
-									<Badge>{tag}</Badge>
-								{/each}
-							</div>
-						</td>
-						<td class="clicks">{url.visitsSummary.total}</td>
-						<td class="date">{new Date(url.dateCreated).toLocaleDateString()}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</Table>
+		{@const table = createSvelteTable(() => ({
+			data: data.shortUrls,
+			columns,
+			state: { sorting },
+			onSortingChange,
+			getCoreRowModel: getCoreRowModel(),
+			manualSorting: true,
+			manualPagination: true,
+			enableSortingRemoval: false,
+		}))}
+		<DataTable {table} />
 
 		{#if data.pagination.pagesCount > 1}
 			<PaginationNav
@@ -123,7 +199,7 @@
 			/>
 		{/if}
 	{/if}
-{/await}
+{/if}
 
 {#if role === 'admin' || role === 'owner'}
 <!-- Create Shortlink Dialog -->
@@ -233,6 +309,7 @@
 	}
 
 	.long-url {
+		display: block;
 		max-width: 300px;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -246,7 +323,7 @@
 		gap: 0.25rem;
 	}
 
-	:global(td).clicks {
+	.clicks {
 		font-weight: 600;
 		color: var(--brand-amber-dark);
 	}
@@ -333,12 +410,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-	}
-
-	.error {
-		color: var(--color-destructive);
-		margin: 0;
-		font-size: 0.9rem;
 	}
 
 	.actions {

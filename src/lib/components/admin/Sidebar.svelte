@@ -2,12 +2,13 @@
   import { page } from "$app/stores";
   import { Dialog, Tooltip } from "bits-ui";
   import { Logo } from "$lib/components/admin";
-  import { BarChart3, LayoutDashboard, Link, LogOut, Menu, Users, X } from "lucide-svelte";
+  import { BarChart3, LayoutDashboard, Link, LogOut, Mail, Menu, Users, X } from "lucide-svelte";
 
   const icons: Record<string, any> = {
     dashboard: LayoutDashboard,
     link: Link,
     chart: BarChart3,
+    mail: Mail,
     users: Users,
   };
 

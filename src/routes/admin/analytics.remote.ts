@@ -5,13 +5,9 @@ import {
 	getPageviews,
 	getMetrics,
 	getActiveVisitors,
-	isUmamiConfigured,
-	type MetricType,
 } from '$lib/server/umami';
 
 export const getSiteStats = query(async () => {
-	if (!isUmamiConfigured()) return null;
-
 	const now = Date.now();
 	const oneDayAgo = now - 24 * 60 * 60 * 1000;
 	const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
@@ -44,8 +40,6 @@ export const getAnalytics = query(
 		period: v.optional(v.picklist(['24h', '7d', '30d']), '7d'),
 	}),
 	async ({ period }) => {
-		if (!isUmamiConfigured()) return null;
-
 		const now = Date.now();
 		const ranges: Record<string, { startAt: number; unit: 'hour' | 'day' }> = {
 			'24h': { startAt: now - 24 * 60 * 60 * 1000, unit: 'hour' },

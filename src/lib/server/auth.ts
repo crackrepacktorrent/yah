@@ -4,6 +4,7 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { getRequestEvent } from '$app/server';
 import { Pool } from 'pg';
 import { env } from '$env/dynamic/private';
+import { getListmonk } from '$lib/server/listmonk';
 
 export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET!,
@@ -18,8 +19,15 @@ export const auth = betterAuth({
 		organization({
 			async sendInvitationEmail(data) {
 				const inviteLink = `${env.BETTER_AUTH_URL}/admin/members/accept/${data.id}`;
-				console.log(`Invite ${data.email} to ${data.organization.name}: ${inviteLink}`);
-				// TODO: integrate with Listmonk or Resend for actual email delivery
+				await getListmonk().sendTransactionalEmail({
+					subscriberEmail: data.email,
+					templateId: Number(env.LISTMONK_INVITATION_TEMPLATE_ID),
+					data: {
+						invite_link: inviteLink,
+						org_name: data.organization.name,
+						role: data.role,
+					},
+				});
 			},
 		}),
 		sveltekitCookies(getRequestEvent),

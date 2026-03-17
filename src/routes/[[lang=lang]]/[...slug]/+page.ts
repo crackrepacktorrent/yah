@@ -6,6 +6,11 @@ export const load: PageLoad = async ({ parent, params, fetch }) => {
   const { storyblokApi, lang } = await parent();
   const slug = params.slug && params.slug !== "" ? params.slug : "home";
 
+  // Admin routes are handled by their own layouts, not Storyblok
+  if (slug.startsWith('admin')) {
+    throw error(404, { message: 'Not a Storyblok page' });
+  }
+
   try {
     // Use SvelteKit's fetch directly for better SSR support
     const token = import.meta.env.VITE_STORYBLOK_TOKEN;

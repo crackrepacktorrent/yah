@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { StatCard, Table, EmptyState, Spinner, Section } from '$lib/components/admin';
+	import { StatCard, EmptyState, Spinner, DataTable } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { getDashboard } from './shortlinks.remote';
 	import { getSiteStats } from './analytics.remote';
 
@@ -9,7 +11,54 @@
 		const s = seconds % 60;
 		return `${m}m ${s}s`;
 	}
+
+	type RecentShortUrl = {
+		shortCode: string;
+		longUrl: string;
+		title?: string | null;
+		visitsSummary: { total: number };
+		dateCreated: string;
+	};
+
+	const columnHelper = createColumnHelper<RecentShortUrl>();
+
+	const columns = [
+		columnHelper.accessor('shortCode', {
+			header: 'Short URL',
+			cell: (info) => renderSnippet(shortCodeCell, info.row.original),
+		}),
+		columnHelper.accessor('longUrl', {
+			header: 'Destination',
+			cell: (info) => renderSnippet(longUrlCell, info.getValue()),
+		}),
+		columnHelper.accessor((row) => row.visitsSummary.total, {
+			id: 'clicks',
+			header: 'Clicks',
+			cell: (info) => renderSnippet(clicksCell, info.getValue()),
+		}),
+		columnHelper.accessor('dateCreated', {
+			header: 'Created',
+			cell: (info) => renderSnippet(dateCell, info.getValue()),
+		}),
+	];
 </script>
+
+{#snippet shortCodeCell(url: RecentShortUrl)}
+	<a href="/admin/shortlinks/{url.shortCode}" class="code">{url.shortCode}</a>
+	{#if url.title}<br /><span class="title">{url.title}</span>{/if}
+{/snippet}
+
+{#snippet longUrlCell(longUrl: string)}
+	<span class="long-url" title={longUrl}>{longUrl}</span>
+{/snippet}
+
+{#snippet clicksCell(total: number)}
+	<span class="clicks">{total}</span>
+{/snippet}
+
+{#snippet dateCell(date: string)}
+	<span class="date">{new Date(date).toLocaleDateString()}</span>
+{/snippet}
 
 <h1>Dashboard</h1>
 
@@ -34,63 +83,44 @@
 				<a href="/admin/shortlinks/new">Create one</a>
 			</EmptyState>
 		{:else}
-			<Table>
-				<thead>
-					<tr>
-						<th>Short URL</th>
-						<th>Destination</th>
-						<th>Clicks</th>
-						<th>Created</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.recentShortUrls as url}
-						<tr>
-							<td>
-								<a href="/admin/shortlinks/{url.shortCode}" class="code">{url.shortCode}</a>
-								{#if url.title}<br /><span class="title">{url.title}</span>{/if}
-							</td>
-							<td class="long-url" title={url.longUrl}>{url.longUrl}</td>
-							<td class="clicks">{url.visitsSummary.total}</td>
-							<td class="date">{new Date(url.dateCreated).toLocaleDateString()}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</Table>
+			{@const table = createSvelteTable(() => ({
+				data: data.recentShortUrls,
+				columns,
+				getCoreRowModel: getCoreRowModel(),
+			}))}
+			<DataTable {table} />
 		{/if}
 	</section>
 {/await}
 
 {#await getSiteStats() then stats}
-	{#if stats}
-		<section class="site-analytics">
-			<div class="section-header">
-				<h2>Site Analytics</h2>
-			</div>
+	<section class="site-analytics">
+		<div class="section-header">
+			<h2>Site Analytics</h2>
+		</div>
 
-			<div class="analytics-periods">
-				<div class="period">
-					<h3>Last 24 Hours</h3>
-					<div class="stats-grid">
-						<StatCard value={stats.today.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
-						<StatCard value={stats.today.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
-						<StatCard value="{stats.today.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
-						<StatCard value={formatDuration(stats.today.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
-					</div>
-				</div>
-
-				<div class="period">
-					<h3>Last 30 Days</h3>
-					<div class="stats-grid">
-						<StatCard value={stats.month.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
-						<StatCard value={stats.month.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
-						<StatCard value="{stats.month.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
-						<StatCard value={formatDuration(stats.month.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
-					</div>
+		<div class="analytics-periods">
+			<div class="period">
+				<h3>Last 24 Hours</h3>
+				<div class="stats-grid">
+					<StatCard value={stats.today.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
+					<StatCard value={stats.today.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
+					<StatCard value="{stats.today.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
+					<StatCard value={formatDuration(stats.today.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
 				</div>
 			</div>
-		</section>
-	{/if}
+
+			<div class="period">
+				<h3>Last 30 Days</h3>
+				<div class="stats-grid">
+					<StatCard value={stats.month.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
+					<StatCard value={stats.month.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
+					<StatCard value="{stats.month.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
+					<StatCard value={formatDuration(stats.month.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
+				</div>
+			</div>
+		</div>
+	</section>
 {/await}
 
 <style>
@@ -147,6 +177,7 @@
 	}
 
 	.long-url {
+		display: block;
 		max-width: 300px;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -154,7 +185,7 @@
 		color: var(--color-muted);
 	}
 
-	:global(td).clicks {
+	.clicks {
 		font-weight: 600;
 		color: var(--brand-amber-dark);
 	}
