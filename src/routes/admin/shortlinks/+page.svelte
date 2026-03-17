@@ -181,7 +181,7 @@
 	{#if data.shortUrls.length === 0}
 		<EmptyState message="No shortlinks found." />
 	{:else}
-		{@const table = createSvelteTable(() => ({
+		{@const table = createSvelteTable({
 			data: data.shortUrls,
 			columns,
 			state: { sorting },
@@ -190,7 +190,7 @@
 			manualSorting: true,
 			manualPagination: true,
 			enableSortingRemoval: false,
-		}))}
+})}
 		<DataTable {table} />
 
 		{#if data.pagination.pagesCount > 1}

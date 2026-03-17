@@ -65,11 +65,11 @@
   {#if visits.length === 0}
     <EmptyState message="No visits yet." />
   {:else}
-    {@const table = createSvelteTable(() => ({
+    {@const table = createSvelteTable({
       data: visits,
       columns,
       getCoreRowModel: getCoreRowModel(),
-    }))}
+})}
     <DataTable {table} />
     {#if pagination.totalItems > 20}
       <p class="more">Showing 20 of {pagination.totalItems} visits</p>

@@ -50,11 +50,11 @@
 	}
 
 	function createMetricTable(items: MetricRow[], label: string, mono: boolean, emptyLabel?: string) {
-		return createSvelteTable(() => ({
+		return createSvelteTable({
 			data: items,
 			columns: metricColumns(label, mono, emptyLabel),
 			getCoreRowModel: getCoreRowModel(),
-		}));
+		});
 	}
 
 	const sections = [
@@ -144,7 +144,7 @@
 					<EmptyState message="No {section.title.toLowerCase()} data yet." />
 				{:else}
 					{@const table = createMetricTable(items, section.label, section.mono, 'emptyLabel' in section ? section.emptyLabel : undefined)}
-					<DataTable {table} />
+					<DataTable {table} pageSize={5} />
 				{/if}
 			</div>
 		{/each}

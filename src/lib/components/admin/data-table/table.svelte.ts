@@ -3,49 +3,99 @@ import {
 	type RowData,
 	type TableOptions,
 	type TableOptionsResolved,
-	type Table
+	type TableState,
+	type Updater
 } from '@tanstack/table-core';
 
 /**
  * Creates a reactive TanStack table for Svelte 5.
- * Accepts a function that returns options so the $derived inside
- * can track reactive state (e.g. changing data, sorting).
+ *
+ * The table is wrapped in $state so Svelte can track mutations from
+ * setOptions() and re-render components that read from it.
  */
 export function createSvelteTable<TData extends RowData>(
-	options: () => TableOptions<TData>
-): Table<TData> {
-	const initial = options();
-	const table = createTable({
-		state: {},
-		onStateChange() {},
-		renderFallbackValue: null,
-		...initial
-	} as TableOptionsResolved<TData>);
+	options: TableOptions<TData>
+) {
+	const resolvedOptions = mergeObjects(
+		{
+			state: {},
+			onStateChange() {},
+			renderFallbackValue: null,
+		},
+		options
+	) as TableOptionsResolved<TData>;
 
-	let tableState = $state(table.initialState);
+	const table = createTable(resolvedOptions);
+	let state = $state<TableState>(table.initialState);
 
-	const resolvedOptions = $derived.by<TableOptionsResolved<TData>>(() => {
-		const opts = options();
-		return Object.assign(
-			{ state: {}, onStateChange() {}, renderFallbackValue: null },
-			opts,
-			{
-				state: { ...tableState, ...opts.state },
-				onStateChange(updater: any) {
-					if (typeof updater === 'function') {
-						tableState = updater(tableState);
-					} else {
-						tableState = updater;
-					}
-					opts.onStateChange?.(updater);
-				}
-			}
-		) as TableOptionsResolved<TData>;
-	});
+	function updateOptions() {
+		table.setOptions(() => {
+			return mergeObjects(resolvedOptions, options, {
+				state: mergeObjects(state, options.state || {}),
+				onStateChange: (updater: Updater<TableState>) => {
+					if (updater instanceof Function) state = updater(state);
+					else state = mergeObjects(state, updater);
+					options.onStateChange?.(updater);
+				},
+			}) as TableOptionsResolved<TData>;
+		});
+	}
+
+	updateOptions();
 
 	$effect.pre(() => {
-		table.setOptions(resolvedOptions);
+		state;
+		updateOptions();
 	});
 
 	return table;
+}
+
+/**
+ * Lazily merges objects via Proxy, preserving getter semantics.
+ * Last source wins for key conflicts.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mergeObjects(...sources: any[]): any {
+	const resolve = (src: any) =>
+		typeof src === 'function' ? (src() ?? undefined) : src;
+
+	const findSourceWithKey = (key: PropertyKey) => {
+		for (let i = sources.length - 1; i >= 0; i--) {
+			const obj = resolve(sources[i]);
+			if (obj && key in obj) return obj;
+		}
+		return undefined;
+	};
+
+	return new Proxy(Object.create(null), {
+		get(_, key) {
+			return findSourceWithKey(key)?.[key as never];
+		},
+		has(_, key) {
+			return !!findSourceWithKey(key);
+		},
+		ownKeys() {
+			const all = new Set<string | symbol>();
+			for (const s of sources) {
+				const obj = resolve(s);
+				if (obj) {
+					for (const k of Reflect.ownKeys(obj)) {
+						all.add(k);
+					}
+				}
+			}
+			return [...all];
+		},
+		getOwnPropertyDescriptor(_, key) {
+			const src = findSourceWithKey(key);
+			if (!src) return undefined;
+			return {
+				configurable: true,
+				enumerable: true,
+				value: (src as any)[key],
+				writable: true,
+			};
+		},
+	}) as any;
 }

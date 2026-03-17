@@ -163,7 +163,7 @@
 	{#if data.templates.length === 0}
 		<EmptyState message="No email templates found." />
 	{:else}
-		{@const table = createSvelteTable(() => ({
+		{@const table = createSvelteTable({
 			data: data.templates,
 			columns,
 			state: { sorting },
@@ -172,7 +172,7 @@
 			},
 			getCoreRowModel: getCoreRowModel(),
 			getSortedRowModel: getSortedRowModel(),
-		}))}
+})}
 		<DataTable {table} />
 	{/if}
 {/await}

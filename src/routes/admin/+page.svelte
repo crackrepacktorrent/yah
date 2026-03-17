@@ -83,11 +83,11 @@
 				<a href="/admin/shortlinks/new">Create one</a>
 			</EmptyState>
 		{:else}
-			{@const table = createSvelteTable(() => ({
+			{@const table = createSvelteTable({
 				data: data.recentShortUrls,
 				columns,
 				getCoreRowModel: getCoreRowModel(),
-			}))}
+})}
 			<DataTable {table} />
 		{/if}
 	</section>

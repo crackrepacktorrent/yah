@@ -201,11 +201,11 @@
 		{#if members.length === 0}
 			<EmptyState message="No members yet." />
 		{:else}
-			{@const table = createSvelteTable(() => ({
+			{@const table = createSvelteTable({
 				data: members,
 				columns: memberColumns,
 				getCoreRowModel: getCoreRowModel(),
-			}))}
+})}
 			<DataTable {table} />
 		{/if}
 	{/await}
@@ -220,11 +220,11 @@
 		{#if data.invitations.length === 0}
 			<EmptyState message="No pending invitations." />
 		{:else}
-			{@const table = createSvelteTable(() => ({
+			{@const table = createSvelteTable({
 				data: data.invitations,
 				columns: inviteColumns,
 				getCoreRowModel: getCoreRowModel(),
-			}))}
+})}
 			<DataTable {table} />
 		{/if}
 	{/await}
