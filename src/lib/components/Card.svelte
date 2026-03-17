@@ -5,10 +5,6 @@
 
   let { blok }: { blok: CardBlok } = $props();
 
-  const linkUrl = getLinkUrl(blok.link);
-  const openInNewTab = blok.link?.target === '_blank';
-  const linkText = blok.link_text ?? 'Learn More';
-
   function formatDate(dateString: string): string {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -19,7 +15,10 @@
     });
   }
 
-  const formattedDate = blok.date ? formatDate(blok.date) : '';
+  let linkUrl = $derived(getLinkUrl(blok.link));
+  let openInNewTab = $derived(blok.link?.target === '_blank');
+  let linkText = $derived(blok.link_text ?? 'Learn More');
+  let formattedDate = $derived(blok.date ? formatDate(blok.date) : '');
 </script>
 
 <div
@@ -72,7 +71,7 @@
 
 <style>
   .card {
-    background-color: white;
+    background-color: var(--card);
     border-radius: var(--radius-md);
     overflow: hidden;
     display: flex;
@@ -96,7 +95,7 @@
   .card-title-link {
     text-decoration: none;
     color: inherit;
-    transition: color 0.2s;
+    transition: color 150ms ease-in-out;
   }
 
   .card-title-link:hover {
@@ -106,7 +105,7 @@
   .card-title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--color-foreground);
+    color: var(--foreground);
     margin: 0;
     line-height: 1.3;
   }
@@ -117,13 +116,13 @@
 
   .card-date {
     font-size: 0.75rem;
-    color: var(--color-muted-foreground);
+    color: var(--muted-foreground);
     margin: 0;
   }
 
   .card-description {
     font-size: 0.875rem;
-    color: var(--color-muted-foreground);
+    color: var(--muted-foreground);
     line-height: 1.5;
     margin: 0;
   }
@@ -137,8 +136,8 @@
   .tag {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
-    background-color: var(--color-muted);
-    color: var(--color-muted-foreground);
+    background-color: var(--muted);
+    color: var(--muted-foreground);
     border-radius: var(--radius-xs);
   }
 
@@ -149,7 +148,7 @@
     margin-top: auto;
     display: inline-block;
     text-decoration: none;
-    transition: transform 0.2s;
+    transition: transform 150ms ease-in-out;
   }
 
   .card-link-text:hover {

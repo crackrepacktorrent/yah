@@ -4,19 +4,13 @@
 
   let { blok }: { blok: VideoBlok } = $props();
 
-  const videoUrl = blok.video_url ?? blok.video_file?.filename ?? "";
-  const isEmbedded = videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") || videoUrl.includes("vimeo.com");
-  const posterUrl = blok.poster_image?.filename ?? "";
-  const showControls = blok.controls ?? true;
-
-  const aspectRatioMap = {
+  const aspectRatioMap: Record<string, string | undefined> = {
     '16:9': '56.25%',
     '4:3': '75%',
     '21:9': '42.857%',
     '1:1': '100%',
     'none': undefined
   };
-  const paddingBottom = aspectRatioMap[blok.aspect_ratio ?? '16:9'];
 
   function getEmbedUrl(url: string): string {
     if (url.includes("youtube.com/watch")) {
@@ -32,7 +26,12 @@
     return url;
   }
 
-  const embedUrl = isEmbedded ? getEmbedUrl(videoUrl) : "";
+  let videoUrl = $derived(blok.video_url ?? blok.video_file?.filename ?? "");
+  let isEmbedded = $derived(videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") || videoUrl.includes("vimeo.com"));
+  let posterUrl = $derived(blok.poster_image?.filename ?? "");
+  let showControls = $derived(blok.controls ?? true);
+  let paddingBottom = $derived(aspectRatioMap[blok.aspect_ratio ?? '16:9']);
+  let embedUrl = $derived(isEmbedded ? getEmbedUrl(videoUrl) : "");
 </script>
 
 <div use:storyblokEditable={blok} class="video-container" style={blok.custom_styles ?? ""}>

@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: yah
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: yah
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yah"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  shlink:
+    image: shlinkio/shlink:4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DEFAULT_DOMAIN: localhost:8080
+      IS_HTTPS_ENABLED: "false"
+      DB_DRIVER: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: yah
+      DB_PASSWORD: password
+      DB_NAME: yah
+      INITIAL_API_KEY: dev-api-key-12345
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

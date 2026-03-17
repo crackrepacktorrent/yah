@@ -1,38 +1,72 @@
 <script lang="ts">
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
-	import type { WithoutChildren } from "bits-ui";
 	import { getEmblaContext } from "./context.js";
-	import { cn } from "$lib/utils.js";
-	import { Button, type Props } from "$lib/components/ui/button/index.js";
 
 	let {
 		ref = $bindable(null),
 		class: className,
-		variant = "outline",
-		size = "icon",
 		...restProps
-	}: WithoutChildren<Props> = $props();
+	}: { ref?: HTMLButtonElement | null; class?: string; [key: string]: unknown } = $props();
 
 	const emblaCtx = getEmblaContext("<Carousel.Previous/>");
 </script>
 
-<Button
+<button
+	bind:this={ref}
 	data-slot="carousel-previous"
-	{variant}
-	{size}
+	type="button"
 	aria-disabled={!emblaCtx.canScrollPrev}
-	class={cn(
-		"absolute h-8 w-8 touch-manipulation rounded-full bg-white shadow-lg transition-colors duration-150 ease-in-out hover:bg-slate-100 cursor-pointer border-0",
-		emblaCtx.orientation === "horizontal"
-			? "-left-4 top-1/2 -translate-y-1/2"
-			: "-top-12 left-1/2 -translate-x-1/2 rotate-90",
-		className
-	)}
+	class="carousel-nav-btn {emblaCtx.orientation === 'vertical' ? 'vertical' : 'horizontal'} prev {className ?? ''}"
 	onclick={emblaCtx.scrollPrev}
 	onkeydown={emblaCtx.handleKeyDown}
 	{...restProps}
-	bind:ref
 >
-	<ArrowLeftIcon class="h-6 w-6" style="color: var(--color-yahrange)" />
+	<ArrowLeftIcon class="carousel-nav-icon" />
 	<span class="sr-only">Previous slide</span>
-</Button>
+</button>
+
+<style>
+	.carousel-nav-btn {
+		position: absolute;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		touch-action: manipulation;
+		border-radius: 9999px;
+		background-color: var(--background);
+		box-shadow: var(--shadow-sm);
+		transition: background-color 150ms ease-in-out;
+		cursor: pointer;
+		border: 0;
+		padding: 0;
+	}
+
+	.carousel-nav-btn:hover {
+		background-color: var(--hover-bg);
+	}
+
+	.carousel-nav-btn[aria-disabled="true"] {
+		pointer-events: none;
+		opacity: 0.5;
+	}
+
+	.carousel-nav-btn.horizontal.prev {
+		left: -1rem;
+		top: 50%;
+		transform: translateY(-50%);
+	}
+
+	.carousel-nav-btn.vertical.prev {
+		top: -3rem;
+		left: 50%;
+		transform: translateX(-50%) rotate(90deg);
+	}
+
+	:global(.carousel-nav-icon) {
+		width: 1.5rem;
+		height: 1.5rem;
+		color: var(--color-yahrange);
+	}
+</style>

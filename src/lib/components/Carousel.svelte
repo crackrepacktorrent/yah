@@ -6,16 +6,12 @@
 
   let { blok }: { blok: CarouselBlok } = $props();
 
-  const showArrows = blok.show_arrows ?? true;
-  const autoplayDelay = Number(blok.autoplay_delay) || 3000; // Convert to number
-  const loop = blok.loop ?? true;
-  const align = blok.align ?? 'center'; // Default to center (peek effect)
-
-  // stopOnInteraction defaults to true - autoplay stops when user clicks arrows
-  const plugins = blok.autoplay ? [Autoplay({ delay: autoplayDelay })] : [];
-
-  // Enable peek effect when align is center (for Embla flex-basis override)
-  const isPeekEffect = align === 'center';
+  let showArrows = $derived(blok.show_arrows ?? true);
+  let autoplayDelay = $derived(Number(blok.autoplay_delay) || 3000);
+  let loop = $derived(blok.loop ?? true);
+  let align = $derived(blok.align ?? 'center');
+  let plugins = $derived(blok.autoplay ? [Autoplay({ delay: autoplayDelay })] : []);
+  let isPeekEffect = $derived(align === 'center');
 </script>
 
 <div

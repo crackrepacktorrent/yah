@@ -11,7 +11,7 @@
 
 <footer use:storyblokEditable={blok} class="footer" style={blok.custom_styles ?? ""}>
   {#if blok.social_links && blok.social_links.length > 0}
-    <nav class="flex flex-row justify-center mt-4 gap-2">
+    <nav class="social-links">
       {#each blok.social_links as link}
         {@const Icon = link.icon === 'twitter' ? Twitter :
                       link.icon === 'facebook' ? Facebook :
@@ -24,7 +24,7 @@
                        'YouTube'}
         <a
           href={link.url}
-          class="flex text-white hover:opacity-90 transition-opacity"
+          class="social-link"
           aria-label={label}
           target="_blank"
           rel="noopener noreferrer"
@@ -34,7 +34,7 @@
       {/each}
     </nav>
   {/if}
-  <div class="text-white text-xs text-center mt-2">
+  <div class="copyright">
     {copyrightText}
   </div>
 </footer>
@@ -42,5 +42,30 @@
 <style>
   .footer {
     margin-top: 2rem;
+  }
+
+  .social-links {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    gap: 0.5rem;
+  }
+
+  .social-link {
+    display: flex;
+    color: var(--primary-foreground);
+    text-decoration: none;
+    transition: opacity 150ms ease-in-out;
+  }
+
+  .social-link:hover {
+    opacity: 0.9;
+  }
+
+  .copyright {
+    color: var(--primary-foreground);
+    font-size: 0.75rem;
+    text-align: center;
+    margin-top: 0.5rem;
   }
 </style>

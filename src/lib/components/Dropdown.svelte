@@ -94,7 +94,7 @@
     padding-top: 0.5rem;
     background-color: transparent;
     border-radius: var(--radius-md);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     min-width: anchor-size(inline);
     width: max-content;
     z-index: 50;
@@ -127,7 +127,7 @@
     font-weight: 500;
     text-decoration: none;
     border: none;
-    background-color: white;
+    background-color: var(--background);
     transition: background-color 150ms ease-in-out;
     cursor: pointer;
   }
@@ -137,6 +137,6 @@
   }
 
   .dropdown-item:hover {
-    background-color: var(--color-accent);
+    background-color: var(--hover-bg);
   }
 </style>

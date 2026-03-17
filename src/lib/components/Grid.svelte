@@ -4,13 +4,12 @@
 
   let { blok }: { blok: GridBlok } = $props();
 
-  const columnCount = blok.column_count ?? 2;
-  const customTemplate = blok.custom_template?.trim();
-  const template = customTemplate || `repeat(${columnCount}, 1fr)`;
-  const gap = blok.gap || '2rem';
-  const equalHeightRows = blok.equal_height_rows ?? false;
-
-  const gridStyles = `grid-template-columns: ${template}; gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''} ${blok.custom_styles ?? ''}`;
+  let columnCount = $derived(blok.column_count ?? 2);
+  let customTemplate = $derived(blok.custom_template?.trim());
+  let template = $derived(customTemplate || `repeat(${columnCount}, 1fr)`);
+  let gap = $derived(blok.gap || '2rem');
+  let equalHeightRows = $derived(blok.equal_height_rows ?? false);
+  let gridStyles = $derived(`grid-template-columns: ${template}; gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''} ${blok.custom_styles ?? ''}`);
 </script>
 
 <div

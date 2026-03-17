@@ -5,7 +5,7 @@
 		type EmblaContext,
 		setEmblaContext,
 	} from "./context.js";
-	import { cn, type WithElementRef } from "$lib/utils.js";
+	import type { WithElementRef } from "$lib/utils.js";
 
 	let {
 		ref = $bindable(null),
@@ -22,12 +22,12 @@
 		api: undefined,
 		scrollPrev,
 		scrollNext,
-		orientation,
+		get orientation() { return orientation; },
 		canScrollNext: false,
 		canScrollPrev: false,
 		handleKeyDown,
-		options: opts,
-		plugins,
+		get options() { return opts; },
+		get plugins() { return plugins; },
 		onInit,
 		scrollSnaps: [],
 		selectedIndex: 0,
@@ -84,10 +84,16 @@
 <div
 	bind:this={ref}
 	data-slot="carousel"
-	class={cn("relative", className)}
+	class="carousel-root {className ?? ''}"
 	role="region"
 	aria-roledescription="carousel"
 	{...restProps}
 >
 	{@render children?.()}
 </div>
+
+<style>
+	.carousel-root {
+		position: relative;
+	}
+</style>

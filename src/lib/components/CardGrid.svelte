@@ -6,19 +6,19 @@
 
   let { blok }: { blok: CardGridBlok } = $props();
 
-  const columns = blok.columns ?? 3;
-  const gap = blok.gap ?? "24px";
-  const equalHeightRows = blok.equal_height_rows ?? false;
-  const fullWidthCards = blok.full_width_cards ?? false;
-
-  const gridStyles = `grid-template-columns: repeat(${columns}, 1fr); gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''} ${blok.custom_styles ?? ''}`;
-  const searchPlaceholder = blok.search_placeholder ?? "Search...";
-  const sortOptions = blok.sort_options ?? [];
-  const enableSearch = blok.enable_search ?? false;
-  const enableSort = blok.enable_sort ?? false;
+  let columns = $derived(blok.columns ?? 3);
+  let gap = $derived(blok.gap ?? "24px");
+  let equalHeightRows = $derived(blok.equal_height_rows ?? false);
+  let fullWidthCards = $derived(blok.full_width_cards ?? false);
+  let gridStyles = $derived(`grid-template-columns: repeat(${columns}, 1fr); gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''} ${blok.custom_styles ?? ''}`);
+  let searchPlaceholder = $derived(blok.search_placeholder ?? "Search...");
+  let sortOptions = $derived(blok.sort_options ?? []);
+  let enableSearch = $derived(blok.enable_search ?? false);
+  let enableSort = $derived(blok.enable_sort ?? false);
 
   let searchQuery = $state("");
-  let sortBy = $state(blok.default_sort ?? (sortOptions.length > 0 ? sortOptions[0] : ""));
+  // svelte-ignore state_referenced_locally
+  let sortBy = $state(blok.default_sort ?? "");
 
   const filteredAndSortedItems = $derived.by(() => {
     let items = blok.cards ?? [];
@@ -78,7 +78,7 @@
           {#snippet trigger()}
             <button type="button" class="sort-button">
               {sortBy ? sortBy.charAt(0).toUpperCase() + sortBy.slice(1) : 'Sort by...'}
-              <ChevronDown class="inline-block w-4 h-4 ml-1" />
+              <ChevronDown class="chevron-icon" />
             </button>
           {/snippet}
         </Dropdown>
@@ -121,9 +121,9 @@
     border: 2px solid var(--grid-input-border, rgba(255, 255, 255, 0.3));
     border-radius: var(--radius-sm);
     background-color: var(--grid-input-bg, rgba(255, 255, 255, 0.1));
-    color: var(--grid-input-color, white);
+    color: var(--grid-input-color, var(--primary-foreground));
     outline: none;
-    transition: border-color 0.2s, background-color 0.2s;
+    transition: border-color 150ms ease-in-out, background-color 150ms ease-in-out;
   }
 
   .search-input::placeholder {
@@ -131,24 +131,25 @@
   }
 
   .search-input:focus {
-    border-color: var(--grid-input-border-focus, white);
+    border-color: var(--grid-input-border-focus, var(--primary-foreground));
     background-color: var(--grid-input-bg-focus, rgba(255, 255, 255, 0.15));
   }
 
   .sort-button {
     padding: 0.75rem 1rem;
     font-size: 1rem;
+    font-weight: 400;
     border: 2px solid var(--grid-input-border, rgba(255, 255, 255, 0.3));
     border-radius: var(--radius-sm);
     background-color: var(--grid-input-bg, rgba(255, 255, 255, 0.1));
-    color: var(--grid-input-color, white);
+    color: var(--grid-input-color, var(--primary-foreground));
     outline: none;
     cursor: pointer;
-    transition: border-color 0.2s, background-color 0.2s;
+    transition: border-color 150ms ease-in-out, background-color 150ms ease-in-out;
   }
 
   .sort-button:focus {
-    border-color: var(--grid-input-border-focus, white);
+    border-color: var(--grid-input-border-focus, var(--primary-foreground));
     background-color: var(--grid-input-bg-focus, rgba(255, 255, 255, 0.15));
   }
 
@@ -179,11 +180,18 @@
   .empty-state {
     text-align: center;
     padding: 3rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--primary-foreground);
   }
 
   .empty-state p {
     font-size: 1.125rem;
     margin: 0;
+  }
+
+  :global(.chevron-icon) {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.25rem;
   }
 </style>

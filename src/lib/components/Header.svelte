@@ -3,13 +3,15 @@
   import { storyblokEditable } from "@storyblok/svelte";
   import { languages, type Language } from "$lib/lang";
   import type { HeaderBlok, HeaderButtonBlok, CardBlok } from "$lib/types/storyblok";
-  import * as Sheet from "$lib/components/ui/sheet";
+  import { Dialog } from "bits-ui";
   import Dropdown from "$lib/components/Dropdown.svelte";
   import logo from "$lib/assets/logo.png";
   import Menu from "lucide-svelte/icons/menu";
   import ChevronDown from "lucide-svelte/icons/chevron-down";
 
+
   let expandedMobileItem = $state<string | null>(null);
+  let mobileMenuOpen = $state(false);
 
   let {
     blok,
@@ -79,13 +81,13 @@
   }
 </script>
 
-<nav class="header flex items-center" style={blok.custom_styles ?? ""}>
-  <a href={lang === "en" ? "/" : `/${lang}`} class="logo mr-auto w-[12rem] transition-transform duration-300">
+<nav class="header" style={blok.custom_styles ?? ""}>
+  <a href={lang === "en" ? "/" : `/${lang}`} class="logo">
     <img src={logo} alt="Youth Alliance for Housing logo" />
   </a>
 
   <!-- Desktop menu -->
-  <div class="horizontal-menu-wrapper relative hidden lg:block">
+  <div class="desktop-menu">
     <div class="horizontal-menu">
       {#if buttons.length > 0}
         {#each buttons as button}
@@ -128,7 +130,7 @@
                   rel={openInNewTab ? "noopener noreferrer" : undefined}
                 >
                   {button.text}
-                  <ChevronDown class="inline-block w-4 h-4 ml-1" />
+                  <ChevronDown class="nav-chevron" />
                 </a>
               {/snippet}
             </Dropdown>
@@ -147,11 +149,11 @@
         {/each}
       {/if}
     </div>
-    <div class="absolute right-0 mt-4 flex items-center space-x-2">
+    <div class="lang-switcher">
       {#each Object.entries(languages) as [code, name], i}
         {#if code === lang}
           <a
-            class="mb-0 rounded-sm bg-white px-1 text-sm text-yahrange no-underline"
+            class="lang-link active"
             href={getLanguageLink(code as Language)}
             hreflang={code}
             aria-current="true"
@@ -161,7 +163,7 @@
           </a>
         {:else}
           <a
-            class="mb-0 px-1 text-sm text-white no-underline"
+            class="lang-link"
             href={getLanguageLink(code as Language)}
             hreflang={code}
             aria-label="Switch to {name}"
@@ -170,133 +172,158 @@
           </a>
         {/if}
         {#if i !== Object.keys(languages).length - 1}
-          <div class="h-3 w-[1px] bg-white"></div>
+          <div class="lang-divider"></div>
         {/if}
       {/each}
     </div>
   </div>
 
   <!-- Mobile Sheet menu -->
-  <Sheet.Root>
-    <Sheet.Trigger class="lg:hidden rounded-lg bg-white p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-yahrange/50" aria-label="Open navigation menu">
-      <Menu class="h-9 w-9 text-yahrange" />
-    </Sheet.Trigger>
+  <Dialog.Root bind:open={mobileMenuOpen}>
+    <Dialog.Trigger class="mobile-menu-trigger" aria-label="Open navigation menu">
+      <Menu class="mobile-menu-icon" />
+    </Dialog.Trigger>
 
-    <Sheet.Content side="right" class="overflow-y-auto">
-      <Sheet.Header class="sr-only">
-        <Sheet.Title>Menu</Sheet.Title>
-      </Sheet.Header>
+    <Dialog.Portal>
+      <Dialog.Overlay class="sheet-overlay" />
 
-      <nav class="flex flex-col gap-1 py-4 pt-6">
-        <!-- Language switcher -->
-        <div class="flex gap-2 justify-center pb-3 mb-3 border-b border-slate-200">
-          {#each Object.entries(languages) as [code, name]}
-            {#if code === lang}
-              <a
-                class="px-3 py-1 rounded-sm text-sm font-medium bg-yahrange text-white no-underline"
-                href={getLanguageLink(code as Language)}
-                hreflang={code}
-                aria-current="true"
-                aria-label="Current language: {name}"
-              >
-                {code.toUpperCase()}
-              </a>
-            {:else}
-              <a
-                class="px-3 py-1 text-sm font-medium text-yahrange no-underline"
-                href={getLanguageLink(code as Language)}
-                hreflang={code}
-                aria-label="Switch to {name}"
-              >
-                {code.toUpperCase()}
-              </a>
-            {/if}
-          {/each}
-        </div>
+      <Dialog.Content class="sheet-panel">
+          <Dialog.Title class="sr-only">Menu</Dialog.Title>
 
-        <!-- Nav links from Storyblok -->
-        {#if buttons.length > 0}
-          <div class="flex flex-col gap-1">
-            {#each buttons as button}
-              {@const cards = getCards(button)}
-              {@const hasDropdown = cards.length > 0}
-              {@const isExpanded = expandedMobileItem === button._uid}
-              {@const openInNewTab = shouldOpenInNewTab(button)}
+          <nav class="mobile-nav">
+            <!-- Language switcher -->
+            <div class="mobile-lang-switcher">
+              {#each Object.entries(languages) as [code, name]}
+                {#if code === lang}
+                  <a
+                    class="mobile-lang-link active"
+                    href={getLanguageLink(code as Language)}
+                    hreflang={code}
+                    aria-current="true"
+                    aria-label="Current language: {name}"
+                  >
+                    {code.toUpperCase()}
+                  </a>
+                {:else}
+                  <a
+                    class="mobile-lang-link"
+                    href={getLanguageLink(code as Language)}
+                    hreflang={code}
+                    aria-label="Switch to {name}"
+                  >
+                    {code.toUpperCase()}
+                  </a>
+                {/if}
+              {/each}
+            </div>
 
-              {#if hasDropdown}
-                <!-- Expandable item with link + chevron -->
-                <div class="mobile-expandable-item">
-                  <div class="mobile-expandable-header">
+            <!-- Nav links from Storyblok -->
+            {#if buttons.length > 0}
+              <div class="mobile-nav-links">
+                {#each buttons as button}
+                  {@const cards = getCards(button)}
+                  {@const hasDropdown = cards.length > 0}
+                  {@const isExpanded = expandedMobileItem === button._uid}
+                  {@const openInNewTab = shouldOpenInNewTab(button)}
+
+                  {#if hasDropdown}
+                    <!-- Expandable item with link + chevron -->
+                    <div class="mobile-expandable-item">
+                      <div class="mobile-expandable-header">
+                        <a
+                          href={getButtonHref(button)}
+                          class="mobile-menu-link-expandable"
+                          style={button.custom_styles ?? ""}
+                          target={openInNewTab ? "_blank" : undefined}
+                          rel={openInNewTab ? "noopener noreferrer" : undefined}
+                        >
+                          {button.text}
+                        </a>
+                        <button
+                          type="button"
+                          class="mobile-chevron-button"
+                          onclick={() => expandedMobileItem = isExpanded ? null : button._uid}
+                          aria-label="Toggle menu"
+                        >
+                          <ChevronDown class="mobile-chevron {isExpanded ? 'expanded' : ''}" />
+                        </button>
+                      </div>
+                      {#if isExpanded}
+                        <div class="mobile-dropdown-content">
+                          {#each cards as card}
+                            {@const url = card.link?.cached_url || card.link?.url || "#"}
+                            {@const cardOpenInNewTab = card.link?.target === '_blank'}
+                            {@const href = (url.startsWith('http') || url === '#')
+                              ? url
+                              : (lang === "en" ? getPathWithoutLang(url) : `/${lang}${getPathWithoutLang(url)}`)}
+                            <a
+                              href={href}
+                              class="mobile-dropdown-item"
+                              target={cardOpenInNewTab ? "_blank" : undefined}
+                              rel={cardOpenInNewTab ? "noopener noreferrer" : undefined}
+                            >
+                              {card.title}
+                            </a>
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
+                  {:else}
+                    <!-- Regular link -->
                     <a
                       href={getButtonHref(button)}
-                      class="mobile-menu-link-expandable"
+                      class="mobile-menu-link"
                       style={button.custom_styles ?? ""}
                       target={openInNewTab ? "_blank" : undefined}
                       rel={openInNewTab ? "noopener noreferrer" : undefined}
                     >
                       {button.text}
                     </a>
-                    <button
-                      type="button"
-                      class="mobile-chevron-button"
-                      onclick={() => expandedMobileItem = isExpanded ? null : button._uid}
-                      aria-label="Toggle menu"
-                    >
-                      <ChevronDown class="h-4 w-4 transition-transform duration-200 {isExpanded ? 'rotate-180' : ''}" />
-                    </button>
-                  </div>
-                  {#if isExpanded}
-                    <div class="mobile-dropdown-content">
-                      {#each cards as card}
-                        {@const url = card.link?.cached_url || card.link?.url || "#"}
-                        {@const cardOpenInNewTab = card.link?.target === '_blank'}
-                        {@const href = (url.startsWith('http') || url === '#')
-                          ? url
-                          : (lang === "en" ? getPathWithoutLang(url) : `/${lang}${getPathWithoutLang(url)}`)}
-                        <a
-                          href={href}
-                          class="mobile-dropdown-item"
-                          target={cardOpenInNewTab ? "_blank" : undefined}
-                          rel={cardOpenInNewTab ? "noopener noreferrer" : undefined}
-                        >
-                          {card.title}
-                        </a>
-                      {/each}
-                    </div>
                   {/if}
-                </div>
-              {:else}
-                <!-- Regular link -->
-                <a
-                  href={getButtonHref(button)}
-                  class="mobile-menu-link"
-                  style={button.custom_styles ?? ""}
-                  target={openInNewTab ? "_blank" : undefined}
-                  rel={openInNewTab ? "noopener noreferrer" : undefined}
-                >
-                  {button.text}
-                </a>
-              {/if}
-            {/each}
-          </div>
-        {/if}
-      </nav>
-    </Sheet.Content>
-  </Sheet.Root>
+                {/each}
+              </div>
+            {/if}
+          </nav>
+        </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
 </nav>
 
-<style lang="postcss">
+<style>
   .header {
+    display: flex;
+    align-items: center;
     margin-bottom: 2rem;
   }
 
   .logo {
-    transition-property: transform;
+    margin-right: auto;
+    width: 12rem;
+    flex-shrink: 0;
+    transition: transform 300ms;
     transform: perspective(1px) translateZ(0);
+  }
+
+  .logo img {
+    width: 100%;
+    height: auto;
+    display: block;
   }
 
   .logo:hover {
     transform: scale(1.1) rotate(1deg);
+  }
+
+  /* Desktop menu */
+  .desktop-menu {
+    position: relative;
+    display: none;
+  }
+
+  @media (min-width: 1024px) {
+    .desktop-menu {
+      display: block;
+    }
   }
 
   .horizontal-menu {
@@ -305,15 +332,13 @@
     gap: 0.25rem;
   }
 
-  /* Navigation buttons */
   .nav-button {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     padding: 0.5rem 1rem;
-    background-color: white;
+    background-color: var(--background);
     color: var(--color-yahrange);
-    border: none;
     border-radius: var(--radius-md);
     font-weight: 500;
     font-size: 0.875rem;
@@ -323,27 +348,133 @@
   }
 
   .nav-button:hover {
-    background-color: var(--color-accent);
+    background-color: var(--hover-bg);
   }
 
-  /* Mobile styles */
-  .mobile-expandable-item {
+  :global(.nav-chevron) {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.25rem;
+  }
+
+  /* Desktop language switcher */
+  .lang-switcher {
+    position: absolute;
+    right: 0;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .lang-link {
+    margin-bottom: 0;
+    padding: 0 0.25rem;
+    font-size: 0.875rem;
+    color: var(--primary-foreground);
+    text-decoration: none;
+  }
+
+  .lang-link.active {
+    background-color: var(--background);
+    border-radius: var(--radius-sm);
+    color: var(--color-yahrange);
+  }
+
+  .lang-divider {
+    width: 1px;
+    height: 0.75rem;
+    background-color: var(--primary-foreground);
+  }
+
+  /* Mobile menu trigger */
+  :global(.mobile-menu-trigger) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    background-color: var(--background);
+    padding: 0.5rem;
+    border: none;
+    cursor: pointer;
+  }
+
+  :global(.mobile-menu-trigger:focus-visible) {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+
+  @media (min-width: 1024px) {
+    :global(.mobile-menu-trigger) {
+      display: none;
+    }
+  }
+
+  :global(.mobile-menu-icon) {
+    width: 2.25rem;
+    height: 2.25rem;
+    color: var(--color-yahrange);
+  }
+
+  /* Sheet overlay */
+  :global(.sheet-overlay) {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background-color: var(--overlay);
+  }
+
+  /* Sheet panel — no horizontal padding so hovers go edge-to-edge */
+  :global(.sheet-panel) {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    width: 75%;
+    max-width: 24rem;
+    background-color: var(--background);
+    box-shadow: var(--shadow-lg);
+    overflow-y: auto;
+  }
+
+  /* Mobile nav */
+  .mobile-nav {
     display: flex;
     flex-direction: column;
+    padding-top: 1rem;
   }
 
-  .mobile-expandable-header {
+  .mobile-lang-switcher {
     display: flex;
-    align-items: stretch;
-    gap: 0;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 0 1rem 0.75rem;
+    margin-bottom: 0.25rem;
+    border-bottom: 1px solid var(--border);
   }
 
+  .mobile-lang-link {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-yahrange);
+    text-decoration: none;
+  }
+
+  .mobile-lang-link.active {
+    background-color: var(--color-yahrange);
+    color: var(--primary-foreground);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Mobile nav links — full-bleed hover backgrounds */
   .mobile-menu-link-expandable {
     flex: 1;
     display: flex;
     align-items: center;
     padding: 0.625rem 1rem;
-    text-align: left;
     transition: background-color 150ms ease-in-out;
     color: var(--color-yahrange);
     text-decoration: none;
@@ -351,7 +482,12 @@
   }
 
   .mobile-menu-link-expandable:hover {
-    background-color: var(--color-accent);
+    background-color: var(--hover-bg);
+  }
+
+  .mobile-expandable-header {
+    display: flex;
+    align-items: stretch;
   }
 
   .mobile-chevron-button {
@@ -367,13 +503,17 @@
   }
 
   .mobile-chevron-button:hover {
-    background-color: var(--color-accent);
+    background-color: var(--hover-bg);
   }
 
-  .mobile-dropdown-content {
-    display: flex;
-    flex-direction: column;
-    margin-top: 0.25rem;
+  :global(.mobile-chevron) {
+    width: 1rem;
+    height: 1rem;
+    transition: transform 200ms;
+  }
+
+  :global(.mobile-chevron.expanded) {
+    transform: rotate(180deg);
   }
 
   .mobile-dropdown-item {
@@ -386,23 +526,19 @@
   }
 
   .mobile-dropdown-item:hover {
-    background-color: var(--color-accent);
+    background-color: var(--hover-bg);
   }
 
   .mobile-menu-link {
     display: block;
-    width: 100%;
     padding: 0.625rem 1rem;
-    text-align: left;
     transition: background-color 150ms ease-in-out;
-    outline: none;
-    border: none;
     color: var(--color-yahrange);
     text-decoration: none;
     font-weight: 500;
   }
 
   .mobile-menu-link:hover {
-    background-color: var(--color-accent);
+    background-color: var(--hover-bg);
   }
 </style>

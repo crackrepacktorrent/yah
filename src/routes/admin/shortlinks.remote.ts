@@ -1,0 +1,184 @@
+import { query, form } from '$app/server';
+import * as v from 'valibot';
+import { getShlink, ShlinkApiError } from '$lib/server/shlink';
+import { error, invalid, redirect } from '@sveltejs/kit';
+
+// ─── Queries ──────────────────────────────────────────────────────────────────
+
+export const getDashboard = query(async () => {
+	const shlink = getShlink();
+
+	const [shortUrlsRes, overallVisitsRes] = await Promise.all([
+		shlink.listShortUrls({ itemsPerPage: 5, orderBy: 'dateCreated-DESC' }),
+		shlink.getOverallVisits(),
+	]);
+
+	return {
+		recentShortUrls: shortUrlsRes.shortUrls.data,
+		totalShortUrls: shortUrlsRes.shortUrls.pagination.totalItems,
+		visits: overallVisitsRes.visits,
+	};
+});
+
+export const listShortUrls = query(
+	v.object({
+		page: v.optional(v.number(), 1),
+		search: v.optional(v.string(), ''),
+		orderBy: v.optional(v.string(), 'dateCreated-DESC'),
+	}),
+	async ({ page, search, orderBy }) => {
+		const shlink = getShlink();
+
+		const res = await shlink.listShortUrls({
+			page,
+			itemsPerPage: 20,
+			searchTerm: search || undefined,
+			orderBy,
+		});
+
+		return {
+			shortUrls: res.shortUrls.data,
+			pagination: res.shortUrls.pagination,
+		};
+	},
+);
+
+export const getShortUrl = query(
+	v.string(),
+	async (shortCode) => {
+		const shlink = getShlink();
+
+		try {
+			const [shortUrl, visitsRes] = await Promise.all([
+				shlink.getShortUrl(shortCode),
+				shlink.getShortUrlVisits(shortCode, { itemsPerPage: 20, excludeBots: true }),
+			]);
+
+			return {
+				shortUrl,
+				visits: visitsRes.visits.data,
+				visitsPagination: visitsRes.visits.pagination,
+			};
+		} catch (err) {
+			if (err instanceof ShlinkApiError && err.status === 404) {
+				error(404, 'Shortlink not found');
+			}
+			throw err;
+		}
+	},
+);
+
+// ─── Forms ────────────────────────────────────────────────────────────────────
+
+export const createShortUrl = form(
+	v.object({
+		longUrl: v.pipe(v.string(), v.nonEmpty('Destination URL is required'), v.url()),
+		customSlug: v.optional(v.string(), ''),
+		title: v.optional(v.string(), ''),
+		tags: v.optional(v.string(), ''),
+		maxVisits: v.optional(v.string(), ''),
+		validUntil: v.optional(v.string(), ''),
+		crawlable: v.optional(v.boolean(), false),
+		forwardQuery: v.optional(v.boolean(), false),
+	}),
+	async (data, issue) => {
+		const tags = data.tags
+			.split(',')
+			.map((t) => t.trim())
+			.filter(Boolean);
+
+		try {
+			const shlink = getShlink();
+			const result = await shlink.createShortUrl({
+				longUrl: data.longUrl,
+				customSlug: data.customSlug || undefined,
+				title: data.title || undefined,
+				tags: tags.length > 0 ? tags : undefined,
+				crawlable: data.crawlable,
+				forwardQuery: data.forwardQuery,
+				maxVisits: data.maxVisits ? Number(data.maxVisits) : undefined,
+				validUntil: data.validUntil || undefined,
+			});
+			redirect(303, `/admin/shortlinks/${result.shortCode}`);
+		} catch (err) {
+			if (err instanceof ShlinkApiError) {
+				invalid(issue.longUrl(err.detail));
+			}
+			throw err;
+		}
+	},
+);
+
+export const editShortUrl = form(
+	v.object({
+		shortCode: v.string(),
+		longUrl: v.optional(v.string(), ''),
+		title: v.optional(v.string(), ''),
+		tags: v.optional(v.string(), ''),
+		maxVisits: v.optional(v.string(), ''),
+		validUntil: v.optional(v.string(), ''),
+		crawlable: v.optional(v.boolean(), false),
+		forwardQuery: v.optional(v.boolean(), false),
+	}),
+	async (data, issue) => {
+		const tags = data.tags
+			.split(',')
+			.map((t) => t.trim())
+			.filter(Boolean);
+
+		try {
+			const shlink = getShlink();
+			await shlink.editShortUrl(data.shortCode, {
+				longUrl: data.longUrl || undefined,
+				title: data.title || null,
+				tags,
+				crawlable: data.crawlable,
+				forwardQuery: data.forwardQuery,
+				maxVisits: data.maxVisits ? Number(data.maxVisits) : null,
+				validUntil: data.validUntil || null,
+			});
+			return { success: true };
+		} catch (err) {
+			if (err instanceof ShlinkApiError) {
+				invalid(issue.longUrl(err.detail));
+			}
+			throw err;
+		}
+	},
+);
+
+export const deleteShortUrl = form(
+	v.object({
+		shortCode: v.string(),
+	}),
+	async (data, issue) => {
+		try {
+			const shlink = getShlink();
+			await shlink.deleteShortUrl(data.shortCode);
+			redirect(303, '/admin/shortlinks');
+		} catch (err) {
+			if (err instanceof ShlinkApiError) {
+				invalid(issue.shortCode(err.detail));
+			}
+			throw err;
+		}
+	},
+);
+
+export const resetShortUrlVisits = form(
+	v.object({
+		shortCode: v.string(),
+	}),
+	async (data, issue) => {
+		try {
+			const shlink = getShlink();
+			const result = await shlink.deleteShortUrlVisits(data.shortCode);
+			return { deletedCount: result.deletedVisits };
+		} catch (err) {
+			if (err instanceof ShlinkApiError) {
+				invalid(issue.shortCode(err.detail));
+			}
+			throw err;
+		}
+	},
+);

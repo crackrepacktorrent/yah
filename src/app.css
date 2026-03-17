@@ -1,91 +1,16 @@
-@import "tailwindcss";
-
-@import "tw-animate-css";
-
 @import "@fontsource-variable/rubik";
 
-@custom-variant dark (&:is(.dark *));
+/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 
 :root {
   --radius: 0.625rem;
-  /* YAH Brand Theme - Based on Slate */
-  --background: oklch(1 0 0); /* white */
-  --foreground: oklch(0.22 0.02 15); /* yahblack #2c252a */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.02 15);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.65 0.23 45); /* yahrange for popover text */
-  --primary: oklch(0.65 0.23 45); /* yahrange #ff6f00 - brand color */
-  --primary-foreground: oklch(1 0 0); /* white text on yahrange */
-  --secondary: oklch(0.968 0.007 247.896); /* light slate gray for hover */
-  --secondary-foreground: oklch(0.65 0.23 45); /* yahrange text on light bg */
-  --muted: oklch(0.95 0.01 240);
-  --muted-foreground: oklch(0.5 0.01 240);
-  --accent: oklch(0.968 0.007 247.896); /* light gray for accents/hover */
-  --accent-foreground: oklch(0.65 0.23 45); /* yahrange on light */
-  --destructive: oklch(0.58 0.22 25); /* yahred #d7403d */
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9 0.01 240);
-  --input: oklch(0.9 0.01 240);
-  --ring: oklch(0.65 0.23 45); /* yahrange focus ring */
-  --chart-1: oklch(0.65 0.23 45); /* yahrange */
-  --chart-2: oklch(0.7 0.12 175); /* yahdarkmint */
-  --chart-3: oklch(0.3 0.03 260); /* yahdarkblue */
-  --chart-4: oklch(0.75 0.15 45); /* yahrangelight */
-  --chart-5: oklch(0.8 0.1 50); /* yahrangelighter */
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.22 0.02 15);
-  --sidebar-primary: oklch(0.65 0.23 45);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.95 0.08 165);
-  --sidebar-accent-foreground: oklch(0.22 0.02 15);
-  --sidebar-border: oklch(0.9 0.01 240);
-  --sidebar-ring: oklch(0.65 0.23 45);
-}
-
-.dark {
-  /* YAH Brand Theme - Dark Mode (if needed) */
-  --background: oklch(0.25 0.02 260); /* yahdarkblue */
-  --foreground: oklch(1 0 0); /* white */
-  --card: oklch(0.3 0.02 260);
-  --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.3 0.02 260);
-  --popover-foreground: oklch(1 0 0);
-  --primary: oklch(0.65 0.23 45); /* yahrange */
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.7 0.12 175); /* yahdarkmint */
-  --secondary-foreground: oklch(1 0 0);
-  --muted: oklch(0.35 0.02 260);
-  --muted-foreground: oklch(0.7 0.01 240);
-  --accent: oklch(0.75 0.15 45); /* yahrangelight */
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.58 0.22 25); /* yahred */
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.4 0.02 260);
-  --input: oklch(0.4 0.02 260);
-  --ring: oklch(0.65 0.23 45);
-  --chart-1: oklch(0.65 0.23 45);
-  --chart-2: oklch(0.7 0.12 175);
-  --chart-3: oklch(0.95 0.08 165);
-  --chart-4: oklch(0.75 0.15 45);
-  --chart-5: oklch(0.8 0.1 50);
-  --sidebar: oklch(0.3 0.02 260);
-  --sidebar-foreground: oklch(1 0 0);
-  --sidebar-primary: oklch(0.65 0.23 45);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.35 0.02 260);
-  --sidebar-accent-foreground: oklch(1 0 0);
-  --sidebar-border: oklch(0.4 0.02 260);
-  --sidebar-ring: oklch(0.65 0.23 45);
-}
-
-@theme inline {
   --radius-xs: calc(var(--radius) - 6px);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  /* YAH Brand Colors (direct hex) */
+
+  /* YAH Brand Colors */
   --color-yahrange: #ff6f00;
   --color-yahrangelight: #ff9e6c;
   --color-yahrangelighter: #ffbb98;
@@ -94,153 +19,214 @@
   --color-yahred: #d7403d;
   --color-yahdarkblue: #262637;
   --color-yahblack: #2c252a;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Semantic Colors */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.22 0.02 15);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 15);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.65 0.23 45);
+  --primary: oklch(0.65 0.23 45);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.65 0.23 45);
+  --muted: oklch(0.95 0.01 240);
+  --muted-foreground: oklch(0.5 0.01 240);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.65 0.23 45);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.9 0.01 240);
+  --input: oklch(0.9 0.01 240);
+  --ring: oklch(0.65 0.23 45);
+
+  --success: #16a34a;
+  --success-foreground: oklch(1 0 0);
+  --success-bg: #f0fdf4;
+  --destructive-bg: #fef2f2;
+
+  /* Interactive */
+  --hover-bg: #f0f0f0;
+  --overlay: rgba(0, 0, 0, 0.5);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-lg: -4px 0 16px rgba(0, 0, 0, 0.15);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+.dark {
+  --background: oklch(0.25 0.02 260);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.3 0.02 260);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.3 0.02 260);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.65 0.23 45);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.7 0.12 175);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.35 0.02 260);
+  --muted-foreground: oklch(0.7 0.01 240);
+  --accent: oklch(0.75 0.15 45);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.4 0.02 260);
+  --input: oklch(0.4 0.02 260);
+  --ring: oklch(0.65 0.23 45);
 
-  /* Responsive base font size - scales from 14px (mobile) to 19px (desktop)
-     Made more aggressive for noticeable scaling. If too much, we can add media queries to individual elements instead. */
-  html {
-    font-size: clamp(14px, 12px + 0.5vw, 19px);
-  }
+}
 
-  /* Default body styles - overridable by custom_global_css */
-  body {
-    margin: 0;
-    font-family: "Rubik Variable", sans-serif;
-    background-color: var(--color-yahrange);
-    color: #ffffff; /* white text */
-    font-size: 1rem; /* inherits responsive size from html */
-  }
+/* ─── Base Styles ───────────────────────────────────────────────────────────── */
 
-  /* Global typography - can be overridden via custom_global_css in Storyblok */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+input,
+button,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+img,
+video,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+html {
+  font-size: clamp(14px, 12px + 0.5vw, 19px);
+}
+
+body {
+  margin: 0;
+  font-family: "Rubik Variable", sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-size: 1rem;
+}
+
+/* ─── Typography ────────────────────────────────────────────────────────────── */
+
+h1 {
+  margin-top: 0;
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1.2;
+  margin-bottom: 2rem;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1.875rem;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: 2rem;
+}
+
+h3 {
+  margin-top: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 2rem;
+}
+
+h4 {
+  margin-top: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 1.5rem;
+}
+
+h5 {
+  margin-top: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+
+h6 {
+  margin-top: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+p {
+  font-size: 1.125rem;
+  line-height: 2rem;
+  margin-bottom: 2rem;
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+ul, ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+ul {
+  list-style-type: disc;
+}
+
+ol {
+  list-style-type: decimal;
+}
+
+li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+strong {
+  font-weight: 700;
+}
+
+em {
+  font-style: italic;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
   h1 {
-    margin-top: 0;
-    font-size: 3rem;        /* 39-57px - scales with base (13-19px) */
-    font-weight: 900;       /* font-black - strong presence */
-    line-height: 1.2;
-    margin-bottom: 2rem;    /* 32px - good spacing */
+    font-size: 2.25rem;
   }
+}
 
-  h2 {
-    margin-top: 0;
-    font-size: 1.875rem;    /* 30px */
-    font-weight: 800;       /* font-extrabold */
-    line-height: 1.3;
-    margin-bottom: 2rem;    /* 32px */
-  }
+/* ─── Utility: screen reader only ───────────────────────────────────────────── */
 
-  h3 {
-    margin-top: 0;
-    font-size: 1.5rem;      /* 24px */
-    font-weight: 700;       /* font-bold */
-    line-height: 1.4;
-    margin-bottom: 2rem;    /* 32px */
-  }
-
-  h4 {
-    margin-top: 0;
-    font-size: 1.25rem;     /* 20px */
-    font-weight: 700;
-    line-height: 1.4;
-    margin-bottom: 1.5rem;  /* 24px */
-  }
-
-  h5 {
-    margin-top: 0;
-    font-size: 1.125rem;    /* 18px */
-    font-weight: 600;
-    line-height: 1.5;
-    margin-bottom: 1.25rem; /* 20px */
-  }
-
-  h6 {
-    margin-top: 0;
-    font-size: 1rem;        /* 16px */
-    font-weight: 600;
-    line-height: 1.5;
-    margin-bottom: 1rem;    /* 16px */
-  }
-
-  p {
-    font-size: 1.125rem;    /* 18px - comfortable reading */
-    line-height: 2rem;      /* 32px - generous line-height */
-    margin-bottom: 2rem;    /* 32px */
-  }
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-
-  ul, ol {
-    margin-bottom: 1rem;
-    padding-left: 1.5rem;
-  }
-
-  ul {
-    list-style-type: disc;
-  }
-
-  ol {
-    list-style-type: decimal;
-  }
-
-  li {
-    margin-bottom: 0.5rem;
-    line-height: 1.6;
-  }
-
-  strong {
-    font-weight: 700;
-  }
-
-  em {
-    font-style: italic;
-  }
-
-  a {
-    color: inherit;
-    text-decoration: underline;
-  }
-
-  /* Mobile typography adjustments */
-  @media (max-width: 640px) {
-    h1 {
-      font-size: 2.25rem;  /* ~32-43px on mobile, reduced from 3rem for better fit */
-    }
-  }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

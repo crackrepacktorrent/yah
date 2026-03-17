@@ -4,29 +4,16 @@
 
   let { blok }: { blok: ImageBlok } = $props();
 
-  const altText = blok.alt_text ?? blok.image.alt ?? "";
-  const imageUrl = blok.image.filename;
-  const loading = blok.lazy_loading ?? true ? 'lazy' : 'eager';
-  const clickable = blok.clickable ?? false;
-
-  // Aspect ratio - Controls image dimensions
-  const aspectRatio = blok.aspect_ratio ?? 'natural';
-
-  // Object fit mode - Controls how image fills its space
-  const objectFit = blok.object_fit ?? (aspectRatio === 'natural' ? 'none' : 'cover');
-
-  // Object position - Controls which part of the image is visible when cropped
-  const objectPosition = blok.object_position ?? 'center';
-
-  // Build container styles
-  const containerStyles = aspectRatio !== 'natural'
-    ? `aspect-ratio: ${aspectRatio};`
-    : '';
-
-  // Build image styles
-  const objectFitStyle = objectFit !== 'none' ? `object-fit: ${objectFit};` : '';
-  const objectPositionStyle = `object-position: ${objectPosition};`;
-  const imgStyles = objectFitStyle + objectPositionStyle + (blok.img_custom_styles ? ` ${blok.img_custom_styles}` : '');
+  let altText = $derived(blok.alt_text ?? blok.image.alt ?? "");
+  let imageUrl = $derived(blok.image.filename);
+  let loading = $derived((blok.lazy_loading ?? true) ? 'lazy' as const : 'eager' as const);
+  let clickable = $derived(blok.clickable ?? false);
+  let aspectRatio = $derived(blok.aspect_ratio ?? 'natural');
+  let objectFit = $derived(blok.object_fit ?? (aspectRatio === 'natural' ? 'none' : 'cover'));
+  let objectPosition = $derived(blok.object_position ?? 'center');
+  let containerStyles = $derived(aspectRatio !== 'natural' ? `aspect-ratio: ${aspectRatio};` : '');
+  let objectFitStyle = $derived(objectFit !== 'none' ? `object-fit: ${objectFit};` : '');
+  let imgStyles = $derived(objectFitStyle + `object-position: ${objectPosition};` + (blok.img_custom_styles ? ` ${blok.img_custom_styles}` : ''));
 </script>
 
 <div
@@ -95,7 +82,7 @@
   .caption {
     font-size: 0.875rem;
     line-height: 1.25rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--primary-foreground);
     text-align: center;
     margin: 0;
   }

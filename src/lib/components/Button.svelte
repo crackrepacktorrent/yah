@@ -5,10 +5,10 @@
 
   let { blok }: { blok: ButtonBlok } = $props();
 
-  const href = getLinkUrl(blok.link);
-  const openInNewTab = blok.link?.target === '_blank';
-  const size = blok.size ?? 'medium';
-  const alignment = blok.alignment ?? 'center';
+  let href = $derived(getLinkUrl(blok.link));
+  let openInNewTab = $derived(blok.link?.target === '_blank');
+  let size = $derived(blok.size ?? 'medium');
+  let alignment = $derived(blok.alignment ?? 'center');
 </script>
 
 <a
@@ -35,12 +35,12 @@
     cursor: pointer;
     border: 2px solid transparent;
     letter-spacing: 0.025em;
-    background-color: white;
+    background-color: var(--background);
     color: var(--color-yahrange);
   }
 
   .button:hover {
-    background-color: var(--color-accent);
+    background-color: var(--hover-bg);
   }
 
   /* Sizes */

@@ -349,13 +349,3 @@ export interface HeaderBlok extends StoryblokBlok {
   component: 'header';
   buttons?: HeaderButtonBlok[];
 }
-
-/**
- * Shortlink component - redirect entry managed in config
- */
-export interface ShortlinkBlok extends StoryblokBlok {
-  component: 'shortlink';
-  slug: string;
-  destination_url: string;
-  http_status: '301' | '302';
-}

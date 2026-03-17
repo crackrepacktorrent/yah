@@ -1,0 +1,55 @@
+/* ─── Admin Design Tokens ──────────────────────────────────────────────────── */
+
+:root {
+	--admin-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+	--admin-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+	--admin-muted: #6b7280;
+	--admin-border: #d1d5db;
+	--admin-border-light: #f3f4f6;
+	--admin-border-medium: #e5e7eb;
+	--admin-bg: #fafafa;
+	--admin-focus-ring: 0 0 0 3px rgba(255, 111, 0, 0.1);
+	--admin-primary-hover: #e66500;
+}
+
+/* ─── Admin Headings ───────────────────────────────────────────────────────── */
+
+.admin-layout h1 {
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: var(--color-yahblack);
+	margin-bottom: 1.5rem;
+}
+
+.admin-layout h2 {
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: var(--color-yahblack);
+	margin-bottom: 1rem;
+}
+
+.admin-layout h3 {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--color-yahblack);
+	margin-bottom: 0.75rem;
+}
+
+/* ─── Shared Input Styles ──────────────────────────────────────────────────── */
+
+.admin-input {
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--admin-border);
+	border-radius: var(--radius-md);
+	font-size: 0.9rem;
+	background: var(--admin-bg);
+	color: var(--color-yahblack);
+	transition: border-color 0.15s;
+	width: 100%;
+}
+
+.admin-input:focus {
+	outline: none;
+	border-color: var(--color-yahrange);
+	box-shadow: var(--admin-focus-ring);
+}

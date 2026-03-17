@@ -1,17 +1,10 @@
 import type { PageLoad } from "./$types";
-import { error, redirect } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { getStoryblokVersion } from "$lib/utils/storyblok-helpers";
 
-export const load: PageLoad = async ({ parent, params, fetch, url }) => {
-  const { storyblokApi, lang, shortlinks } = await parent();
+export const load: PageLoad = async ({ parent, params, fetch }) => {
+  const { storyblokApi, lang } = await parent();
   const slug = params.slug && params.slug !== "" ? params.slug : "home";
-
-  // Check for shortlink redirect (skip in Storyblok visual editor)
-  const matchedShortlink = shortlinks?.find(s => s.slug === slug);
-  if (matchedShortlink && !url.searchParams.has('_storyblok')) {
-    const status = parseInt(matchedShortlink.http_status) || 301;
-    throw redirect(status, matchedShortlink.destination_url);
-  }
 
   try {
     // Use SvelteKit's fetch directly for better SSR support
