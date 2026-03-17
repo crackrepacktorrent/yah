@@ -17,7 +17,8 @@
 	let orderBy = $derived($page.url.searchParams.get('orderBy') || 'dateCreated-DESC');
 
 	let shortlinksQuery = $derived(listShortUrls({ page: currentPage, search, orderBy }));
-	let { current: data } = staleWhileRevalidate(() => shortlinksQuery.current);
+	let stale = staleWhileRevalidate(() => shortlinksQuery.current);
+	let data = $derived(stale.current);
 
 	let createOpen = $state(false);
 	let createPending = $state(false);

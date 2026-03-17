@@ -8,7 +8,8 @@
 
 	let period = $state<'24h' | '7d' | '30d'>('7d');
 	let analyticsQuery = $derived(getAnalytics({ period }));
-	let { current: data } = staleWhileRevalidate(() => analyticsQuery.current);
+	let stale = staleWhileRevalidate(() => analyticsQuery.current);
+	let data = $derived(stale.current);
 	let chartMax = $derived(data ? Math.max(...data.pageviews.map((p: any) => p.y), 1) : 1);
 
 	function formatDuration(seconds: number) {
