@@ -1,23 +1,39 @@
 <script lang="ts">
   import "$lib/components/admin/admin.css";
   import { Sidebar } from "$lib/components/admin";
-  import type { LayoutData } from "./$types";
   import { page } from "$app/stores";
   import { authClient } from "$lib/auth-client";
   import { goto } from "$app/navigation";
   import { Toaster } from "svelte-sonner";
+  import { getSession } from "./session.remote";
 
-  let { data, children }: { data: LayoutData; children: any } = $props();
+  let { children }: { children: any } = $props();
 
-  const navSections = [
-    {
-      label: "Home",
-      items: [
-        { href: "/admin", label: "Dashboard", icon: "dashboard" },
-        { href: "/admin/shortlinks", label: "Shortlinks", icon: "link" },
-      ],
-    },
-  ];
+  let session = $derived(getSession());
+  let role = $derived(session.current?.role);
+
+  const navSections = $derived.by(() => {
+    const sections = [
+      {
+        label: "Home",
+        items: [
+          { href: "/admin", label: "Dashboard", icon: "dashboard" },
+          { href: "/admin/shortlinks", label: "Shortlinks", icon: "link" },
+        ],
+      },
+    ];
+
+    if (role === 'owner') {
+      sections.push({
+        label: "Organization",
+        items: [
+          { href: "/admin/members", label: "Members", icon: "users" },
+        ],
+      });
+    }
+
+    return sections;
+  });
 
   async function handleLogout() {
     await authClient.signOut();
@@ -38,13 +54,13 @@
   }}
 />
 
-{#if $page.url.pathname === "/admin/login"}
+{#if $page.url.pathname === "/admin/login" || $page.url.pathname.startsWith("/admin/members/accept")}
   {@render children()}
 {:else}
   <div class="admin-layout">
     <Sidebar
       sections={navSections}
-      user={data.user}
+      user={session.current?.user ?? null}
       onlogout={handleLogout}
     />
 

@@ -5,6 +5,9 @@
 	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listShortUrls, createShortUrl } from '../shortlinks.remote';
+	import { getSession } from '../session.remote';
+
+	let role = $derived(getSession().current?.role);
 
 	let search = $state($page.url.searchParams.get('search') || '');
 	let currentPage = $derived(Number($page.url.searchParams.get('page')) || 1);
@@ -61,7 +64,9 @@
 
 <div class="header">
 	<h1>Shortlinks</h1>
-	<Button variant="primary" onclick={() => (createOpen = true)}>+ New Shortlink</Button>
+	{#if role === 'admin' || role === 'owner'}
+		<Button variant="primary" onclick={() => (createOpen = true)}>+ New Shortlink</Button>
+	{/if}
 </div>
 
 <form class="search-bar" onsubmit={handleSearch}>
@@ -120,6 +125,7 @@
 	{/if}
 {/await}
 
+{#if role === 'admin' || role === 'owner'}
 <!-- Create Shortlink Dialog -->
 <Dialog.Root bind:open={createOpen}>
 	<Dialog.Portal>
@@ -189,6 +195,7 @@
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>
+{/if}
 
 <style>
 	.header {

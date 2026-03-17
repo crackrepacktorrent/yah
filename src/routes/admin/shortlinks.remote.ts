@@ -2,6 +2,7 @@ import { query, form, command } from '$app/server';
 import * as v from 'valibot';
 import { getShlink, ShlinkApiError } from '$lib/server/shlink';
 import { error, invalid, redirect } from '@sveltejs/kit';
+import { requireRole } from '$lib/server/auth-helpers';
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +86,8 @@ export const createShortUrl = command(
 		forwardQuery: v.optional(v.boolean(), true),
 	}),
 	async (data) => {
+		await requireRole('admin', 'owner');
+
 		const tags = data.tags
 			.split(',')
 			.map((t: string) => t.trim())
@@ -117,6 +120,8 @@ export const editShortUrl = form(
 		forwardQuery: v.optional(v.boolean(), false),
 	}),
 	async (data, issue) => {
+		await requireRole('admin', 'owner');
+
 		const tags = data.tags
 			.split(',')
 			.map((t) => t.trim())
@@ -146,6 +151,7 @@ export const editShortUrl = form(
 export const deleteShortUrl = command(
 	v.string(),
 	async (shortCode) => {
+		await requireRole('admin', 'owner');
 		const shlink = getShlink();
 		await shlink.deleteShortUrl(shortCode);
 	},
@@ -154,6 +160,7 @@ export const deleteShortUrl = command(
 export const resetShortUrlVisits = command(
 	v.string(),
 	async (shortCode) => {
+		await requireRole('admin', 'owner');
 		const shlink = getShlink();
 		const result = await shlink.deleteShortUrlVisits(shortCode);
 		return { deletedCount: result.deletedVisits };

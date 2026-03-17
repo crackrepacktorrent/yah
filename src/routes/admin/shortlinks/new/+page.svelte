@@ -1,41 +1,67 @@
 <script lang="ts">
-	import { Card, Button, FormField, Switch } from '$lib/components/admin';
+	import { goto } from '$app/navigation';
+	import { Card, Button, FormField, Input, Switch } from '$lib/components/admin';
+	import { toast } from 'svelte-sonner';
 	import { createShortUrl } from '../../shortlinks.remote';
+
+	let pending = $state(false);
 	let forwardQuery = $state(true);
 	let crawlable = $state(false);
+
+	async function handleCreate(e: SubmitEvent) {
+		e.preventDefault();
+		const form = e.target as HTMLFormElement;
+		const fd = new FormData(form);
+
+		pending = true;
+		try {
+			const result = await createShortUrl({
+				longUrl: fd.get('longUrl') as string,
+				customSlug: fd.get('customSlug') as string,
+				title: fd.get('title') as string,
+				tags: fd.get('tags') as string,
+				maxVisits: fd.get('maxVisits') as string,
+				validUntil: fd.get('validUntil') as string,
+				crawlable,
+				forwardQuery,
+			});
+			toast.success('Shortlink created.');
+			goto(`/admin/shortlinks/${result.shortCode}`);
+		} catch (err: any) {
+			toast.error(err?.message || 'Failed to create shortlink.');
+		} finally {
+			pending = false;
+		}
+	}
 </script>
 
 <h1>New Shortlink</h1>
 
 <Card maxWidth="600px">
-	<form {...createShortUrl} class="create-form">
+	<form class="create-form" onsubmit={handleCreate}>
 		<FormField label="Destination URL" required>
-			<input {...createShortUrl.fields.longUrl.as('url')} class="admin-input" required placeholder="https://example.com/long/path" />
+			<Input name="longUrl" type="url" required placeholder="https://example.com/long/path" />
 		</FormField>
 
-		{#each createShortUrl.fields.longUrl.issues() as issue}
-			<p class="error">{issue.message}</p>
-		{/each}
-
 		<FormField label="Custom Slug" hint="(optional — leave blank for auto-generated)">
-			<input {...createShortUrl.fields.customSlug.as('text')} class="admin-input" placeholder="my-link" />
+			<Input name="customSlug" placeholder="my-link" />
 		</FormField>
 
 		<FormField label="Title" hint="(optional)">
-			<input {...createShortUrl.fields.title.as('text')} class="admin-input" placeholder="Descriptive title" />
+			<Input name="title" placeholder="Descriptive title" />
 		</FormField>
 
 		<FormField label="Tags" hint="(comma-separated)">
-			<input {...createShortUrl.fields.tags.as('text')} class="admin-input" placeholder="campaign, social" />
+			<Input name="tags" placeholder="campaign, social" />
 		</FormField>
 
 		<div class="row">
 			<FormField label="Max Visits" hint="(optional)">
-				<input {...createShortUrl.fields.maxVisits.as('text')} class="admin-input" placeholder="Unlimited" />
+				<Input name="maxVisits" placeholder="Unlimited" />
 			</FormField>
 
 			<FormField label="Expires" hint="(optional)">
-				<input {...createShortUrl.fields.validUntil.as('text')} type="date" class="admin-input" min={new Date().toLocaleDateString('en-CA')} />
+				<Input name="validUntil" type="date" min={new Date().toLocaleDateString('en-CA')} />
 			</FormField>
 		</div>
 
@@ -46,8 +72,8 @@
 
 		<div class="actions">
 			<Button variant="ghost" href="/admin/shortlinks">Cancel</Button>
-			<Button variant="primary" type="submit" disabled={createShortUrl.pending}>
-				{createShortUrl.pending ? 'Creating...' : 'Create Shortlink'}
+			<Button variant="primary" type="submit" disabled={pending}>
+				{pending ? 'Creating...' : 'Create Shortlink'}
 			</Button>
 		</div>
 	</form>
@@ -81,12 +107,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-	}
-
-	.error {
-		color: var(--color-destructive);
-		margin: 0;
-		font-size: 0.9rem;
 	}
 
 	.actions {

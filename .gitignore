@@ -31,3 +31,6 @@ vite.config.ts.timestamp-*
 # Documentation/Guides
 *.md
 !README.md
+
+# Playwright MCP
+.playwright-mcp

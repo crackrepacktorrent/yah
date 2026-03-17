@@ -17,7 +17,7 @@ export const auth = betterAuth({
 	plugins: [
 		organization({
 			async sendInvitationEmail(data) {
-				const inviteLink = `${env.BETTER_AUTH_URL}/admin/accept-invitation/${data.id}`;
+				const inviteLink = `${env.BETTER_AUTH_URL}/admin/members/accept/${data.id}`;
 				console.log(`Invite ${data.email} to ${data.organization.name}: ${inviteLink}`);
 				// TODO: integrate with Listmonk or Resend for actual email delivery
 			},

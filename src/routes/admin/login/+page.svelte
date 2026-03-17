@@ -23,6 +23,10 @@
       return;
     }
 
+    await authClient.organization.setActive({
+      organizationSlug: 'yah',
+    });
+
     goto("/admin");
   }
 </script>

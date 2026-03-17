@@ -2,12 +2,12 @@
   import { page } from "$app/stores";
   import { Dialog, Tooltip } from "bits-ui";
   import { Logo } from "$lib/components/admin";
-  import { LayoutDashboard, Link, LogOut, Menu, X } from "lucide-svelte";
-  import type { Component } from "svelte";
+  import { LayoutDashboard, Link, LogOut, Menu, Users, X } from "lucide-svelte";
 
-  const icons: Record<string, Component> = {
+  const icons: Record<string, any> = {
     dashboard: LayoutDashboard,
     link: Link,
+    users: Users,
   };
 
   export type NavItem = { href: string; label: string; icon: string };
@@ -31,11 +31,10 @@
   }
 </script>
 
-
 {#snippet sidebarContent()}
   <div class="sidebar-header">
     <a href="/admin" class="brand">
-      <Logo fill="var(--brand-cream)" height={72} />
+      <Logo fill="var(--brand-magenta-light)" height={72} />
     </a>
   </div>
 

@@ -2,7 +2,11 @@
   import { goto } from "$app/navigation";
   import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section } from "$lib/components/admin";
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
+  import { getSession } from "../../../session.remote";
   import { toast } from "svelte-sonner";
+
+  let role = $derived(getSession().current?.role);
+  let canEdit = $derived(role === 'admin' || role === 'owner');
 
   let {
     shortUrl,
@@ -49,6 +53,7 @@
   }
 </script>
 
+{#if canEdit}
 <Section title="Settings">
   <Card>
     <div class="settings-inner">
@@ -90,8 +95,9 @@
               dirty = false;
               toast.success("Shortlink updated.");
               getShortUrl(slug).refresh();
-            } else if (editShortUrl.fields.longUrl.issues().length > 0) {
-              toast.error(editShortUrl.fields.longUrl.issues()[0].message);
+            } else {
+              const issues = editShortUrl.fields?.longUrl?.issues() ?? [];
+              if (issues.length > 0) toast.error(issues[0]?.message ?? "Validation error");
             }
           } catch (err) {
             toast.error("Failed to save changes.");
@@ -133,7 +139,7 @@
         </fieldset>
 
         <div class="edit-actions">
-          <Button variant="primary" type="submit" disabled={!unlocked || !dirty || editShortUrl.pending}>
+          <Button variant="primary" type="submit" disabled={!unlocked || !dirty || !!editShortUrl.pending}>
             {editShortUrl.pending ? "Saving..." : "Save Changes"}
           </Button>
           <Button variant="danger-outline" type="button" disabled={!unlocked} onclick={() => (confirmReset = true)}>Reset Visits</Button>
@@ -159,6 +165,7 @@
     onconfirm={handleDelete}
   />
 </Section>
+{/if}
 
 <style>
   .settings-inner {

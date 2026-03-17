@@ -37,7 +37,7 @@
     <div class="bottom-row">
       <ShortlinkEditor
         {shortUrl}
-        {slug}
+        slug={slug!}
       />
       {#if visitsQuery?.current}
         <ShortlinkVisits
