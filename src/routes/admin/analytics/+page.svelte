@@ -4,12 +4,14 @@
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { ToggleGroup } from 'bits-ui';
 	import { getAnalytics } from '../analytics.remote';
-	import { staleWhileRevalidate } from '$lib/utils/stale-query.svelte';
-
 	let period = $state<'24h' | '7d' | '30d'>('7d');
 	let analyticsQuery = $derived(getAnalytics({ period }));
-	let stale = staleWhileRevalidate(() => analyticsQuery.current);
-	let data = $derived(stale.current);
+	let _prev: typeof analyticsQuery.current;
+	let data = $derived.by(() => {
+		const val = analyticsQuery.current;
+		if (val !== undefined) _prev = val;
+		return val ?? _prev;
+	});
 	let chartMax = $derived(data ? Math.max(...data.pageviews.map((p: any) => p.y), 1) : 1);
 
 	function formatDuration(seconds: number) {

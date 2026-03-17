@@ -8,8 +8,6 @@
 	import { toast } from 'svelte-sonner';
 	import { listShortUrls, createShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
-	import { staleWhileRevalidate } from '$lib/utils/stale-query.svelte';
-
 	let role = $derived(getSession().current?.role);
 
 	let search = $state($page.url.searchParams.get('search') || '');
@@ -17,8 +15,12 @@
 	let orderBy = $derived($page.url.searchParams.get('orderBy') || 'dateCreated-DESC');
 
 	let shortlinksQuery = $derived(listShortUrls({ page: currentPage, search, orderBy }));
-	let stale = staleWhileRevalidate(() => shortlinksQuery.current);
-	let data = $derived(stale.current);
+	let _prev: typeof shortlinksQuery.current;
+	let data = $derived.by(() => {
+		const val = shortlinksQuery.current;
+		if (val !== undefined) _prev = val;
+		return val ?? _prev;
+	});
 
 	let createOpen = $state(false);
 	let createPending = $state(false);
