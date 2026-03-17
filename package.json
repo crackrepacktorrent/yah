@@ -37,6 +37,7 @@
 		"lucide-svelte": "^0.562.0",
 		"pdfjs-dist": "^5.4.530",
 		"pg": "^8.20.0",
+		"qr-code-styling": "^1.9.2",
 		"valibot": "^1.2.0"
 	}
 }

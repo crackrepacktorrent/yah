@@ -48,6 +48,11 @@
 		padding: 0.5rem 1rem;
 	}
 
+	.btn:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
+
 	.btn:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;

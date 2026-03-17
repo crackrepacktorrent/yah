@@ -8,6 +8,7 @@
 		description,
 		confirmLabel = 'Confirm',
 		variant = 'danger',
+		onconfirm,
 		children,
 	}: {
 		open: boolean;
@@ -15,6 +16,7 @@
 		description: string;
 		confirmLabel?: string;
 		variant?: 'danger' | 'primary';
+		onconfirm?: () => void;
 		children?: Snippet;
 	} = $props();
 </script>
@@ -52,7 +54,7 @@
 						</AlertDialog.Cancel>
 						<AlertDialog.Action>
 							{#snippet child({ props: actionProps })}
-								<button {...actionProps} class="confirm-action confirm-action-{variant}">
+								<button {...actionProps} class="confirm-action confirm-action-{variant}" onclick={() => onconfirm?.()}>
 									{confirmLabel}
 								</button>
 							{/snippet}

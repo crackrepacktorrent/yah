@@ -49,4 +49,8 @@
 	.admin-table :global(tr:last-child td) {
 		border-bottom: none;
 	}
+
+	.admin-table :global(tbody tr:hover) {
+		background: var(--color-border-light);
+	}
 </style>

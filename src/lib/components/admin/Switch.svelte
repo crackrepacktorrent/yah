@@ -14,7 +14,7 @@
 	} = $props();
 </script>
 
-<label class="switch-field">
+<label class="switch-field" class:switch-disabled={disabled}>
 	<BitsSwitch.Root bind:checked {name} {disabled}>
 		{#snippet child({ props, checked: isChecked })}
 			<button {...props} class="switch-track" class:switch-on={isChecked}>
@@ -52,6 +52,11 @@
 		background: var(--color-primary);
 	}
 
+	.switch-track:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
 	.switch-thumb {
 		position: absolute;
 		top: 2px;
@@ -66,6 +71,11 @@
 
 	.switch-thumb-on {
 		transform: translateX(18px);
+	}
+
+	.switch-disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.switch-label {

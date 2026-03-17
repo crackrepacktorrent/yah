@@ -39,7 +39,7 @@
 	}
 
 	.tooltip-content {
-		background: var(--brand-darkblue);
+		background: var(--color-foreground);
 		color: var(--color-surface);
 		padding: 0.4rem 0.75rem;
 		border-radius: var(--radius-sm);

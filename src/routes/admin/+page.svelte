@@ -63,15 +63,9 @@
 
 	.stats-grid {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 		gap: 1rem;
 		margin-bottom: 2rem;
-	}
-
-	@media (max-width: 768px) {
-		.stats-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
 	}
 
 	.section-header {

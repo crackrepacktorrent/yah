@@ -9,3 +9,7 @@ export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 export { default as Switch } from './Switch.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
 export { default as PaginationNav } from './PaginationNav.svelte';
+export { default as Breadcrumb } from './Breadcrumb.svelte';
+export { default as Section } from './Section.svelte';
+export { default as QRCode } from './QRCode.svelte';
+export { default as Logo } from './Logo.svelte';
