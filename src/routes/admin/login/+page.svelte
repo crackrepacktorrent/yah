@@ -8,7 +8,8 @@
   let error = $state("");
   let loading = $state(false);
 
-  async function handleLogin() {
+  async function handleLogin(e: SubmitEvent) {
+    e.preventDefault();
     error = "";
     loading = true;
 

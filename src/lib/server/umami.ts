@@ -25,9 +25,16 @@ async function getToken(): Promise<string> {
 	return data.token;
 }
 
+function decodeBase64Url(str: string): string {
+	// base64url → base64: replace URL-safe chars and pad
+	const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+	const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+	return atob(padded);
+}
+
 function getJwtExpiry(token: string): number {
 	try {
-		const payload = JSON.parse(atob(token.split('.')[1]));
+		const payload = JSON.parse(decodeBase64Url(token.split('.')[1]));
 		// Expire 5 minutes early to avoid using stale tokens
 		return payload.exp ? payload.exp * 1000 - 5 * 60 * 1000 : Date.now() + 23 * 60 * 60 * 1000;
 	} catch {

@@ -37,12 +37,20 @@ export const actions: Actions = {
 			return fail(400, { error: 'Please select at least one list.', email, name });
 		}
 
+		// Validate that submitted list IDs are actually public lists
 		try {
+			const allLists = await getListmonk().listLists();
+			const publicIds = new Set(allLists.filter((l) => l.type === 'public').map((l) => l.id));
+			const validListIds = listIds.filter((id) => publicIds.has(id));
+			if (validListIds.length === 0) {
+				return fail(400, { error: 'Invalid list selection.', email, name });
+			}
+
 			await getListmonk().createSubscriber({
 				email,
 				name: name || undefined,
 				status: 'enabled',
-				lists: listIds,
+				lists: validListIds,
 			});
 		} catch (err: any) {
 			// Listmonk returns 409 if subscriber already exists — that's fine,

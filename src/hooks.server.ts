@@ -19,7 +19,11 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 	event.locals.session = session?.session ?? null;
 	event.locals.user = session?.user ?? null;
 
-	if (event.url.pathname.startsWith(ADMIN_PREFIX) && !event.url.pathname.startsWith(ADMIN_LOGIN)) {
+	const isPublicAdminRoute =
+		event.url.pathname.startsWith(ADMIN_LOGIN) ||
+		event.url.pathname.startsWith('/admin/members/accept/');
+
+	if (event.url.pathname.startsWith(ADMIN_PREFIX) && !isPublicAdminRoute) {
 		if (!event.locals.user) {
 			throw redirect(303, '/admin/login');
 		}
