@@ -1,33 +1,26 @@
 <script lang="ts">
-	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Button, Input, Badge, Tooltip, PaginationNav, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog } from '$lib/components/admin';
+	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
-	import { createColumnHelper, getCoreRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
+	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
 	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listShortUrls, createShortUrl, deleteShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
 	let role = $derived(getSession().current?.role);
 
-	let search = $state($page.url.searchParams.get('search') || '');
-	let currentPage = $derived(Number($page.url.searchParams.get('page')) || 1);
-	let orderBy = $derived($page.url.searchParams.get('orderBy') || 'dateCreated-DESC');
+	let shortlinksQuery = $derived(listShortUrls());
 
-	let shortlinksQuery = $derived(listShortUrls({ page: currentPage, search, orderBy }));
-	let _prev: typeof shortlinksQuery.current;
-	let data = $derived.by(() => {
-		const val = shortlinksQuery.current;
-		if (val !== undefined) _prev = val;
-		return val ?? _prev;
-	});
+	let globalFilter = $state('');
+	let sorting = $state<SortingState>([{ id: 'dateCreated', desc: true }]);
+	let rowSelection = $state<RowSelectionState>({});
 
 	let createOpen = $state(false);
 	let createPending = $state(false);
+	let confirmDelete = $state(false);
 
-	// Row selection
-	let rowSelection = $state<RowSelectionState>({});
 	let selectedRows = $derived.by(() => {
+		const data = shortlinksQuery.current;
 		if (!data) return [];
 		return Object.keys(rowSelection)
 			.filter((k) => rowSelection[k])
@@ -35,7 +28,6 @@
 			.filter(Boolean);
 	});
 	let selectedCount = $derived(selectedRows.length);
-	let confirmDelete = $state(false);
 
 	function clearSelection() {
 		rowSelection = {};
@@ -48,7 +40,7 @@
 			}
 			toast.success(`${selectedCount} shortlink${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
-			listShortUrls({ page: currentPage, search, orderBy }).refresh();
+			listShortUrls().refresh();
 		} catch (err: any) {
 			toast.error(err?.message || 'Failed to delete shortlink.');
 		}
@@ -78,51 +70,6 @@
 			toast.error(err?.message || 'Failed to create shortlink.');
 		} finally {
 			createPending = false;
-		}
-	}
-
-	function handleSearch(e: Event) {
-		e.preventDefault();
-		const params = new URLSearchParams($page.url.searchParams);
-		if (search) {
-			params.set('search', search);
-		} else {
-			params.delete('search');
-		}
-		params.delete('page');
-		goto(`/admin/shortlinks?${params.toString()}`);
-	}
-
-	function pageUrl(p: number) {
-		const params = new URLSearchParams($page.url.searchParams);
-		params.set('page', String(p));
-		return `/admin/shortlinks?${params.toString()}`;
-	}
-
-	const sortFieldMap: Record<string, string> = {
-		dateCreated: 'dateCreated',
-		shortCode: 'shortCode',
-		longUrl: 'longUrl',
-		visits: 'visits',
-	};
-
-	let sorting = $derived.by<SortingState>(() => {
-		const [field, dir] = orderBy.split('-');
-		if (sortFieldMap[field]) {
-			return [{ id: sortFieldMap[field], desc: dir === 'DESC' }];
-		}
-		return [];
-	});
-
-	function onSortingChange(updater: any) {
-		const next: SortingState = typeof updater === 'function' ? updater(sorting) : updater;
-		if (next.length > 0) {
-			const { id, desc } = next[0];
-			const field = sortFieldMap[id] || id;
-			const params = new URLSearchParams($page.url.searchParams);
-			params.set('orderBy', `${field}-${desc ? 'DESC' : 'ASC'}`);
-			params.delete('page');
-			goto(`/admin/shortlinks?${params.toString()}`);
 		}
 	}
 
@@ -206,60 +153,52 @@
 	<span class="date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
-<div class="header">
-	<h1>Shortlinks</h1>
-	{#if role === 'admin' || role === 'owner'}
-		<Button variant="primary" onclick={() => (createOpen = true)}>+ New Shortlink</Button>
-	{/if}
-</div>
+<h1>Shortlinks</h1>
 
-<form class="search-bar" onsubmit={handleSearch}>
-	<Input type="text" placeholder="Search by slug or URL..." bind:value={search} />
-	<Button variant="secondary" type="submit">Search</Button>
-</form>
-
-{#if !data && shortlinksQuery.loading}
+{#await shortlinksQuery}
 	<Spinner size={48} centered />
-{:else if data}
+{:then data}
 	{#if data.shortUrls.length === 0}
 		<EmptyState message="No shortlinks found." />
 	{:else}
+		{#snippet toolbar()}
+			{#if selectedCount > 0 && (role === 'admin' || role === 'owner')}
+				<span class="toolbar-count">{selectedCount} selected</span>
+				<div class="toolbar-actions">
+					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+				</div>
+			{:else}
+				<div class="toolbar-search">
+					<Input type="text" placeholder="Filter shortlinks..." bind:value={globalFilter} />
+				</div>
+				{#if role === 'admin' || role === 'owner'}
+					<Button variant="primary" onclick={() => (createOpen = true)}>+ New Shortlink</Button>
+				{/if}
+			{/if}
+		{/snippet}
+
 		{@const table = createSvelteTable({
 			data: data.shortUrls,
 			columns,
-			state: { sorting, rowSelection },
-			onSortingChange,
+			state: { sorting, rowSelection, globalFilter },
+			onSortingChange: (updater) => {
+				sorting = typeof updater === 'function' ? updater(sorting) : updater;
+			},
 			onRowSelectionChange: (updater) => {
 				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
 			},
+			onGlobalFilterChange: (updater) => {
+				globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
+			},
 			getCoreRowModel: getCoreRowModel(),
-			manualSorting: true,
-			manualPagination: true,
-			enableSortingRemoval: false,
+			getFilteredRowModel: getFilteredRowModel(),
+			getSortedRowModel: getSortedRowModel(),
 		})}
 
-		{#if selectedCount > 0 && (role === 'admin' || role === 'owner')}
-			<div class="action-bar">
-				<span class="action-bar-count">{selectedCount} selected</span>
-				<div class="action-bar-actions">
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="action-bar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			</div>
-		{/if}
-
-		<DataTable {table} />
-
-		{#if data.pagination.pagesCount > 1}
-			<PaginationNav
-				count={data.pagination.totalItems}
-				perPage={20}
-				page={data.pagination.currentPage}
-				onPageChange={(p) => goto(pageUrl(p))}
-			/>
-		{/if}
+		<DataTable {table} {toolbar} />
 	{/if}
-{/if}
+{/await}
 
 <ConfirmDialog
 	bind:open={confirmDelete}
@@ -342,22 +281,9 @@
 {/if}
 
 <style>
-	.header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.5rem;
-	}
-
 	h1 {
-		margin: 0;
+		margin: 0 0 1.5rem;
 		color: var(--color-foreground);
-	}
-
-	.search-bar {
-		display: flex;
-		gap: 0.5rem;
-		margin-bottom: 1.5rem;
 	}
 
 	.code {
@@ -406,46 +332,6 @@
 		height: 1rem;
 		accent-color: var(--color-primary);
 		cursor: pointer;
-	}
-
-	.action-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding: 0.5rem 0.75rem;
-		margin-bottom: 0.5rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-	}
-
-	.action-bar-count {
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: var(--color-foreground);
-		white-space: nowrap;
-	}
-
-	.action-bar-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.action-bar-clear {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.8rem;
-		padding: 0.25rem 0.5rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.action-bar-clear:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 
 	/* ─── Dialog ───────────────────────────────────────────────────────── */

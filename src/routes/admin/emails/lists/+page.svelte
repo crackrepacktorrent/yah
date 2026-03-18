@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
-	import { createColumnHelper, getCoreRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
+	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
 	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listLists, createList, updateList, deleteList } from '../lists.remote';
@@ -9,6 +9,7 @@
 
 	let role = $derived(getSession().current?.role);
 	let listsQuery = $derived(listLists());
+	let globalFilter = $state('');
 
 	// Row selection
 	let rowSelection = $state<RowSelectionState>({});
@@ -186,12 +187,7 @@
 	<span class="date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
-<div class="header">
-	<h1>Mailing Lists</h1>
-	{#if role === 'admin' || role === 'owner'}
-		<Button variant="primary" onclick={openCreate}>+ New List</Button>
-	{/if}
-</div>
+<h1>Mailing Lists</h1>
 
 {#await listsQuery}
 	<Spinner size={48} centered />
@@ -199,31 +195,41 @@
 	{#if data.lists.length === 0}
 		<EmptyState message="No mailing lists found." />
 	{:else}
+		{#snippet toolbar()}
+			{#if selectedCount > 0 && role === 'owner'}
+				<span class="toolbar-count">{selectedCount} selected</span>
+				<div class="toolbar-actions">
+					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+				</div>
+			{:else}
+				<div class="toolbar-search">
+					<Input type="text" placeholder="Filter lists..." bind:value={globalFilter} />
+				</div>
+				{#if role === 'admin' || role === 'owner'}
+					<Button variant="primary" onclick={openCreate}>+ New List</Button>
+				{/if}
+			{/if}
+		{/snippet}
+
 		{@const table = createSvelteTable({
 			data: data.lists,
 			columns,
-			state: { sorting, rowSelection },
+			state: { sorting, rowSelection, globalFilter },
 			onSortingChange: (updater) => {
 				sorting = typeof updater === 'function' ? updater(sorting) : updater;
 			},
 			onRowSelectionChange: (updater) => {
 				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
 			},
+			onGlobalFilterChange: (updater) => {
+				globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
+			},
 			getCoreRowModel: getCoreRowModel(),
+			getFilteredRowModel: getFilteredRowModel(),
 			getSortedRowModel: getSortedRowModel(),
 		})}
-
-		{#if selectedCount > 0 && role === 'owner'}
-			<div class="action-bar">
-				<span class="action-bar-count">{selectedCount} selected</span>
-				<div class="action-bar-actions">
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="action-bar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			</div>
-		{/if}
-
-		<DataTable {table} />
+		<DataTable {table} {toolbar} />
 	{/if}
 {/await}
 
@@ -352,15 +358,8 @@
 </Dialog.Root>
 
 <style>
-	.header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.5rem;
-	}
-
 	h1 {
-		margin: 0;
+		margin: 0 0 1.5rem;
 		color: var(--color-foreground);
 	}
 
@@ -394,47 +393,6 @@
 		height: 1rem;
 		accent-color: var(--color-primary);
 		cursor: pointer;
-	}
-
-	.action-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding: 0.5rem 0.75rem;
-		margin-bottom: 0.5rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-	}
-
-	.action-bar-count {
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: var(--color-foreground);
-		white-space: nowrap;
-	}
-
-	.action-bar-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.action-bar-clear {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.8rem;
-		padding: 0.25rem 0.5rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.action-bar-clear:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 
 	/* ─── Dialog ───────────────────────────────────────────────────────── */

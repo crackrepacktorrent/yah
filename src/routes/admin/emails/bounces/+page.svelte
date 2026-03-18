@@ -129,12 +129,7 @@
 	<span class="date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
-<div class="header">
-	<h1>Bounces</h1>
-	{#if role === 'owner'}
-		<Button variant="danger" onclick={() => (confirmClearAll = true)}>Clear All</Button>
-	{/if}
-</div>
+<h1>Bounces</h1>
 
 {#if !data && bouncesQuery.loading}
 	<Spinner size={48} centered />
@@ -142,6 +137,21 @@
 	{#if data.bounces.length === 0}
 		<EmptyState message="No bounces recorded." />
 	{:else}
+		{#snippet toolbar()}
+			{#if selectedCount > 0 && role === 'owner'}
+				<span class="toolbar-count">{selectedCount} selected</span>
+				<div class="toolbar-actions">
+					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+				</div>
+			{:else}
+				<div class="toolbar-spacer"></div>
+				{#if role === 'owner'}
+					<Button variant="danger" onclick={() => (confirmClearAll = true)}>Clear All</Button>
+				{/if}
+			{/if}
+		{/snippet}
+
 		{@const table = createSvelteTable({
 			data: data.bounces,
 			columns,
@@ -152,18 +162,7 @@
 			getCoreRowModel: getCoreRowModel(),
 			manualPagination: true,
 		})}
-
-		{#if selectedCount > 0 && role === 'owner'}
-			<div class="action-bar">
-				<span class="action-bar-count">{selectedCount} selected</span>
-				<div class="action-bar-actions">
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="action-bar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			</div>
-		{/if}
-
-		<DataTable {table} />
+		<DataTable {table} {toolbar} />
 
 		{#if data.total > data.perPage}
 			<PaginationNav
@@ -193,15 +192,8 @@
 />
 
 <style>
-	.header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.5rem;
-	}
-
 	h1 {
-		margin: 0;
+		margin: 0 0 1.5rem;
 		color: var(--color-foreground);
 	}
 
@@ -215,45 +207,5 @@
 		height: 1rem;
 		accent-color: var(--color-primary);
 		cursor: pointer;
-	}
-
-	.action-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding: 0.5rem 0.75rem;
-		margin-bottom: 0.5rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-	}
-
-	.action-bar-count {
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: var(--color-foreground);
-		white-space: nowrap;
-	}
-
-	.action-bar-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.action-bar-clear {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.8rem;
-		padding: 0.25rem 0.5rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.action-bar-clear:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 </style>

@@ -21,28 +21,16 @@ export const getDashboard = query(async () => {
 	};
 });
 
-export const listShortUrls = query(
-	v.object({
-		page: v.optional(v.number(), 1),
-		search: v.optional(v.string(), ''),
-		orderBy: v.optional(v.string(), 'dateCreated-DESC'),
-	}),
-	async ({ page, search, orderBy }) => {
-		const shlink = getShlink();
+export const listShortUrls = query(async () => {
+	const shlink = getShlink();
 
-		const res = await shlink.listShortUrls({
-			page,
-			itemsPerPage: 20,
-			searchTerm: search || undefined,
-			orderBy,
-		});
+	const res = await shlink.listShortUrls({
+		itemsPerPage: 10000,
+		orderBy: 'dateCreated-DESC',
+	});
 
-		return {
-			shortUrls: res.shortUrls.data,
-			pagination: res.shortUrls.pagination,
-		};
-	},
-);
+	return { shortUrls: res.shortUrls.data };
+});
 
 export const getShortUrl = query(
 	v.string(),

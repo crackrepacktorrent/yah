@@ -1,4 +1,5 @@
 <script lang="ts" generics="TData">
+	import type { Snippet } from 'svelte';
 	import type { Table } from '@tanstack/table-core';
 	import { FlexRender } from './data-table';
 	import TableWrapper from './Table.svelte';
@@ -7,10 +8,12 @@
 		table,
 		onrowclick,
 		pageSize = 0,
+		toolbar,
 	}: {
 		table: Table<TData>;
 		onrowclick?: (row: TData) => void;
 		pageSize?: number;
+		toolbar?: Snippet;
 	} = $props();
 
 	// Client-side pagination managed by the component, not TanStack.
@@ -34,7 +37,7 @@
 	});
 </script>
 
-<TableWrapper>
+<TableWrapper {toolbar}>
 	<thead>
 		{#each table.getHeaderGroups() as headerGroup}
 			<tr>

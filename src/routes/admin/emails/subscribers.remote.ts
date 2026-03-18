@@ -11,10 +11,19 @@ export const listSubscribers = query(
 	}),
 	async ({ page, perPage, search }) => {
 		await requireRole('owner', 'admin');
+
+		// Listmonk expects a SQL WHERE clause for the query param.
+		// Build a safe ILIKE expression from the user's search input.
+		let query: string | undefined;
+		if (search) {
+			const escaped = search.replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
+			query = `(subscribers.email ILIKE '%${escaped}%' OR subscribers.name ILIKE '%${escaped}%')`;
+		}
+
 		const res = await getListmonk().listSubscribers({
 			page: page ?? 1,
 			per_page: perPage ?? 20,
-			query: search || undefined,
+			query,
 		});
 		return {
 			subscribers: res.data.results,

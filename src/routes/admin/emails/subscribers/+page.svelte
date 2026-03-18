@@ -12,10 +12,22 @@
 
 	let role = $derived(getSession().current?.role);
 
-	let search = $state($page.url.searchParams.get('search') || '');
+	let search = $state('');
 	let currentPage = $derived(Number($page.url.searchParams.get('page')) || 1);
 
-	let subscribersQuery = $derived(listSubscribers({ page: currentPage, perPage: 20, search: search || undefined }));
+	// Debounce search → re-query
+	let debouncedSearch = $state('');
+	let debounceTimer: ReturnType<typeof setTimeout>;
+	$effect(() => {
+		const value = search;
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			debouncedSearch = value;
+		}, 300);
+		return () => clearTimeout(debounceTimer);
+	});
+
+	let subscribersQuery = $derived(listSubscribers({ page: currentPage, perPage: 20, search: debouncedSearch || undefined }));
 	let _prev: typeof subscribersQuery.current;
 	let data = $derived.by(() => {
 		const val = subscribersQuery.current;
@@ -60,18 +72,6 @@
 	// Confirm dialogs
 	let confirmDelete = $state(false);
 	let confirmBlocklist = $state(false);
-
-	function handleSearch(e: Event) {
-		e.preventDefault();
-		const params = new URLSearchParams($page.url.searchParams);
-		if (search) {
-			params.set('search', search);
-		} else {
-			params.delete('search');
-		}
-		params.delete('page');
-		goto(`/admin/emails/subscribers?${params.toString()}`);
-	}
 
 	function pageUrl(p: number) {
 		const params = new URLSearchParams($page.url.searchParams);
@@ -284,17 +284,7 @@
 	</div>
 {/snippet}
 
-<div class="header">
-	<h1>Subscribers</h1>
-	{#if role === 'admin' || role === 'owner'}
-		<Button variant="primary" onclick={openCreate}>+ New Subscriber</Button>
-	{/if}
-</div>
-
-<form class="search-bar" onsubmit={handleSearch}>
-	<Input type="text" placeholder="Search by email or name..." bind:value={search} />
-	<Button variant="secondary" type="submit">Search</Button>
-</form>
+<h1>Subscribers</h1>
 
 {#if !data && subscribersQuery.loading}
 	<Spinner size={48} centered />
@@ -302,6 +292,26 @@
 	{#if data.subscribers.length === 0}
 		<EmptyState message="No subscribers found." />
 	{:else}
+		{#snippet toolbar()}
+			{#if selectedCount > 0 && role === 'owner'}
+				<span class="toolbar-count">{selectedCount} selected</span>
+				<div class="toolbar-actions">
+					{#if canBlocklist}
+						<Button variant="danger-outline" onclick={() => (confirmBlocklist = true)}>Blocklist</Button>
+					{/if}
+					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+				</div>
+			{:else}
+				<div class="toolbar-search">
+					<Input type="text" placeholder="Filter by email or name..." bind:value={search} />
+				</div>
+				{#if role === 'admin' || role === 'owner'}
+					<Button variant="primary" onclick={openCreate}>+ New Subscriber</Button>
+				{/if}
+			{/if}
+		{/snippet}
+
 		{@const table = createSvelteTable({
 			data: data.subscribers,
 			columns,
@@ -312,21 +322,7 @@
 			getCoreRowModel: getCoreRowModel(),
 			manualPagination: true,
 		})}
-
-		{#if selectedCount > 0 && role === 'owner'}
-			<div class="action-bar">
-				<span class="action-bar-count">{selectedCount} selected</span>
-				<div class="action-bar-actions">
-					{#if canBlocklist}
-						<Button variant="danger-outline" onclick={() => (confirmBlocklist = true)}>Blocklist</Button>
-					{/if}
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="action-bar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			</div>
-		{/if}
-
-		<DataTable {table} />
+		<DataTable {table} {toolbar} />
 
 		{#if data.total > data.perPage}
 			<PaginationNav
@@ -464,22 +460,9 @@
 </Dialog.Root>
 
 <style>
-	.header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.5rem;
-	}
-
 	h1 {
-		margin: 0;
+		margin: 0 0 1.5rem;
 		color: var(--color-foreground);
-	}
-
-	.search-bar {
-		display: flex;
-		gap: 0.5rem;
-		margin-bottom: 1.5rem;
 	}
 
 	.date {
@@ -512,56 +495,11 @@
 		text-decoration: underline;
 	}
 
-	/* ─── Row checkbox ─────────────────────────────────────────────────── */
-
 	:global(.row-checkbox) {
 		width: 1rem;
 		height: 1rem;
 		accent-color: var(--color-primary);
 		cursor: pointer;
-	}
-
-	/* ─── Action bar ───────────────────────────────────────────────────── */
-
-	.action-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding: 0.5rem 0.75rem;
-		margin-bottom: 0.5rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-	}
-
-	.action-bar-count {
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: var(--color-foreground);
-		white-space: nowrap;
-	}
-
-	.action-bar-actions {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.action-bar-clear {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.8rem;
-		padding: 0.25rem 0.5rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.action-bar-clear:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 
 	/* ─── Dialog ───────────────────────────────────────────────────────── */
