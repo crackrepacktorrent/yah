@@ -31,6 +31,23 @@
         </div>
       </Card>
     {/if}
+    <Card>
+      <span class="label">Options</span>
+      <div class="options">
+        <Badge variant={shortUrl.crawlable ? 'success' : 'default'}>
+          {shortUrl.crawlable ? 'Crawlable' : 'Not crawlable'}
+        </Badge>
+        <Badge variant={shortUrl.forwardQuery ? 'success' : 'default'}>
+          {shortUrl.forwardQuery ? 'Forwards query' : 'No query forwarding'}
+        </Badge>
+        {#if shortUrl.meta.maxVisits}
+          <Badge variant="warning">Max {shortUrl.meta.maxVisits} visits</Badge>
+        {/if}
+        {#if shortUrl.meta.validUntil}
+          <Badge variant="warning">Expires {new Date(shortUrl.meta.validUntil).toLocaleDateString()}</Badge>
+        {/if}
+      </div>
+    </Card>
   </div>
 </Section>
 
@@ -61,7 +78,7 @@
     word-break: break-all;
   }
 
-  .tags {
+  .tags, .options {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
