@@ -101,18 +101,18 @@ export const deleteCampaign = protectedCommand(
 export const getCampaignAnalytics = protectedQuery(
 	{ campaign: ['view'] },
 	v.object({
-		campaignId: v.optional(v.number()),
+		campaignIds: v.array(v.number()),
 		type: v.picklist(['views', 'clicks']),
 		from: v.string(),
 		to: v.string(),
 	}),
-	async ({ campaignId, type, from, to }) => {
-		return getListmonk().getAnalytics({
-			id: campaignId,
-			type,
-			from,
-			to,
-		});
+	async ({ campaignIds, type, from, to }) => {
+		const lm = getListmonk();
+		// Fetch analytics for each selected campaign and merge results
+		const results = await Promise.all(
+			campaignIds.map((id) => lm.getAnalytics({ id, type, from, to })),
+		);
+		return results.flat();
 	},
 );
 

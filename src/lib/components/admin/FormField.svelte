@@ -14,13 +14,13 @@
 	} = $props();
 </script>
 
-<label class="form-field">
+<div class="form-field">
 	<span class="form-field-label">
 		{label}{#if required}<span class="required-mark"> *</span>{/if}
 	</span>
 	{@render children()}
 	{#if hint}<span class="form-field-hint">{hint}</span>{/if}
-</label>
+</div>
 
 <style>
 	.form-field {

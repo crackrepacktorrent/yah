@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog, DialogShell, DatePicker } from '$lib/components/admin';
-	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog, DialogShell, DatePicker, TagInput } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
 	import { today, getLocalTimeZone } from '@internationalized/date';
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { listShortUrls, createShortUrl, deleteShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
 	import { can } from '../can';
@@ -24,6 +25,7 @@
 
 	let createOpen = $state(false);
 	let createPending = $state(false);
+	let createTags = $state<string[]>([]);
 	let confirmDelete = $state(false);
 
 	let selectedRows = $derived.by(() => {
@@ -48,8 +50,8 @@
 			toast.success(`${selectedCount} shortlink${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listShortUrls().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to delete shortlink.');
+		} catch (err) {
+			toastError(err, 'Failed to delete shortlink.');
 		}
 	}
 
@@ -64,7 +66,7 @@
 				longUrl: fd.get('longUrl') as string,
 				customSlug: fd.get('customSlug') as string,
 				title: fd.get('title') as string,
-				tags: fd.get('tags') as string,
+				tags: createTags.join(', '),
 				maxVisits: fd.get('maxVisits') as string,
 				validUntil: fd.get('validUntil') as string,
 				crawlable: fd.has('crawlable'),
@@ -73,8 +75,8 @@
 			createOpen = false;
 			toast.success('Shortlink created.');
 			goto(`/admin/shortlinks/${result.shortCode}`);
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to create shortlink.');
+		} catch (err) {
+			toastError(err, 'Failed to create shortlink.');
 		} finally {
 			createPending = false;
 		}
@@ -92,13 +94,7 @@
 	const columnHelper = createColumnHelper<ShortUrl>();
 
 	const columns = [
-		columnHelper.display({
-			id: 'select',
-			header: (info) => renderSnippet(selectAllCell, info.table),
-			cell: (info) => renderSnippet(selectRowCell, info.row),
-			enableSorting: false,
-			enableColumnFilter: false,
-		}),
+		createSelectColumn<ShortUrl>(),
 		columnHelper.accessor('shortCode', {
 			header: 'Short URL',
 			cell: (info) => renderSnippet(shortCodeCell, info.row.original),
@@ -132,14 +128,6 @@
 		}),
 	];
 </script>
-
-{#snippet selectAllCell(table: any)}
-	<input type="checkbox" class="row-checkbox" checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onchange={table.getToggleAllRowsSelectedHandler()} />
-{/snippet}
-
-{#snippet selectRowCell(row: any)}
-	<input type="checkbox" class="row-checkbox" checked={row.getIsSelected()} onchange={row.getToggleSelectedHandler()} />
-{/snippet}
 
 {#snippet shortCodeCell(url: ShortUrl)}
 	<a href="/admin/shortlinks/{url.shortCode}" class="code">{url.shortCode}</a>
@@ -183,7 +171,7 @@
 				<Input type="text" placeholder="Filter shortlinks..." bind:value={globalFilter} />
 			</div>
 			{#if can(session, 'shortlink', 'create')}
-				<Button variant="primary" onclick={() => (createOpen = true)}>+ New Shortlink</Button>
+				<Button variant="primary" onclick={() => { createTags = []; createOpen = true; }}>+ New Shortlink</Button>
 			{/if}
 		{/if}
 	{/snippet}
@@ -237,8 +225,8 @@
 			<Input name="title" placeholder="Descriptive title" />
 		</FormField>
 
-		<FormField label="Tags" hint="(comma-separated)">
-			<Input name="tags" placeholder="campaign, social" />
+		<FormField label="Tags" hint="Press Enter to add">
+			<TagInput bind:tags={createTags} placeholder="Add a tag..." />
 		</FormField>
 
 		<div class="form-row">

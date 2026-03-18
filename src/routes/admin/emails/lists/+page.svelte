@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, Spinner, DataTable, DialogShell } from '$lib/components/admin';
-	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, getFacetedRowModel, getFacetedUniqueValues, type SortingState, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { listLists, createList, updateList, deleteList, sendOptinCampaign } from '../lists.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
@@ -73,8 +74,8 @@
 			createOpen = false;
 			toast.success('List created.');
 			listLists().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to create list.');
+		} catch (err) {
+			toastError(err, 'Failed to create list.');
 		} finally {
 			createPending = false;
 		}
@@ -103,8 +104,8 @@
 			toast.success('List updated.');
 			clearSelection();
 			listLists().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to update list.');
+		} catch (err) {
+			toastError(err, 'Failed to update list.');
 		} finally {
 			editPending = false;
 		}
@@ -118,8 +119,8 @@
 			toast.success(`${selectedCount} list${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listLists().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to delete list.');
+		} catch (err) {
+			toastError(err, 'Failed to delete list.');
 		}
 	}
 
@@ -132,8 +133,8 @@
 			const result = await sendOptinCampaign(confirmOptin.listId);
 			toast.success(`Opt-in confirmations sent to ${result.sent} of ${result.total} subscribers.`);
 			confirmOptin = { open: false, listId: 0, listName: '' };
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to send opt-in campaign.');
+		} catch (err) {
+			toastError(err, 'Failed to send opt-in campaign.');
 		} finally {
 			optinPending = false;
 		}
@@ -154,19 +155,8 @@
 	const columnHelper = createColumnHelper<ListItem>();
 	let sorting = $state<SortingState>([]);
 
-	const multiSelectFilter = (row: any, columnId: string, filterValue: unknown[]) => {
-		if (!filterValue || filterValue.length === 0) return true;
-		return filterValue.includes(row.getValue(columnId));
-	};
-
 	const columns = [
-		columnHelper.display({
-			id: 'select',
-			header: (info) => renderSnippet(selectAllCell, info.table),
-			cell: (info) => renderSnippet(selectRowCell, info.row),
-			enableSorting: false,
-			enableColumnFilter: false,
-		}),
+		createSelectColumn<ListItem>(),
 		columnHelper.accessor('name', {
 			header: 'Name',
 			cell: (info) => renderSnippet(nameCell, info.row.original),
@@ -201,14 +191,6 @@
 		}),
 	];
 </script>
-
-{#snippet selectAllCell(table: any)}
-	<input type="checkbox" class="row-checkbox" checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onchange={table.getToggleAllRowsSelectedHandler()} />
-{/snippet}
-
-{#snippet selectRowCell(row: any)}
-	<input type="checkbox" class="row-checkbox" checked={row.getIsSelected()} onchange={row.getToggleSelectedHandler()} />
-{/snippet}
 
 {#snippet nameCell(list: ListItem)}
 	<button class="cell-link" onclick={() => openEdit(list)}>{list.name}</button>

@@ -3,6 +3,7 @@
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { listMembers, listInvitations, inviteMember, updateMemberRole, removeMember, cancelInvitation } from '../members.remote';
 	import { getSession } from '../session.remote';
 
@@ -42,8 +43,8 @@
 			inviteRole = 'member';
 			toast.success('Invitation sent.');
 			listInvitations().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to send invitation.');
+		} catch (err) {
+			toastError(err, 'Failed to send invitation.');
 		} finally {
 			invitePending = false;
 		}
@@ -54,8 +55,8 @@
 			await updateMemberRole({ memberId, role: role as 'owner' | 'admin' | 'member' });
 			toast.success('Role updated.');
 			listMembers().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to update role.');
+		} catch (err) {
+			toastError(err, 'Failed to update role.');
 		}
 	}
 
@@ -64,8 +65,8 @@
 			await removeMember(confirmRemove.memberId);
 			toast.success('Member removed.');
 			listMembers().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to remove member.');
+		} catch (err) {
+			toastError(err, 'Failed to remove member.');
 		}
 	}
 
@@ -74,8 +75,8 @@
 			await cancelInvitation(confirmCancelInvite.id);
 			toast.success('Invitation cancelled.');
 			listInvitations().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to cancel invitation.');
+		} catch (err) {
+			toastError(err, 'Failed to cancel invitation.');
 		}
 	}
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section, DatePicker } from "$lib/components/admin";
+  import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section, DatePicker, TagInput } from "$lib/components/admin";
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
   import { getSession } from "../../../session.remote";
   import { can } from "../../../can";
@@ -21,6 +21,7 @@
 
   let unlocked = $state(false);
   let dirty = $state(false);
+  let editTags = $state<string[]>([...shortUrl.tags]);
   let confirmUnlock = $state(false);
   let confirmDelete = $state(false);
   let confirmReset = $state(false);
@@ -33,6 +34,7 @@
     slug;
     unlocked = false;
     dirty = false;
+    editTags = [...shortUrl.tags];
   });
 
   async function handleReset() {
@@ -121,8 +123,9 @@
             <Input {...editShortUrl.fields.title.as("text")} value={shortUrl.title ?? ""} />
           </FormField>
 
-          <FormField label="Tags" hint="(comma-separated)">
-            <Input {...editShortUrl.fields.tags.as("text")} value={shortUrl.tags.join(", ")} />
+          <FormField label="Tags" hint="Press Enter to add">
+            <input type="hidden" name="tags" value={editTags.join(", ")} />
+            <TagInput bind:tags={editTags} placeholder="Add a tag..." disabled={!unlocked} />
           </FormField>
 
           <div class="form-row">

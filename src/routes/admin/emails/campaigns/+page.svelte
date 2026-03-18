@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Badge, Button, ConfirmDialog, EmptyState, Input, Spinner, DataTable } from '$lib/components/admin';
-	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { listCampaigns, deleteCampaign, updateCampaignStatus } from '../campaigns.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
@@ -51,8 +52,8 @@
 			toast.success(`${selectedCount} campaign${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listCampaigns().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to delete campaign.');
+		} catch (err) {
+			toastError(err, 'Failed to delete campaign.');
 		}
 	}
 
@@ -67,8 +68,8 @@
 			await updateCampaignStatus({ id: sendTarget.id, status: 'running' });
 			toast.success(`Campaign "${sendTarget.name}" started.`);
 			listCampaigns().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to start campaign.');
+		} catch (err) {
+			toastError(err, 'Failed to start campaign.');
 		}
 	}
 
@@ -77,8 +78,8 @@
 			await updateCampaignStatus({ id: campaign.id, status });
 			toast.success(`Campaign status updated.`);
 			listCampaigns().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to update status.');
+		} catch (err) {
+			toastError(err, 'Failed to update status.');
 		}
 	}
 
@@ -120,19 +121,8 @@
 
 	const columnHelper = createColumnHelper<Campaign>();
 
-	const multiSelectFilter = (row: any, columnId: string, filterValue: unknown[]) => {
-		if (!filterValue || filterValue.length === 0) return true;
-		return filterValue.includes(row.getValue(columnId));
-	};
-
 	const columns = [
-		columnHelper.display({
-			id: 'select',
-			header: (info) => renderSnippet(selectAllCell, info.table),
-			cell: (info) => renderSnippet(selectRowCell, info.row),
-			enableSorting: false,
-			enableColumnFilter: false,
-		}),
+		createSelectColumn<Campaign>(),
 		columnHelper.accessor('name', {
 			header: 'Campaign',
 			cell: (info) => renderSnippet(nameCell, info.row.original),
@@ -182,14 +172,6 @@
 		}),
 	];
 </script>
-
-{#snippet selectAllCell(table: any)}
-	<input type="checkbox" class="row-checkbox" checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onchange={table.getToggleAllRowsSelectedHandler()} />
-{/snippet}
-
-{#snippet selectRowCell(row: any)}
-	<input type="checkbox" class="row-checkbox" checked={row.getIsSelected()} onchange={row.getToggleSelectedHandler()} />
-{/snippet}
 
 {#snippet nameCell(campaign: Campaign)}
 	<div class="name-col">

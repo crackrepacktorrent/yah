@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Badge, Breadcrumb, Button, Card, ConfirmDialog, FormField, Input, Section, Spinner, Tabs, TabContent, DialogShell, Select, DatePicker } from '$lib/components/admin';
+	import { Badge, Breadcrumb, Button, Card, ConfirmDialog, FormField, Input, Section, Spinner, Tabs, TabContent, DialogShell, Select, DatePicker, TagInput, MultiSelect } from '$lib/components/admin';
 	import { onMount } from 'svelte';
 
 	let RichTextEditor: any = $state(null);
@@ -10,6 +10,7 @@
 	});
 
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { createCampaign, updateCampaign, deleteCampaign, updateCampaignStatus, previewCampaign, testCampaign } from '../campaigns.remote';
 	import { listLists } from '../lists.remote';
 	import { listTemplates } from '../../emails.remote';
@@ -32,17 +33,17 @@
 
 	let activeTab = $state('campaign');
 
-	// ─── Form state ──────────────────────────────────────────────
-	let name = $state('');
-	let subject = $state('');
-	let fromEmail = $state('');
-	let listIds = $state<number[]>([]);
-	let body = $state('');
-	let contentType = $state<'richtext' | 'html' | 'markdown' | 'plain'>('richtext');
-	let templateId = $state<number | undefined>(undefined);
-	let tags = $state('');
-	let sendLater = $state(false);
-	let sendAt = $state('');
+	// ─── Form state (initialized from campaign prop) ─────────────
+	let name = $state(campaign?.name ?? '');
+	let subject = $state(campaign?.subject ?? '');
+	let fromEmail = $state(campaign?.from_email ?? '');
+	let listIds = $state<string[]>(campaign?.lists.map((l) => String(l.id)) ?? []);
+	let body = $state(campaign?.body ?? '');
+	let contentType = $state<'richtext' | 'html' | 'markdown' | 'plain'>(campaign?.content_type ?? 'richtext');
+	let templateId = $state<number | undefined>(campaign?.template_id);
+	let tags = $state<string[]>(campaign ? [...campaign.tags] : []);
+	let sendLater = $state(!!campaign?.send_at);
+	let sendAt = $state(campaign?.send_at ? campaign.send_at.slice(0, 16) : '');
 
 	let savePending = $state(false);
 
@@ -50,6 +51,7 @@
 	let previewOpen = $state(false);
 	let previewHtml = $state('');
 	let previewLoading = $state(false);
+	let testOpen = $state(false);
 	let testEmails = $state('');
 	let testPending = $state(false);
 
@@ -57,39 +59,26 @@
 	let confirmDelete = $state(false);
 	let confirmSend = $state(false);
 
-	// ─── Init from campaign ──────────────────────────────────────
-	$effect(() => {
-		if (campaign) {
-			name = campaign.name;
-			subject = campaign.subject;
-			fromEmail = campaign.from_email;
-			listIds = campaign.lists.map((l) => l.id);
-			body = campaign.body;
-			contentType = campaign.content_type;
-			templateId = campaign.template_id;
-			tags = campaign.tags.join(', ');
-			sendLater = !!campaign.send_at;
-			sendAt = campaign.send_at ? campaign.send_at.slice(0, 16) : '';
-		}
-	});
-
 	let isDraft = $derived(mode === 'create' || campaign?.status === 'draft');
 	let canEdit = $derived(isDraft && can(session, 'campaign', 'edit'));
 
 	async function handleSave() {
+		if (!name.trim()) { toast.error('Name is required.'); return; }
+		if (!subject.trim()) { toast.error('Subject is required.'); return; }
+		if (listIds.length === 0) { toast.error('Select at least one list.'); return; }
+
 		savePending = true;
 		try {
-			const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean);
 			if (mode === 'create') {
 				const created = await createCampaign({
 					name,
 					subject,
 					fromEmail: fromEmail || undefined,
-					lists: listIds,
+					lists: listIds.map(Number),
 					body,
 					contentType,
 					templateId,
-					tags: tagList.length ? tagList : undefined,
+					tags: tags.length ? tags : undefined,
 					sendAt: sendLater && sendAt ? new Date(sendAt).toISOString() : undefined,
 				});
 				toast.success('Campaign created.');
@@ -100,17 +89,17 @@
 					name,
 					subject,
 					fromEmail: fromEmail || undefined,
-					lists: listIds,
+					lists: listIds.map(Number),
 					body,
 					contentType,
 					templateId,
-					tags: tagList,
+					tags,
 					sendAt: sendLater && sendAt ? new Date(sendAt).toISOString() : null,
 				});
 				toast.success('Campaign saved.');
 			}
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to save campaign.');
+		} catch (err) {
+			toastError(err, 'Failed to save campaign.');
 		} finally {
 			savePending = false;
 		}
@@ -122,8 +111,8 @@
 		previewOpen = true;
 		try {
 			previewHtml = await previewCampaign(campaign.id);
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to load preview.');
+		} catch (err) {
+			toastError(err, 'Failed to load preview.');
 			previewOpen = false;
 		} finally {
 			previewLoading = false;
@@ -142,8 +131,8 @@
 			await testCampaign({ id: campaign.id, subscribers: emails });
 			toast.success(`Test email sent to ${emails.join(', ')}.`);
 			testEmails = '';
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to send test email.');
+		} catch (err) {
+			toastError(err, 'Failed to send test email.');
 		} finally {
 			testPending = false;
 		}
@@ -155,8 +144,8 @@
 			await updateCampaignStatus({ id: campaign.id, status: 'running' });
 			toast.success(`Campaign "${campaign.name}" started.`);
 			goto('/admin/emails/campaigns');
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to start campaign.');
+		} catch (err) {
+			toastError(err, 'Failed to start campaign.');
 		}
 	}
 
@@ -166,13 +155,9 @@
 			await deleteCampaign(campaign.id);
 			toast.success('Campaign deleted.');
 			goto('/admin/emails/campaigns');
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to delete campaign.');
+		} catch (err) {
+			toastError(err, 'Failed to delete campaign.');
 		}
-	}
-
-	function toggleListId(id: number) {
-		listIds = listIds.includes(id) ? listIds.filter((x) => x !== id) : [...listIds, id];
 	}
 
 	function statusVariant(status: string): 'default' | 'success' | 'error' | 'warning' | 'info' {
@@ -201,6 +186,9 @@
 		{/if}
 	</div>
 	<div class="campaign-actions">
+		{#if campaign && can(session, 'campaign', 'send')}
+			<Button variant="ghost" onclick={() => (testOpen = true)}>Test</Button>
+		{/if}
 		{#if campaign && campaign.status === 'draft' && can(session, 'campaign', 'send')}
 			<Button variant="primary" onclick={() => (confirmSend = true)}>Send Campaign</Button>
 		{/if}
@@ -216,8 +204,7 @@
 </div>
 
 <div class="campaign-body">
-	<div class="campaign-main">
-		<Card>
+	<Card>
 			<Tabs bind:value={activeTab} tabs={[{ value: 'campaign', label: 'Campaign' }, { value: 'content', label: 'Content' }]}>
 				<TabContent value="campaign">
 					<div class="form-fields">
@@ -235,27 +222,16 @@
 
 						<FormField label="Lists" required>
 							{@const allLists = listsQuery.current?.lists ?? []}
-							<div class="list-checkboxes">
-								{#each allLists as list}
-									<label class="list-checkbox">
-										<input
-											type="checkbox"
-											checked={listIds.includes(list.id)}
-											onchange={() => toggleListId(list.id)}
-											disabled={!canEdit}
-										/>
-										<span>{list.name}</span>
-										<Badge variant={list.type === 'public' ? 'info' : 'default'}>{list.type}</Badge>
-									</label>
-								{/each}
-								{#if allLists.length === 0}
-									<span class="cell-muted">No lists available</span>
-								{/if}
-							</div>
+							<MultiSelect
+								bind:selected={listIds}
+								options={allLists.map((l) => ({ value: String(l.id), label: l.name, detail: l.type }))}
+								placeholder="Search lists..."
+								disabled={!canEdit}
+							/>
 						</FormField>
 
-						<FormField label="Tags" hint="Comma-separated">
-							<Input bind:value={tags} placeholder="newsletter, announcement" disabled={!canEdit} />
+						<FormField label="Tags" hint="Press Enter to add">
+							<TagInput bind:tags disabled={!canEdit} placeholder="Add a tag..." />
 						</FormField>
 
 						{#if canEdit}
@@ -328,35 +304,14 @@
 					</div>
 				</TabContent>
 			</Tabs>
-		</Card>
-	</div>
+	</Card>
 
-	{#if campaign && can(session, 'campaign', 'send')}
-		<div class="campaign-sidebar">
-			<Card>
-				<Section title="Send test">
-					<div class="test-send-row">
-						<Input bind:value={testEmails} placeholder="email1@example.com, email2@..." />
-						<Button variant="secondary" onclick={handleTestSend} disabled={testPending}>
-							{testPending ? 'Sending...' : 'Send'}
-						</Button>
-					</div>
-					<span class="test-send-hint">Comma-separated. Must be existing subscribers.</span>
-				</Section>
-			</Card>
-
-			{#if campaign.status !== 'draft'}
-				<Card>
-					<Section title="Stats">
-						<div class="stat-grid">
-							<div class="stat"><span class="stat-value">{campaign.sent}</span><span class="stat-label">Sent</span></div>
-							<div class="stat"><span class="stat-value">{campaign.views}</span><span class="stat-label">Views</span></div>
-							<div class="stat"><span class="stat-value">{campaign.clicks}</span><span class="stat-label">Clicks</span></div>
-							<div class="stat"><span class="stat-value">{campaign.bounces}</span><span class="stat-label">Bounces</span></div>
-						</div>
-					</Section>
-				</Card>
-			{/if}
+	{#if campaign && campaign.status !== 'draft'}
+		<div class="stats-row">
+			<div class="stat"><span class="stat-value">{campaign.sent}</span><span class="stat-label">Sent</span></div>
+			<div class="stat"><span class="stat-value">{campaign.views}</span><span class="stat-label">Views</span></div>
+			<div class="stat"><span class="stat-value">{campaign.clicks}</span><span class="stat-label">Clicks</span></div>
+			<div class="stat"><span class="stat-value">{campaign.bounces}</span><span class="stat-label">Bounces</span></div>
 		</div>
 	{/if}
 </div>
@@ -379,14 +334,32 @@
 	onconfirm={handleDelete}
 />
 
+<!-- Test Send Dialog -->
+<DialogShell bind:open={testOpen} title="Send Test Email" maxWidth="480px">
+	<div class="form-fields">
+		<FormField label="Recipients" hint="Comma-separated. Must be existing subscribers.">
+			<Input bind:value={testEmails} placeholder="email1@example.com, email2@example.com" />
+		</FormField>
+		<div class="dialog-actions">
+			<button type="button" class="cancel-btn" onclick={() => (testOpen = false)}>Cancel</button>
+			<Button variant="primary" onclick={handleTestSend} disabled={testPending}>
+				{testPending ? 'Sending...' : 'Send Test'}
+			</Button>
+		</div>
+	</div>
+</DialogShell>
+
 <!-- Preview Dialog -->
 <DialogShell bind:open={previewOpen} title="Campaign Preview" maxWidth="800px">
 	{#if previewLoading}
 		<Spinner size={32} centered />
 	{:else}
-		<div class="preview-frame">
-			{@html previewHtml}
-		</div>
+		<iframe
+			class="preview-frame"
+			srcdoc={previewHtml}
+			sandbox="allow-same-origin"
+			title="Campaign preview"
+		></iframe>
 	{/if}
 </DialogShell>
 
@@ -416,14 +389,9 @@
 	}
 
 	.campaign-body {
-		display: grid;
-		grid-template-columns: 1fr 280px;
+		display: flex;
+		flex-direction: column;
 		gap: 1.5rem;
-		align-items: start;
-	}
-
-	.campaign-main {
-		min-width: 0;
 	}
 
 	/* ─── Form ────────────────────────────────────────────────────── */
@@ -483,6 +451,19 @@
 		color: var(--color-muted);
 	}
 
+	/* Make the rich text editor taller on campaign pages.
+	   clamp: 250px floor (mobile), scales with viewport, 600px cap (desktop) */
+	.form-fields :global(.rte-editor) {
+		min-height: clamp(250px, 45vh, 600px);
+	}
+
+	/* Taller editor for campaign content — user can drag to resize */
+	.form-fields :global(.rte-container) {
+		resize: vertical;
+		overflow: hidden;
+		min-height: 350px;
+	}
+
 	.template-vars code {
 		background: var(--color-hover);
 		padding: 0.15rem 0.4rem;
@@ -491,31 +472,21 @@
 		color: var(--color-foreground);
 	}
 
-	/* ─── Sidebar ─────────────────────────────────────────────────── */
+	/* ─── Stats row ───────────────────────────────────────────────── */
 
-	.test-send-row {
+	.stats-row {
 		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
-
-	.test-send-hint {
-		display: block;
-		font-size: 0.75rem;
-		color: var(--color-muted);
-		margin-top: 0.25rem;
-	}
-
-	.stat-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.75rem;
+		gap: 2rem;
+		padding: 1rem 1.5rem;
+		background: var(--color-surface);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-sm);
 	}
 
 	.stat {
 		display: flex;
-		flex-direction: column;
-		align-items: center;
+		align-items: baseline;
+		gap: 0.375rem;
 	}
 
 	.stat-value {
@@ -526,10 +497,8 @@
 	}
 
 	.stat-label {
-		font-size: 0.75rem;
+		font-size: 0.8rem;
 		color: var(--color-muted);
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
 	}
 
 	/* ─── Preview ─────────────────────────────────────────────────── */
@@ -537,24 +506,21 @@
 	.preview-frame {
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
-		min-height: 300px;
-		max-height: 70vh;
-		overflow-y: auto;
+		width: 100%;
+		min-height: 500px;
+		height: 70vh;
 		background: white;
 	}
 
-	.preview-frame :global(*) {
-		max-width: 100%;
-	}
-
 	@media (max-width: 768px) {
-		.campaign-body {
-			grid-template-columns: 1fr;
-		}
-
 		.content-header-row {
 			flex-direction: column;
 			align-items: stretch;
+		}
+
+		.stats-row {
+			flex-wrap: wrap;
+			gap: 1rem;
 		}
 	}
 </style>

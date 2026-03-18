@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Badge, Button, EmptyState, Spinner, Section } from '$lib/components/admin';
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { listLists, updateList } from '../lists.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
@@ -26,8 +27,8 @@
 			await updateList({ id: list.id, name: list.name, type: newType, optin: list.optin });
 			toast.success(`"${list.name}" is now ${newType}.`);
 			listLists().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to update list.');
+		} catch (err) {
+			toastError(err, 'Failed to update list.');
 		} finally {
 			pendingToggle = null;
 		}

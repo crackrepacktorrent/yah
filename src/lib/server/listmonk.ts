@@ -29,10 +29,14 @@ class ListmonkClient {
 
 		if (!res.ok) {
 			const text = await res.text().catch(() => '');
-			throw new ListmonkApiError(
-				`Listmonk API error: ${res.status} ${res.statusText} — ${text}`,
-				res.status,
-			);
+			let message = `Listmonk API error: ${res.status} ${res.statusText}`;
+			try {
+				const json = JSON.parse(text);
+				if (json.message) message = json.message;
+			} catch {
+				if (text) message += ` — ${text}`;
+			}
+			throw new ListmonkApiError(message, res.status);
 		}
 
 		return res.json();
@@ -283,18 +287,17 @@ class ListmonkClient {
 	// ─── Analytics ───────────────────────────────────────────────────────────
 
 	async getAnalytics(params: {
-		id?: number;
+		id: number;
 		type: 'views' | 'clicks' | 'links' | 'bounces';
 		from: string;
 		to: string;
 	}): Promise<ListmonkAnalyticsPoint[]> {
 		const qs = new URLSearchParams();
-		if (params.id) qs.set('id', String(params.id));
+		qs.set('id', String(params.id));
 		qs.set('from', params.from);
 		qs.set('to', params.to);
-		const query = qs.toString();
 		const res = await this.request<{ data: ListmonkAnalyticsPoint[] }>(
-			`/campaigns/analytics/${params.type}${query ? `?${query}` : ''}`,
+			`/campaigns/analytics/${params.type}?${qs.toString()}`,
 		);
 		return res.data;
 	}

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, Spinner, DataTable, DialogShell } from '$lib/components/admin';
-	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { listSubscribers, createSubscriber, updateSubscriber, deleteSubscriber, blocklistSubscriber } from '../subscribers.remote';
 	import { listLists } from '../lists.remote';
 	import { getSession } from '../../session.remote';
@@ -79,8 +80,8 @@
 			createOpen = false;
 			toast.success('Subscriber created.');
 			refreshList();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to create subscriber.');
+		} catch (err) {
+			toastError(err, 'Failed to create subscriber.');
 		} finally {
 			createPending = false;
 		}
@@ -109,8 +110,8 @@
 			toast.success('Subscriber updated.');
 			clearSelection();
 			refreshList();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to update subscriber.');
+		} catch (err) {
+			toastError(err, 'Failed to update subscriber.');
 		} finally {
 			editPending = false;
 		}
@@ -124,8 +125,8 @@
 			toast.success(`${selectedCount} subscriber${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			refreshList();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to delete subscriber.');
+		} catch (err) {
+			toastError(err, 'Failed to delete subscriber.');
 		}
 	}
 
@@ -137,8 +138,8 @@
 			toast.success(`${selectedCount} subscriber${selectedCount > 1 ? 's' : ''} blocklisted.`);
 			clearSelection();
 			refreshList();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to blocklist subscriber.');
+		} catch (err) {
+			toastError(err, 'Failed to blocklist subscriber.');
 		}
 	}
 
@@ -172,19 +173,8 @@
 
 	const columnHelper = createColumnHelper<Subscriber>();
 
-	const multiSelectFilter = (row: any, columnId: string, filterValue: unknown[]) => {
-		if (!filterValue || filterValue.length === 0) return true;
-		return filterValue.includes(row.getValue(columnId));
-	};
-
 	const columns = [
-		columnHelper.display({
-			id: 'select',
-			header: (info) => renderSnippet(selectAllCell, info.table),
-			cell: (info) => renderSnippet(selectRowCell, info.row),
-			enableSorting: false,
-			enableColumnFilter: false,
-		}),
+		createSelectColumn<Subscriber>(),
 		columnHelper.accessor('email', {
 			header: 'Email',
 			cell: (info) => renderSnippet(emailCell, info.row.original),
@@ -219,25 +209,6 @@
 		}),
 	];
 </script>
-
-{#snippet selectAllCell(table: any)}
-	<input
-		type="checkbox"
-		class="row-checkbox"
-		checked={table.getIsAllRowsSelected()}
-		indeterminate={table.getIsSomeRowsSelected()}
-		onchange={table.getToggleAllRowsSelectedHandler()}
-	/>
-{/snippet}
-
-{#snippet selectRowCell(row: any)}
-	<input
-		type="checkbox"
-		class="row-checkbox"
-		checked={row.getIsSelected()}
-		onchange={row.getToggleSelectedHandler()}
-	/>
-{/snippet}
 
 {#snippet emailCell(sub: Subscriber)}
 	<button class="cell-link" onclick={() => openEdit(sub)}>{sub.email}</button>

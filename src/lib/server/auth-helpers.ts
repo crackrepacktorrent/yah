@@ -1,9 +1,21 @@
 import { auth } from '$lib/server/auth';
 import { query, command, form, getRequestEvent } from '$app/server';
-import { error } from '@sveltejs/kit';
+import { error, isHttpError } from '@sveltejs/kit';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 type Permissions = Record<string, string[]>;
+
+/**
+ * Re-throws known errors as SvelteKit expected errors so their messages
+ * survive serialization to the client. SvelteKit strips messages from
+ * "unexpected" errors for security — this ensures API errors (Listmonk,
+ * Shlink, etc.) are surfaced as user-visible messages.
+ */
+function surfaceError(err: unknown): never {
+	if (isHttpError(err)) throw err; // already a SvelteKit error
+	if (err instanceof Error) error(400, err.message);
+	error(500, 'An unexpected error occurred');
+}
 
 export async function getSessionOrThrow() {
 	const event = getRequestEvent();
@@ -73,12 +85,12 @@ export function protectedCommand(permissions: Permissions, schemaOrFn: any, mayb
 	if (typeof schemaOrFn === 'function') {
 		return command(async () => {
 			await enforcePermissions(permissions);
-			return schemaOrFn();
+			try { return await schemaOrFn(); } catch (err) { surfaceError(err); }
 		});
 	}
 	return command(schemaOrFn, async (arg: any) => {
 		await enforcePermissions(permissions);
-		return maybeFn(arg);
+		try { return await maybeFn(arg); } catch (err) { surfaceError(err); }
 	});
 }
 

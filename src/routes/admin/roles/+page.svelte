@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
-	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { listRoles, createRole, updateRole, deleteRole } from '../roles.remote';
 	import { statements } from '$lib/permissions';
 
@@ -98,8 +99,8 @@
 			editOpen = false;
 			toast.success('Role updated.');
 			listRoles().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to update role.');
+		} catch (err) {
+			toastError(err, 'Failed to update role.');
 		} finally {
 			savePending = false;
 		}
@@ -114,8 +115,8 @@
 			clonePermissions = null;
 			toast.success('Role created.');
 			listRoles().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to create role.');
+		} catch (err) {
+			toastError(err, 'Failed to create role.');
 		} finally {
 			createPending = false;
 		}
@@ -129,8 +130,8 @@
 			toast.success(`${selectedCount} role${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listRoles().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to delete role.');
+		} catch (err) {
+			toastError(err, 'Failed to delete role.');
 		}
 	}
 
@@ -176,13 +177,7 @@
 	const columnHelper = createColumnHelper<RoleItem>();
 
 	const columns = [
-		columnHelper.display({
-			id: 'select',
-			header: (info) => renderSnippet(selectAllCell, info.table),
-			cell: (info) => renderSnippet(selectRowCell, info.row),
-			enableSorting: false,
-			enableColumnFilter: false,
-		}),
+		createSelectColumn<RoleItem>(),
 		columnHelper.accessor('role', {
 			header: 'Name',
 			cell: (info) => renderSnippet(nameCell, info.row.original),
@@ -197,14 +192,6 @@
 		}),
 	];
 </script>
-
-{#snippet selectAllCell(table: any)}
-	<input type="checkbox" class="row-checkbox" checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onchange={table.getToggleAllRowsSelectedHandler()} />
-{/snippet}
-
-{#snippet selectRowCell(row: any)}
-	<input type="checkbox" class="row-checkbox" checked={row.getIsSelected()} disabled={!row.getCanSelect()} onchange={row.getToggleSelectedHandler()} />
-{/snippet}
 
 {#snippet nameCell(role: RoleItem)}
 	<button class="cell-link role-name" onclick={() => openEdit(role)}>{role.role}</button>

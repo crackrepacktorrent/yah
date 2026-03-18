@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, Spinner, DataTable, DialogShell } from '$lib/components/admin';
-	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
+	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, getFacetedRowModel, getFacetedUniqueValues, type SortingState, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
+	import { toastError } from '$lib/utils/toast-error';
 	import { listTemplates, getTemplate, updateTemplate, deleteTemplate, createTemplate, setDefaultTemplate } from '../emails.remote';
 	import { getSession } from '../session.remote';
 	import { can } from '../can';
@@ -68,8 +69,8 @@
 			editBody = tpl.body;
 			editIsDefault = tpl.is_default;
 			editType = tpl.type;
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to load template.');
+		} catch (err) {
+			toastError(err, 'Failed to load template.');
 			editOpen = false;
 		} finally {
 			editLoading = false;
@@ -83,8 +84,8 @@
 			editOpen = false;
 			toast.success('Template updated.');
 			listTemplates().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to update template.');
+		} catch (err) {
+			toastError(err, 'Failed to update template.');
 		} finally {
 			savePending = false;
 		}
@@ -105,8 +106,8 @@
 			createOpen = false;
 			toast.success('Template created.');
 			listTemplates().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to create template.');
+		} catch (err) {
+			toastError(err, 'Failed to create template.');
 		} finally {
 			createPending = false;
 		}
@@ -118,8 +119,8 @@
 			editIsDefault = true;
 			toast.success('Default template updated.');
 			listTemplates().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to set default template.');
+		} catch (err) {
+			toastError(err, 'Failed to set default template.');
 		}
 	}
 
@@ -131,8 +132,8 @@
 			toast.success(`${selectedCount} template${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listTemplates().refresh();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to delete template.');
+		} catch (err) {
+			toastError(err, 'Failed to delete template.');
 		}
 	}
 
@@ -174,19 +175,8 @@
 	const columnHelper = createColumnHelper<Template>();
 	let sorting = $state<SortingState>([]);
 
-	const multiSelectFilter = (row: any, columnId: string, filterValue: unknown[]) => {
-		if (!filterValue || filterValue.length === 0) return true;
-		return filterValue.includes(row.getValue(columnId));
-	};
-
 	const columns = [
-		columnHelper.display({
-			id: 'select',
-			header: (info) => renderSnippet(selectAllCell, info.table),
-			cell: (info) => renderSnippet(selectRowCell, info.row),
-			enableSorting: false,
-			enableColumnFilter: false,
-		}),
+		createSelectColumn<Template>(),
 		columnHelper.accessor('name', {
 			header: 'Name',
 			cell: (info) => renderSnippet(nameCell, info.row.original),
@@ -211,14 +201,6 @@
 	];
 </script>
 
-{#snippet selectAllCell(table: any)}
-	<input type="checkbox" class="row-checkbox" checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onchange={table.getToggleAllRowsSelectedHandler()} />
-{/snippet}
-
-{#snippet selectRowCell(row: any)}
-	<input type="checkbox" class="row-checkbox" checked={row.getIsSelected()} onchange={row.getToggleSelectedHandler()} />
-{/snippet}
-
 {#snippet nameCell(tpl: Template)}
 	<button class="cell-link" onclick={() => openEdit(tpl.id)}>{tpl.name}</button>
 {/snippet}
@@ -228,10 +210,6 @@
 	{#if tpl.is_default}
 		<Badge variant="warning">Default</Badge>
 	{/if}
-{/snippet}
-
-{#snippet subjectCell(subject: string)}
-	<span class="subject">{subject || '—'}</span>
 {/snippet}
 
 {#snippet dateCell(date: string)}
@@ -394,12 +372,6 @@
 	h1 {
 		margin: 0 0 1.5rem;
 		color: var(--color-foreground);
-	}
-
-	.subject {
-		font-family: monospace;
-		font-size: 0.85rem;
-		color: var(--color-muted);
 	}
 
 	/* ─── Edit Form ────────────────────────────────────────────────────── */

@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { Badge, Button, Card, EmptyState, Section, Spinner, Combobox, DateRangePicker } from '$lib/components/admin';
-	import { Combobox as BitsCombobox } from 'bits-ui';
+	import { Button, Card, EmptyState, FormField, MultiSelect, Section, Spinner, DateRangePicker } from '$lib/components/admin';
 	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 	import { listCampaigns, getCampaignAnalytics } from '../campaigns.remote';
 
-	// ─── Campaign combobox ───────────────────────────────────────
-	let selectedCampaignId = $state<number | undefined>(undefined);
-	let searchValue = $state('');
+	// ─── Campaign multi-select ───────────────────────────────────
+	let selectedCampaignIds = $state<string[]>([]);
 
 	let campaignsQuery = $derived(listCampaigns());
 	let _prevCampaigns: typeof campaignsQuery.current;
@@ -17,16 +15,16 @@
 	});
 
 	let campaigns = $derived(campaignsData?.campaigns ?? []);
-	let filteredCampaigns = $derived(
-		searchValue
-			? campaigns.filter((c) => c.name.toLowerCase().includes(searchValue.toLowerCase()))
-			: campaigns,
+	let campaignOptions = $derived(
+		campaigns.map((c) => ({ value: String(c.id), label: `#${c.id}: ${c.name}`, detail: c.status })),
 	);
 
-	let selected = $derived(
-		selectedCampaignId != null ? campaigns.find((c) => c.id === selectedCampaignId) : null,
+	// If nothing selected, use all campaign IDs
+	let effectiveIds = $derived(
+		selectedCampaignIds.length > 0
+			? selectedCampaignIds.map(Number)
+			: campaigns.map((c) => c.id),
 	);
-	let selectedLabel = $derived(selected ? `${selected.name} (${selected.status})` : 'All campaigns');
 
 	// ─── Date range ──────────────────────────────────────────────
 	let nowDate = today(getLocalTimeZone());
@@ -41,46 +39,61 @@
 	let initialTo = formatDateValue(nowDate);
 	let appliedFrom = $state(initialFrom);
 	let appliedTo = $state(initialTo);
-	let appliedCampaignId = $state<number | undefined>(undefined);
+	let appliedIds = $state<number[]>([]);
 
 	function applyFilters() {
 		if (!dateRange.start || !dateRange.end) return;
 		appliedFrom = formatDateValue(dateRange.start);
 		appliedTo = formatDateValue(dateRange.end);
-		appliedCampaignId = selectedCampaignId;
+		appliedIds = effectiveIds;
 	}
 
+	// Auto-apply when campaigns load for the first time
+	let hasAutoApplied = $state(false);
+	$effect(() => {
+		if (campaigns.length > 0 && !hasAutoApplied) {
+			appliedIds = campaigns.map((c) => c.id);
+			hasAutoApplied = true;
+		}
+	});
+
 	let viewsQuery = $derived(
-		getCampaignAnalytics({
-			campaignId: appliedCampaignId,
-			type: 'views',
-			from: appliedFrom,
-			to: appliedTo,
-		}),
+		appliedIds.length > 0
+			? getCampaignAnalytics({
+					campaignIds: appliedIds,
+					type: 'views',
+					from: appliedFrom,
+					to: appliedTo,
+				})
+			: null,
 	);
-	let _prevViews: typeof viewsQuery.current;
+	let _prevViews: typeof viewsQuery extends null ? undefined : NonNullable<typeof viewsQuery>['current'];
 	let viewsData = $derived.by(() => {
+		if (!viewsQuery) return _prevViews;
 		const val = viewsQuery.current;
 		if (val !== undefined) _prevViews = val;
 		return val ?? _prevViews;
 	});
 
 	let clicksQuery = $derived(
-		getCampaignAnalytics({
-			campaignId: appliedCampaignId,
-			type: 'clicks',
-			from: appliedFrom,
-			to: appliedTo,
-		}),
+		appliedIds.length > 0
+			? getCampaignAnalytics({
+					campaignIds: appliedIds,
+					type: 'clicks',
+					from: appliedFrom,
+					to: appliedTo,
+				})
+			: null,
 	);
-	let _prevClicks: typeof clicksQuery.current;
+	let _prevClicks: typeof clicksQuery extends null ? undefined : NonNullable<typeof clicksQuery>['current'];
 	let clicksData = $derived.by(() => {
+		if (!clicksQuery) return _prevClicks;
 		const val = clicksQuery.current;
 		if (val !== undefined) _prevClicks = val;
 		return val ?? _prevClicks;
 	});
 
-	let loading = $derived(viewsQuery.loading || clicksQuery.loading);
+	let loading = $derived((viewsQuery?.loading || clicksQuery?.loading) ?? false);
 
 	// ─── Chart helpers ───────────────────────────────────────────
 	type AnalyticsPoint = { campaign_id: number; count: number; timestamp: string };
@@ -109,18 +122,6 @@
 		const d = new Date(timestamp);
 		return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 	}
-
-	function statusVariant(status: string): 'default' | 'success' | 'error' | 'warning' | 'info' {
-		switch (status) {
-			case 'draft': return 'default';
-			case 'running': return 'success';
-			case 'paused': return 'warning';
-			case 'finished': return 'info';
-			case 'cancelled': return 'error';
-			case 'scheduled': return 'warning';
-			default: return 'default';
-		}
-	}
 </script>
 
 <h1>Email Analytics</h1>
@@ -129,41 +130,25 @@
 	<Spinner size={48} centered />
 {:else}
 	<div class="filter-bar">
-		<Combobox
-			value={selectedCampaignId != null ? String(selectedCampaignId) : ''}
-			onValueChange={(v) => {
-				selectedCampaignId = v ? Number(v) : undefined;
-				searchValue = '';
-			}}
-			oninput={(e) => { searchValue = (e.target as HTMLInputElement).value; }}
-			placeholder="Search campaigns..."
-			class="combobox-campaigns"
-		>
-			<BitsCombobox.Item value="" label="All campaigns" class="combobox-item">
-				{#snippet child({ props: itemProps, selected: itemSelected })}
-					<div {...itemProps} class="combobox-item" class:selected={itemSelected}>
-						All campaigns
-					</div>
-				{/snippet}
-			</BitsCombobox.Item>
-			{#each filteredCampaigns as campaign}
-				<BitsCombobox.Item value={String(campaign.id)} label="{campaign.name} ({campaign.status})" class="combobox-item">
-					{#snippet child({ props: itemProps, selected: itemSelected })}
-						<div {...itemProps} class="combobox-item" class:selected={itemSelected}>
-							<span>{campaign.name}</span>
-							<Badge variant={statusVariant(campaign.status)}>{campaign.status}</Badge>
-						</div>
-					{/snippet}
-				</BitsCombobox.Item>
-			{/each}
-			{#if filteredCampaigns.length === 0}
-				<div class="combobox-empty">No campaigns found</div>
-			{/if}
-		</Combobox>
+		<div class="filter-campaigns">
+			<FormField label="Campaigns">
+				<MultiSelect
+					bind:selected={selectedCampaignIds}
+					options={campaignOptions}
+					placeholder="All campaigns"
+				/>
+			</FormField>
+		</div>
 
-		<DateRangePicker bind:value={dateRange} maxValue={nowDate} />
+		<div class="filter-dates">
+			<FormField label="Date range">
+				<DateRangePicker bind:value={dateRange} maxValue={nowDate} />
+			</FormField>
+		</div>
 
-		<Button variant="primary" onclick={applyFilters}>Apply</Button>
+		<div class="filter-apply">
+			<Button variant="primary" onclick={applyFilters}>Apply</Button>
+		</div>
 	</div>
 
 	{#if loading && !viewsData && !clicksData}
@@ -226,14 +211,23 @@
 
 	.filter-bar {
 		display: flex;
-		align-items: center;
+		align-items: flex-end;
 		gap: 0.75rem;
 		margin-bottom: 1.5rem;
 		flex-wrap: wrap;
 	}
 
-	:global(.combobox-campaigns) {
+	.filter-campaigns {
+		flex: 1;
 		min-width: 260px;
+	}
+
+	.filter-dates {
+		flex-shrink: 0;
+	}
+
+	.filter-apply {
+		padding-bottom: 0.125rem;
 	}
 
 	/* ─── Charts ──────────────────────────────────────────────── */
@@ -321,7 +315,7 @@
 			align-items: stretch;
 		}
 
-		:global(.combobox-campaigns) {
+		.filter-campaigns {
 			min-width: 0;
 		}
 	}
