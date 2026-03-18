@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, PaginationNav, Spinner, DataTable } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, PaginationNav, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, type RowSelectionState } from '@tanstack/table-core';
-	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listSubscribers, createSubscriber, updateSubscriber, deleteSubscriber, blocklistSubscriber } from '../subscribers.remote';
 	import { listLists } from '../lists.remote';
@@ -352,112 +351,68 @@
 />
 
 <!-- Create Subscriber Dialog -->
-<Dialog.Root bind:open={createOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-overlay"></div>
-			{/snippet}
-		</Dialog.Overlay>
-		<Dialog.Content>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-content">
-					<div class="dialog-header">
-						<h2>New Subscriber</h2>
-						<Dialog.Close>
-							{#snippet child({ props: closeProps })}
-								<button {...closeProps} class="dialog-close">&times;</button>
-							{/snippet}
-						</Dialog.Close>
-					</div>
+<DialogShell bind:open={createOpen} title="New Subscriber">
+	<div class="form-fields">
+		<FormField label="Email" required>
+			<Input type="email" bind:value={createEmail} required placeholder="subscriber@example.com" />
+		</FormField>
 
-					<div class="form-fields">
-						<FormField label="Email" required>
-							<Input type="email" bind:value={createEmail} required placeholder="subscriber@example.com" />
-						</FormField>
+		<FormField label="Name">
+			<Input bind:value={createName} placeholder="Full name" />
+		</FormField>
 
-						<FormField label="Name">
-							<Input bind:value={createName} placeholder="Full name" />
-						</FormField>
+		<FormField label="Status">
+			<select class="select" bind:value={createStatus}>
+				<option value="enabled">Enabled</option>
+				<option value="disabled">Disabled</option>
+				<option value="blocklisted">Blocklisted</option>
+			</select>
+		</FormField>
 
-						<FormField label="Status">
-							<select class="select" bind:value={createStatus}>
-								<option value="enabled">Enabled</option>
-								<option value="disabled">Disabled</option>
-								<option value="blocklisted">Blocklisted</option>
-							</select>
-						</FormField>
+		<FormField label="Lists">
+			{@render listCheckboxes(createListIds, (id) => (createListIds = toggleListId(id, createListIds)))}
+		</FormField>
 
-						<FormField label="Lists">
-							{@render listCheckboxes(createListIds, (id) => (createListIds = toggleListId(id, createListIds)))}
-						</FormField>
-
-						<div class="actions">
-							<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
-							<Button variant="primary" onclick={handleCreate} disabled={createPending}>
-								{createPending ? 'Creating...' : 'Create'}
-							</Button>
-						</div>
-					</div>
-				</div>
-			{/snippet}
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+		<div class="actions">
+			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="primary" onclick={handleCreate} disabled={createPending}>
+				{createPending ? 'Creating...' : 'Create'}
+			</Button>
+		</div>
+	</div>
+</DialogShell>
 
 <!-- Edit Subscriber Dialog -->
-<Dialog.Root bind:open={editOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-overlay"></div>
-			{/snippet}
-		</Dialog.Overlay>
-		<Dialog.Content>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-content">
-					<div class="dialog-header">
-						<h2>Edit Subscriber</h2>
-						<Dialog.Close>
-							{#snippet child({ props: closeProps })}
-								<button {...closeProps} class="dialog-close">&times;</button>
-							{/snippet}
-						</Dialog.Close>
-					</div>
+<DialogShell bind:open={editOpen} title="Edit Subscriber">
+	<div class="form-fields">
+		<FormField label="Email" required>
+			<Input type="email" bind:value={editEmail} required />
+		</FormField>
 
-					<div class="form-fields">
-						<FormField label="Email" required>
-							<Input type="email" bind:value={editEmail} required />
-						</FormField>
+		<FormField label="Name">
+			<Input bind:value={editName} placeholder="Full name" />
+		</FormField>
 
-						<FormField label="Name">
-							<Input bind:value={editName} placeholder="Full name" />
-						</FormField>
+		<FormField label="Status">
+			<select class="select" bind:value={editStatus}>
+				<option value="enabled">Enabled</option>
+				<option value="disabled">Disabled</option>
+				<option value="blocklisted">Blocklisted</option>
+			</select>
+		</FormField>
 
-						<FormField label="Status">
-							<select class="select" bind:value={editStatus}>
-								<option value="enabled">Enabled</option>
-								<option value="disabled">Disabled</option>
-								<option value="blocklisted">Blocklisted</option>
-							</select>
-						</FormField>
+		<FormField label="Lists">
+			{@render listCheckboxes(editListIds, (id) => (editListIds = toggleListId(id, editListIds)))}
+		</FormField>
 
-						<FormField label="Lists">
-							{@render listCheckboxes(editListIds, (id) => (editListIds = toggleListId(id, editListIds)))}
-						</FormField>
-
-						<div class="actions">
-							<button type="button" class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
-							<Button variant="primary" onclick={handleEdit} disabled={editPending}>
-								{editPending ? 'Saving...' : 'Save'}
-							</Button>
-						</div>
-					</div>
-				</div>
-			{/snippet}
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+		<div class="actions">
+			<button type="button" class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
+			<Button variant="primary" onclick={handleEdit} disabled={editPending}>
+				{editPending ? 'Saving...' : 'Save'}
+			</Button>
+		</div>
+	</div>
+</DialogShell>
 
 <style>
 	h1 {
@@ -500,61 +455,6 @@
 		height: 1rem;
 		accent-color: var(--color-primary);
 		cursor: pointer;
-	}
-
-	/* ─── Dialog ───────────────────────────────────────────────────────── */
-
-	.dialog-overlay {
-		position: fixed;
-		inset: 0;
-		background: var(--color-overlay);
-		z-index: 50;
-	}
-
-	.dialog-content {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		z-index: 51;
-		background: var(--color-surface);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
-		padding: 1.5rem;
-		width: 90vw;
-		max-width: 520px;
-		max-height: 90vh;
-		overflow-y: auto;
-	}
-
-	.dialog-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.25rem;
-	}
-
-	.dialog-header h2 {
-		margin: 0;
-		font-size: 1.1rem;
-		font-weight: 700;
-		color: var(--color-foreground);
-	}
-
-	.dialog-close {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 1.5rem;
-		line-height: 1;
-		padding: 0.25rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.dialog-close:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 
 	.form-fields {

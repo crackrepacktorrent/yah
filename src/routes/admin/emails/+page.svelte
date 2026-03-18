@@ -1,14 +1,19 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
-	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listTemplates, getTemplate, updateTemplate, deleteTemplate, createTemplate, setDefaultTemplate } from '../emails.remote';
 	import { getSession } from '../session.remote';
 
 	let role = $derived(getSession().current?.role);
 	let templatesQuery = $derived(listTemplates());
+	let _prevTemplates: typeof templatesQuery.current;
+	let templatesData = $derived.by(() => {
+		const val = templatesQuery.current;
+		if (val !== undefined) _prevTemplates = val;
+		return val ?? _prevTemplates;
+	});
 	let globalFilter = $state('');
 
 	let editOpen = $state(false);
@@ -220,10 +225,10 @@
 
 <h1>Email Templates</h1>
 
-{#await templatesQuery}
+{#if !templatesData && templatesQuery.loading}
 	<Spinner size={48} centered />
-{:then data}
-	{#if data.templates.length === 0}
+{:else if templatesData}
+	{#if templatesData.templates.length === 0}
 		<EmptyState message="No email templates found." />
 	{:else}
 		{#snippet toolbar()}
@@ -244,7 +249,7 @@
 		{/snippet}
 
 		{@const table = createSvelteTable({
-			data: data.templates,
+			data: templatesData.templates,
 			columns,
 			state: { sorting, rowSelection, globalFilter },
 			onSortingChange: (updater) => {
@@ -262,7 +267,7 @@
 		})}
 		<DataTable {table} {toolbar} />
 	{/if}
-{/await}
+{/if}
 
 <ConfirmDialog
 	bind:open={confirmDelete}
@@ -273,147 +278,93 @@
 />
 
 <!-- Create Template Dialog -->
-<Dialog.Root bind:open={createOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-overlay"></div>
-			{/snippet}
-		</Dialog.Overlay>
-		<Dialog.Content>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-content">
-					<div class="dialog-header">
-						<h2>New Template</h2>
-						<Dialog.Close>
-							{#snippet child({ props: closeProps })}
-								<button {...closeProps} class="dialog-close">
-									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<line x1="18" y1="6" x2="6" y2="18"></line>
-										<line x1="6" y1="6" x2="18" y2="18"></line>
-									</svg>
-								</button>
-							{/snippet}
-						</Dialog.Close>
-					</div>
+<DialogShell bind:open={createOpen} title="New Template" maxWidth="700px">
+	<div class="edit-form">
+		<FormField label="Name" required>
+			<Input bind:value={createName} placeholder="Template name" />
+		</FormField>
 
-					<div class="edit-form">
-						<FormField label="Name" required>
-							<Input bind:value={createName} placeholder="Template name" />
-						</FormField>
+		<FormField label="Type">
+			<select class="type-select" bind:value={createType}>
+				<option value="tx">Transactional</option>
+				<option value="campaign">Campaign</option>
+			</select>
+		</FormField>
 
-						<FormField label="Type">
-							<select class="type-select" bind:value={createType}>
-								<option value="tx">Transactional</option>
-								<option value="campaign">Campaign</option>
-							</select>
-						</FormField>
+		<FormField label="Subject" hint="Use {'{{ .Tx.Data.field }}'} for template variables">
+			<Input bind:value={createSubject} placeholder="Email subject" />
+		</FormField>
 
-						<FormField label="Subject" hint="Use {'{{ .Tx.Data.field }}'} for template variables">
-							<Input bind:value={createSubject} placeholder="Email subject" />
-						</FormField>
+		<div class="body-field">
+			<span class="body-label">Body (HTML)</span>
+			<textarea
+				class="body-editor"
+				bind:value={createBody}
+				rows="12"
+				placeholder="<html>...</html>"
+			></textarea>
+		</div>
 
-						<div class="body-field">
-							<span class="body-label">Body (HTML)</span>
-							<textarea
-								class="body-editor"
-								bind:value={createBody}
-								rows="12"
-								placeholder="<html>...</html>"
-							></textarea>
-						</div>
-
-						<div class="actions">
-							<button class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
-							<Button variant="primary" onclick={handleCreateTemplate} disabled={createPending}>
-								{createPending ? 'Creating...' : 'Create'}
-							</Button>
-						</div>
-					</div>
-				</div>
-			{/snippet}
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+		<div class="actions">
+			<button class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="primary" onclick={handleCreateTemplate} disabled={createPending}>
+				{createPending ? 'Creating...' : 'Create'}
+			</Button>
+		</div>
+	</div>
+</DialogShell>
 
 <!-- Edit Template Dialog -->
-<Dialog.Root bind:open={editOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-overlay"></div>
-			{/snippet}
-		</Dialog.Overlay>
-		<Dialog.Content>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-content">
-					<div class="dialog-header">
-						<h2>{role === 'owner' ? 'Edit Template' : 'View Template'}</h2>
-						<Dialog.Close>
-							{#snippet child({ props: closeProps })}
-								<button {...closeProps} class="dialog-close">
-									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<line x1="18" y1="6" x2="6" y2="18"></line>
-										<line x1="6" y1="6" x2="18" y2="18"></line>
-									</svg>
-								</button>
-							{/snippet}
-						</Dialog.Close>
-					</div>
+<DialogShell bind:open={editOpen} title={role === 'owner' ? 'Edit Template' : 'View Template'} maxWidth="700px">
+	{#if editLoading}
+		<Spinner size={32} centered />
+	{:else}
+		<div class="edit-form">
+			<FormField label="Name">
+				<Input bind:value={editName} disabled={role !== 'owner'} />
+			</FormField>
 
-					{#if editLoading}
-						<Spinner size={32} centered />
-					{:else}
-						<div class="edit-form">
-							<FormField label="Name">
-								<Input bind:value={editName} disabled={role !== 'owner'} />
-							</FormField>
+			<FormField label="Subject" hint="Use {'{{ .Tx.Data.field }}'} for template variables">
+				<Input bind:value={editSubject} disabled={role !== 'owner'} />
+			</FormField>
 
-							<FormField label="Subject" hint="Use {'{{ .Tx.Data.field }}'} for template variables">
-								<Input bind:value={editSubject} disabled={role !== 'owner'} />
-							</FormField>
-
-							<div class="body-field">
-								<div class="body-header">
-									<span class="body-label">Body (HTML)</span>
-									<button class="preview-toggle" onclick={() => (showPreview = !showPreview)}>
-										{showPreview ? 'Edit' : 'Preview'}
-									</button>
-								</div>
-								{#if showPreview}
-									<div class="preview-frame">
-										{@html previewHtml(editBody)}
-									</div>
-								{:else}
-									<textarea
-										class="body-editor"
-										bind:value={editBody}
-										disabled={role !== 'owner'}
-										rows="16"
-									></textarea>
-								{/if}
-							</div>
-
-							{#if role === 'owner'}
-								<div class="actions">
-									{#if !editIsDefault}
-										<Button variant="ghost" onclick={handleSetDefault}>Set as Default</Button>
-									{/if}
-									<div class="actions-right">
-										<button class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
-										<Button variant="primary" onclick={handleSave} disabled={savePending}>
-											{savePending ? 'Saving...' : 'Save'}
-										</Button>
-									</div>
-								</div>
-							{/if}
-						</div>
-					{/if}
+			<div class="body-field">
+				<div class="body-header">
+					<span class="body-label">Body (HTML)</span>
+					<button class="preview-toggle" onclick={() => (showPreview = !showPreview)}>
+						{showPreview ? 'Edit' : 'Preview'}
+					</button>
 				</div>
-			{/snippet}
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+				{#if showPreview}
+					<div class="preview-frame">
+						{@html previewHtml(editBody)}
+					</div>
+				{:else}
+					<textarea
+						class="body-editor"
+						bind:value={editBody}
+						disabled={role !== 'owner'}
+						rows="16"
+					></textarea>
+				{/if}
+			</div>
+
+			{#if role === 'owner'}
+				<div class="actions">
+					{#if !editIsDefault}
+						<Button variant="ghost" onclick={handleSetDefault}>Set as Default</Button>
+					{/if}
+					<div class="actions-right">
+						<button class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
+						<Button variant="primary" onclick={handleSave} disabled={savePending}>
+							{savePending ? 'Saving...' : 'Save'}
+						</Button>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+</DialogShell>
 
 <style>
 	h1 {
@@ -452,61 +403,6 @@
 
 	.name-link:hover {
 		text-decoration: underline;
-	}
-
-	/* ─── Dialog ───────────────────────────────────────────────────────── */
-
-	.dialog-overlay {
-		position: fixed;
-		inset: 0;
-		background: var(--color-overlay);
-		z-index: 50;
-	}
-
-	.dialog-content {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		z-index: 51;
-		background: var(--color-surface);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
-		padding: 1.5rem;
-		width: 90vw;
-		max-width: 700px;
-		max-height: 90vh;
-		overflow-y: auto;
-	}
-
-	.dialog-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.25rem;
-	}
-
-	.dialog-header h2 {
-		margin: 0;
-		font-size: 1.1rem;
-		font-weight: 700;
-		color: var(--color-foreground);
-	}
-
-	.dialog-close {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		padding: 0.25rem;
-		border-radius: var(--radius-sm);
-		display: flex;
-		align-items: center;
-	}
-
-	.dialog-close:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 
 	/* ─── Edit Form ────────────────────────────────────────────────────── */

@@ -12,11 +12,11 @@ export const listSubscribers = query(
 	async ({ page, perPage, search }) => {
 		await requireRole('owner', 'admin');
 
-		// Listmonk expects a SQL WHERE clause for the query param.
-		// Build a safe ILIKE expression from the user's search input.
+		// Listmonk's subscriber query API expects a raw SQL WHERE clause.
+		// We manually escape special characters since parameterized queries aren't supported.
 		let query: string | undefined;
 		if (search) {
-			const escaped = search.replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
+			const escaped = search.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
 			query = `(subscribers.email ILIKE '%${escaped}%' OR subscribers.name ILIKE '%${escaped}%')`;
 		}
 
@@ -58,7 +58,7 @@ export const createSubscriber = command(
 export const updateSubscriber = command(
 	v.object({
 		id: v.number(),
-		email: v.optional(v.pipe(v.string(), v.nonEmpty(), v.email())),
+		email: v.optional(v.pipe(v.string(), v.nonEmpty('Email is required'), v.email('Invalid email'))),
 		name: v.optional(v.string()),
 		status: v.optional(v.string()),
 		listIds: v.optional(v.array(v.number())),

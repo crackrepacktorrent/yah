@@ -18,6 +18,7 @@
   xmlns="http://www.w3.org/2000/svg"
   {width}
   {height}
+  aria-hidden="true"
 >
   <g
     transform={LOGO_TRANSFORM}

@@ -5,6 +5,7 @@ export { default as FormField } from './FormField.svelte';
 export { default as StatCard } from './StatCard.svelte';
 export { default as Badge } from './Badge.svelte';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+export { default as DialogShell } from './DialogShell.svelte';
 export { default as Switch } from './Switch.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
 export { default as PaginationNav } from './PaginationNav.svelte';

@@ -68,7 +68,7 @@ export const createShortUrl = command(
 		customSlug: v.optional(v.string(), ''),
 		title: v.optional(v.string(), ''),
 		tags: v.optional(v.string(), ''),
-		maxVisits: v.optional(v.string(), ''),
+		maxVisits: v.optional(v.pipe(v.string(), v.transform((s) => s.trim())), ''),
 		validUntil: v.optional(v.string(), ''),
 		crawlable: v.optional(v.boolean(), false),
 		forwardQuery: v.optional(v.boolean(), true),
@@ -89,7 +89,7 @@ export const createShortUrl = command(
 			tags: tags.length > 0 ? tags : undefined,
 			crawlable: data.crawlable,
 			forwardQuery: data.forwardQuery,
-			maxVisits: data.maxVisits ? Number(data.maxVisits) : undefined,
+			maxVisits: data.maxVisits ? (parseInt(data.maxVisits, 10) || undefined) : undefined,
 			validUntil: data.validUntil || undefined,
 		});
 		return { shortCode: result.shortCode };
@@ -102,7 +102,7 @@ export const editShortUrl = form(
 		longUrl: v.optional(v.string(), ''),
 		title: v.optional(v.string(), ''),
 		tags: v.optional(v.string(), ''),
-		maxVisits: v.optional(v.string(), ''),
+		maxVisits: v.optional(v.pipe(v.string(), v.transform((s) => s.trim())), ''),
 		validUntil: v.optional(v.string(), ''),
 		crawlable: v.optional(v.boolean(), false),
 		forwardQuery: v.optional(v.boolean(), false),
@@ -123,7 +123,7 @@ export const editShortUrl = form(
 				tags,
 				crawlable: data.crawlable,
 				forwardQuery: data.forwardQuery,
-				maxVisits: data.maxVisits ? Number(data.maxVisits) : null,
+				maxVisits: data.maxVisits ? (parseInt(data.maxVisits, 10) || null) : null,
 				validUntil: data.validUntil || null,
 			});
 			return { success: true };

@@ -19,15 +19,19 @@ export const auth = betterAuth({
 		organization({
 			async sendInvitationEmail(data) {
 				const inviteLink = `${env.BETTER_AUTH_URL}/admin/members/accept/${data.id}`;
-				await getListmonk().sendTransactionalEmail({
-					subscriberEmail: data.email,
-					templateId: Number(env.LISTMONK_INVITATION_TEMPLATE_ID),
-					data: {
-						invite_link: inviteLink,
-						org_name: data.organization.name,
-						role: data.role,
-					},
-				});
+				try {
+					await getListmonk().sendTransactionalEmail({
+						subscriberEmail: data.email,
+						templateId: Number(env.LISTMONK_INVITATION_TEMPLATE_ID),
+						data: {
+							invite_link: inviteLink,
+							org_name: data.organization.name,
+							role: data.role,
+						},
+					});
+				} catch (err) {
+					console.error('Failed to send invitation email:', err);
+				}
 			},
 		}),
 		sveltekitCookies(getRequestEvent),

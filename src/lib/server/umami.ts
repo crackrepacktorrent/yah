@@ -21,8 +21,18 @@ async function getToken(): Promise<string> {
 	}
 
 	const data = await res.json();
-	cachedToken = { token: data.token, expiresAt: Date.now() + 23 * 60 * 60 * 1000 };
+	cachedToken = { token: data.token, expiresAt: getJwtExpiry(data.token) };
 	return data.token;
+}
+
+function getJwtExpiry(token: string): number {
+	try {
+		const payload = JSON.parse(atob(token.split('.')[1]));
+		// Expire 5 minutes early to avoid using stale tokens
+		return payload.exp ? payload.exp * 1000 - 5 * 60 * 1000 : Date.now() + 23 * 60 * 60 * 1000;
+	} catch {
+		return Date.now() + 23 * 60 * 60 * 1000;
+	}
 }
 
 function init() {
@@ -88,6 +98,7 @@ export async function getPageviews(
 	endAt: number,
 	unit: 'hour' | 'day' | 'week' | 'month' = 'day',
 ): Promise<{ pageviews: UmamiPageview[]; sessions: UmamiPageview[] }> {
+	init();
 	return umamiGet(`/websites/${getWebsiteId()}/pageviews`, {
 		startAt: String(startAt),
 		endAt: String(endAt),
@@ -110,6 +121,7 @@ export async function getMetrics(
 	type: MetricType,
 	limit = 10,
 ): Promise<UmamiMetric[]> {
+	init();
 	return umamiGet(`/websites/${getWebsiteId()}/metrics`, {
 		startAt: String(startAt),
 		endAt: String(endAt),
@@ -119,6 +131,7 @@ export async function getMetrics(
 }
 
 export async function getActiveVisitors(): Promise<number> {
+	init();
 	const data = await umamiGet(`/websites/${getWebsiteId()}/active`);
 	return data.visitors;
 }

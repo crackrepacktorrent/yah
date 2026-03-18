@@ -5,6 +5,22 @@
 	import { getDashboard } from './shortlinks.remote';
 	import { getSiteStats } from './analytics.remote';
 
+	let dashboardQuery = $derived(getDashboard());
+	let _prevDashboard: typeof dashboardQuery.current;
+	let dashboardData = $derived.by(() => {
+		const val = dashboardQuery.current;
+		if (val !== undefined) _prevDashboard = val;
+		return val ?? _prevDashboard;
+	});
+
+	let siteStatsQuery = $derived(getSiteStats());
+	let _prevStats: typeof siteStatsQuery.current;
+	let siteStats = $derived.by(() => {
+		const val = siteStatsQuery.current;
+		if (val !== undefined) _prevStats = val;
+		return val ?? _prevStats;
+	});
+
 	function formatDuration(seconds: number) {
 		if (seconds < 60) return `${seconds}s`;
 		const m = Math.floor(seconds / 60);
@@ -62,14 +78,14 @@
 
 <h1>Dashboard</h1>
 
-{#await getDashboard()}
+{#if !dashboardData && dashboardQuery.loading}
 	<Spinner size={48} centered />
-{:then data}
+{:else if dashboardData}
 	<div class="stats-grid">
-		<StatCard value={data.totalShortUrls} label="Short URLs" accent="var(--brand-orange)" />
-		<StatCard value={data.visits.nonOrphanVisits.total.toLocaleString()} label="Total Clicks" accent="var(--brand-amber)" />
-		<StatCard value={data.visits.nonOrphanVisits.nonBots.toLocaleString()} label="Human Clicks" accent="var(--brand-olive)" />
-		<StatCard value={data.visits.nonOrphanVisits.bots.toLocaleString()} label="Bot Clicks" accent="var(--brand-magenta)" />
+		<StatCard value={dashboardData.totalShortUrls} label="Short URLs" accent="var(--brand-orange)" />
+		<StatCard value={dashboardData.visits.nonOrphanVisits.total.toLocaleString()} label="Total Clicks" accent="var(--brand-amber)" />
+		<StatCard value={dashboardData.visits.nonOrphanVisits.nonBots.toLocaleString()} label="Human Clicks" accent="var(--brand-olive)" />
+		<StatCard value={dashboardData.visits.nonOrphanVisits.bots.toLocaleString()} label="Bot Clicks" accent="var(--brand-magenta)" />
 	</div>
 
 	<section class="recent">
@@ -78,22 +94,22 @@
 			<a href="/admin/shortlinks" class="view-all">View all →</a>
 		</div>
 
-		{#if data.recentShortUrls.length === 0}
+		{#if dashboardData.recentShortUrls.length === 0}
 			<EmptyState message="No shortlinks yet.">
 				<a href="/admin/shortlinks/new">Create one</a>
 			</EmptyState>
 		{:else}
 			{@const table = createSvelteTable({
-				data: data.recentShortUrls,
+				data: dashboardData.recentShortUrls,
 				columns,
 				getCoreRowModel: getCoreRowModel(),
 })}
 			<DataTable {table} />
 		{/if}
 	</section>
-{/await}
+{/if}
 
-{#await getSiteStats() then stats}
+{#if siteStats}
 	<section class="site-analytics">
 		<div class="section-header">
 			<h2>Site Analytics</h2>
@@ -103,25 +119,25 @@
 			<div class="period">
 				<h3>Last 24 Hours</h3>
 				<div class="stats-grid">
-					<StatCard value={stats.today.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
-					<StatCard value={stats.today.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
-					<StatCard value="{stats.today.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
-					<StatCard value={formatDuration(stats.today.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
+					<StatCard value={siteStats.today.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
+					<StatCard value={siteStats.today.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
+					<StatCard value="{siteStats.today.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
+					<StatCard value={formatDuration(siteStats.today.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
 				</div>
 			</div>
 
 			<div class="period">
 				<h3>Last 30 Days</h3>
 				<div class="stats-grid">
-					<StatCard value={stats.month.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
-					<StatCard value={stats.month.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
-					<StatCard value="{stats.month.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
-					<StatCard value={formatDuration(stats.month.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
+					<StatCard value={siteStats.month.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
+					<StatCard value={siteStats.month.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
+					<StatCard value="{siteStats.month.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
+					<StatCard value={formatDuration(siteStats.month.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
 				</div>
 			</div>
 		</div>
 	</section>
-{/await}
+{/if}
 
 <style>
 	h1 {

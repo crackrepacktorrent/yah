@@ -2,21 +2,15 @@
   import { Section, EmptyState, DataTable } from "$lib/components/admin";
   import { createSvelteTable, renderSnippet } from "$lib/components/admin";
   import { createColumnHelper, getCoreRowModel } from "@tanstack/table-core";
+  import type { Visit, Pagination } from '$lib/server/shlink';
 
   let {
     visits,
     pagination,
   }: {
-    visits: any[];
-    pagination: any;
+    visits: Visit[];
+    pagination: Pagination;
   } = $props();
-
-  type Visit = {
-    date: string;
-    referer: string;
-    visitLocation: { cityName?: string; countryCode?: string } | null;
-    userAgent: string;
-  };
 
   const columnHelper = createColumnHelper<Visit>();
 

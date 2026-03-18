@@ -2,7 +2,7 @@ import { query, command } from '$app/server';
 import * as v from 'valibot';
 import { auth } from '$lib/server/auth';
 import { getRequestEvent } from '$app/server';
-import { requireRole } from '$lib/server/auth-helpers';
+import { requireRole, getSessionOrThrow } from '$lib/server/auth-helpers';
 
 export const listMembers = query(async () => {
 	await requireRole('owner');
@@ -28,7 +28,7 @@ export const listInvitations = query(async () => {
 
 export const inviteMember = command(
 	v.object({
-		email: v.pipe(v.string(), v.nonEmpty('Email is required'), v.email()),
+		email: v.pipe(v.string(), v.nonEmpty('Email is required'), v.email('Invalid email')),
 		role: v.picklist(['admin', 'member']),
 	}),
 	async ({ email, role }) => {
@@ -40,7 +40,7 @@ export const inviteMember = command(
 			body: {
 				email,
 				role,
-				organizationId: await getOrgId(event.request.headers),
+				organizationId: await getOrgId(),
 			},
 		});
 	},
@@ -95,9 +95,9 @@ export const cancelInvitation = command(
 	},
 );
 
-async function getOrgId(headers: Headers): Promise<string> {
-	const session = await auth.api.getSession({ headers });
-	if (!session?.session.activeOrganizationId) {
+async function getOrgId(): Promise<string> {
+	const session = await getSessionOrThrow();
+	if (!session.session.activeOrganizationId) {
 		throw new Error('No active organization');
 	}
 	return session.session.activeOrganizationId;

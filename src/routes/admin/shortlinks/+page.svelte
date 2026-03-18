@@ -1,15 +1,20 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog } from '$lib/components/admin';
+	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
-	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listShortUrls, createShortUrl, deleteShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
 	let role = $derived(getSession().current?.role);
 
 	let shortlinksQuery = $derived(listShortUrls());
+	let _prevShortlinks: typeof shortlinksQuery.current;
+	let shortlinksData = $derived.by(() => {
+		const val = shortlinksQuery.current;
+		if (val !== undefined) _prevShortlinks = val;
+		return val ?? _prevShortlinks;
+	});
 
 	let globalFilter = $state('');
 	let sorting = $state<SortingState>([{ id: 'dateCreated', desc: true }]);
@@ -155,10 +160,10 @@
 
 <h1>Shortlinks</h1>
 
-{#await shortlinksQuery}
+{#if !shortlinksData && shortlinksQuery.loading}
 	<Spinner size={48} centered />
-{:then data}
-	{#if data.shortUrls.length === 0}
+{:else if shortlinksData}
+	{#if shortlinksData.shortUrls.length === 0}
 		<EmptyState message="No shortlinks found." />
 	{:else}
 		{#snippet toolbar()}
@@ -179,7 +184,7 @@
 		{/snippet}
 
 		{@const table = createSvelteTable({
-			data: data.shortUrls,
+			data: shortlinksData.shortUrls,
 			columns,
 			state: { sorting, rowSelection, globalFilter },
 			onSortingChange: (updater) => {
@@ -198,7 +203,7 @@
 
 		<DataTable {table} {toolbar} />
 	{/if}
-{/await}
+{/if}
 
 <ConfirmDialog
 	bind:open={confirmDelete}
@@ -210,74 +215,47 @@
 
 {#if role === 'admin' || role === 'owner'}
 <!-- Create Shortlink Dialog -->
-<Dialog.Root bind:open={createOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-overlay"></div>
-			{/snippet}
-		</Dialog.Overlay>
-		<Dialog.Content>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-content">
-					<div class="dialog-header">
-						<h2>New Shortlink</h2>
-						<Dialog.Close>
-							{#snippet child({ props: closeProps })}
-								<button {...closeProps} class="dialog-close">
-									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<line x1="18" y1="6" x2="6" y2="18"></line>
-										<line x1="6" y1="6" x2="18" y2="18"></line>
-									</svg>
-								</button>
-							{/snippet}
-						</Dialog.Close>
-					</div>
+<DialogShell bind:open={createOpen} title="New Shortlink" maxWidth="520px">
+	<form class="create-form" onsubmit={handleCreate}>
+		<FormField label="Destination URL" required>
+			<Input name="longUrl" type="url" required placeholder="https://example.com/long/path" />
+		</FormField>
 
-					<form class="create-form" onsubmit={handleCreate}>
-						<FormField label="Destination URL" required>
-							<Input name="longUrl" type="url" required placeholder="https://example.com/long/path" />
-						</FormField>
+		<FormField label="Custom Slug" hint="(optional — leave blank for auto-generated)">
+			<Input name="customSlug" placeholder="my-link" />
+		</FormField>
 
-						<FormField label="Custom Slug" hint="(optional — leave blank for auto-generated)">
-							<Input name="customSlug" placeholder="my-link" />
-						</FormField>
+		<FormField label="Title" hint="(optional)">
+			<Input name="title" placeholder="Descriptive title" />
+		</FormField>
 
-						<FormField label="Title" hint="(optional)">
-							<Input name="title" placeholder="Descriptive title" />
-						</FormField>
+		<FormField label="Tags" hint="(comma-separated)">
+			<Input name="tags" placeholder="campaign, social" />
+		</FormField>
 
-						<FormField label="Tags" hint="(comma-separated)">
-							<Input name="tags" placeholder="campaign, social" />
-						</FormField>
+		<div class="row">
+			<FormField label="Max Visits" hint="(optional)">
+				<Input name="maxVisits" placeholder="Unlimited" />
+			</FormField>
 
-						<div class="row">
-							<FormField label="Max Visits" hint="(optional)">
-								<Input name="maxVisits" placeholder="Unlimited" />
-							</FormField>
+			<FormField label="Expires" hint="(optional)">
+				<Input name="validUntil" type="date" min={new Date().toLocaleDateString('en-CA')} />
+			</FormField>
+		</div>
 
-							<FormField label="Expires" hint="(optional)">
-								<Input name="validUntil" type="date" min={new Date().toLocaleDateString('en-CA')} />
-							</FormField>
-						</div>
+		<div class="switches">
+			<Switch label="Forward query parameters" checked={true} name="forwardQuery" />
+			<Switch label="Allow search engine crawling" checked={false} name="crawlable" />
+		</div>
 
-						<div class="switches">
-							<Switch label="Forward query parameters" checked={true} name="forwardQuery" />
-							<Switch label="Allow search engine crawling" checked={false} name="crawlable" />
-						</div>
-
-						<div class="actions">
-							<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
-							<Button variant="primary" type="submit" disabled={createPending}>
-								{createPending ? 'Creating...' : 'Create Shortlink'}
-							</Button>
-						</div>
-					</form>
-				</div>
-			{/snippet}
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+		<div class="actions">
+			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="primary" type="submit" disabled={createPending}>
+				{createPending ? 'Creating...' : 'Create Shortlink'}
+			</Button>
+		</div>
+	</form>
+</DialogShell>
 {/if}
 
 <style>
@@ -332,61 +310,6 @@
 		height: 1rem;
 		accent-color: var(--color-primary);
 		cursor: pointer;
-	}
-
-	/* ─── Dialog ───────────────────────────────────────────────────────── */
-
-	.dialog-overlay {
-		position: fixed;
-		inset: 0;
-		background: var(--color-overlay);
-		z-index: 50;
-	}
-
-	.dialog-content {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		z-index: 51;
-		background: var(--color-surface);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
-		padding: 1.5rem;
-		width: 90vw;
-		max-width: 520px;
-		max-height: 90vh;
-		overflow-y: auto;
-	}
-
-	.dialog-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.25rem;
-	}
-
-	.dialog-header h2 {
-		margin: 0;
-		font-size: 1.1rem;
-		font-weight: 700;
-		color: var(--color-foreground);
-	}
-
-	.dialog-close {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		padding: 0.25rem;
-		border-radius: var(--radius-sm);
-		display: flex;
-		align-items: center;
-	}
-
-	.dialog-close:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 
 	.create-form {

@@ -45,6 +45,14 @@
 					<th
 						class:sortable={header.column.getCanSort()}
 						onclick={header.column.getToggleSortingHandler()}
+						role={header.column.getCanSort() ? 'button' : undefined}
+						tabindex={header.column.getCanSort() ? 0 : undefined}
+						onkeydown={(e) => {
+							if (header.column.getCanSort() && (e.key === 'Enter' || e.key === ' ')) {
+								e.preventDefault();
+								header.column.getToggleSortingHandler()?.(e);
+							}
+						}}
 					>
 						{#if !header.isPlaceholder}
 							<FlexRender

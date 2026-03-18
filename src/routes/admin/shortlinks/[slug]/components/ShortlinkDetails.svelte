@@ -1,7 +1,8 @@
 <script lang="ts">
   import { Card, Badge, Tooltip, Section } from "$lib/components/admin";
+  import type { ShortUrl } from '$lib/server/shlink';
 
-  let { shortUrl }: { shortUrl: any } = $props();
+  let { shortUrl }: { shortUrl: ShortUrl } = $props();
 </script>
 
 <Section title="Details">

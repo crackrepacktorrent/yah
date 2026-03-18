@@ -1,14 +1,19 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
-	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listLists, createList, updateList, deleteList } from '../lists.remote';
 	import { getSession } from '../../session.remote';
 
 	let role = $derived(getSession().current?.role);
 	let listsQuery = $derived(listLists());
+	let _prevLists: typeof listsQuery.current;
+	let listsData = $derived.by(() => {
+		const val = listsQuery.current;
+		if (val !== undefined) _prevLists = val;
+		return val ?? _prevLists;
+	});
 	let globalFilter = $state('');
 
 	// Row selection
@@ -189,10 +194,10 @@
 
 <h1>Mailing Lists</h1>
 
-{#await listsQuery}
+{#if !listsData && listsQuery.loading}
 	<Spinner size={48} centered />
-{:then data}
-	{#if data.lists.length === 0}
+{:else if listsData}
+	{#if listsData.lists.length === 0}
 		<EmptyState message="No mailing lists found." />
 	{:else}
 		{#snippet toolbar()}
@@ -213,7 +218,7 @@
 		{/snippet}
 
 		{@const table = createSvelteTable({
-			data: data.lists,
+			data: listsData.lists,
 			columns,
 			state: { sorting, rowSelection, globalFilter },
 			onSortingChange: (updater) => {
@@ -231,7 +236,7 @@
 		})}
 		<DataTable {table} {toolbar} />
 	{/if}
-{/await}
+{/if}
 
 <ConfirmDialog
 	bind:open={confirmDelete}
@@ -242,120 +247,76 @@
 />
 
 <!-- Create List Dialog -->
-<Dialog.Root bind:open={createOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-overlay"></div>
-			{/snippet}
-		</Dialog.Overlay>
-		<Dialog.Content>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-content">
-					<div class="dialog-header">
-						<h2>New List</h2>
-						<Dialog.Close>
-							{#snippet child({ props: closeProps })}
-								<button {...closeProps} class="dialog-close">&times;</button>
-							{/snippet}
-						</Dialog.Close>
-					</div>
+<DialogShell bind:open={createOpen} title="New List">
+	<div class="form-fields">
+		<FormField label="Name" required>
+			<Input bind:value={createName} required placeholder="Newsletter" />
+		</FormField>
 
-					<div class="form-fields">
-						<FormField label="Name" required>
-							<Input bind:value={createName} required placeholder="Newsletter" />
-						</FormField>
+		<div class="row">
+			<FormField label="Type">
+				<select class="select" bind:value={createType}>
+					<option value="public">Public</option>
+					<option value="private">Private</option>
+				</select>
+			</FormField>
 
-						<div class="row">
-							<FormField label="Type">
-								<select class="select" bind:value={createType}>
-									<option value="public">Public</option>
-									<option value="private">Private</option>
-								</select>
-							</FormField>
+			<FormField label="Opt-in">
+				<select class="select" bind:value={createOptin}>
+					<option value="single">Single</option>
+					<option value="double">Double</option>
+				</select>
+			</FormField>
+		</div>
 
-							<FormField label="Opt-in">
-								<select class="select" bind:value={createOptin}>
-									<option value="single">Single</option>
-									<option value="double">Double</option>
-								</select>
-							</FormField>
-						</div>
+		<FormField label="Description">
+			<textarea class="textarea" bind:value={createDescription} rows="3" placeholder="Optional description..."></textarea>
+		</FormField>
 
-						<FormField label="Description">
-							<textarea class="textarea" bind:value={createDescription} rows="3" placeholder="Optional description..."></textarea>
-						</FormField>
-
-						<div class="actions">
-							<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
-							<Button variant="primary" onclick={handleCreate} disabled={createPending}>
-								{createPending ? 'Creating...' : 'Create'}
-							</Button>
-						</div>
-					</div>
-				</div>
-			{/snippet}
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+		<div class="actions">
+			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="primary" onclick={handleCreate} disabled={createPending}>
+				{createPending ? 'Creating...' : 'Create'}
+			</Button>
+		</div>
+	</div>
+</DialogShell>
 
 <!-- Edit List Dialog -->
-<Dialog.Root bind:open={editOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-overlay"></div>
-			{/snippet}
-		</Dialog.Overlay>
-		<Dialog.Content>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-content">
-					<div class="dialog-header">
-						<h2>Edit List</h2>
-						<Dialog.Close>
-							{#snippet child({ props: closeProps })}
-								<button {...closeProps} class="dialog-close">&times;</button>
-							{/snippet}
-						</Dialog.Close>
-					</div>
+<DialogShell bind:open={editOpen} title="Edit List">
+	<div class="form-fields">
+		<FormField label="Name" required>
+			<Input bind:value={editName} required />
+		</FormField>
 
-					<div class="form-fields">
-						<FormField label="Name" required>
-							<Input bind:value={editName} required />
-						</FormField>
+		<div class="row">
+			<FormField label="Type">
+				<select class="select" bind:value={editType}>
+					<option value="public">Public</option>
+					<option value="private">Private</option>
+				</select>
+			</FormField>
 
-						<div class="row">
-							<FormField label="Type">
-								<select class="select" bind:value={editType}>
-									<option value="public">Public</option>
-									<option value="private">Private</option>
-								</select>
-							</FormField>
+			<FormField label="Opt-in">
+				<select class="select" bind:value={editOptin}>
+					<option value="single">Single</option>
+					<option value="double">Double</option>
+				</select>
+			</FormField>
+		</div>
 
-							<FormField label="Opt-in">
-								<select class="select" bind:value={editOptin}>
-									<option value="single">Single</option>
-									<option value="double">Double</option>
-								</select>
-							</FormField>
-						</div>
+		<FormField label="Description">
+			<textarea class="textarea" bind:value={editDescription} rows="3"></textarea>
+		</FormField>
 
-						<FormField label="Description">
-							<textarea class="textarea" bind:value={editDescription} rows="3"></textarea>
-						</FormField>
-
-						<div class="actions">
-							<button type="button" class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
-							<Button variant="primary" onclick={handleEdit} disabled={editPending}>
-								{editPending ? 'Saving...' : 'Save'}
-							</Button>
-						</div>
-					</div>
-				</div>
-			{/snippet}
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+		<div class="actions">
+			<button type="button" class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
+			<Button variant="primary" onclick={handleEdit} disabled={editPending}>
+				{editPending ? 'Saving...' : 'Save'}
+			</Button>
+		</div>
+	</div>
+</DialogShell>
 
 <style>
 	h1 {
@@ -393,61 +354,6 @@
 		height: 1rem;
 		accent-color: var(--color-primary);
 		cursor: pointer;
-	}
-
-	/* ─── Dialog ───────────────────────────────────────────────────────── */
-
-	.dialog-overlay {
-		position: fixed;
-		inset: 0;
-		background: var(--color-overlay);
-		z-index: 50;
-	}
-
-	.dialog-content {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		z-index: 51;
-		background: var(--color-surface);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
-		padding: 1.5rem;
-		width: 90vw;
-		max-width: 520px;
-		max-height: 90vh;
-		overflow-y: auto;
-	}
-
-	.dialog-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.25rem;
-	}
-
-	.dialog-header h2 {
-		margin: 0;
-		font-size: 1.1rem;
-		font-weight: 700;
-		color: var(--color-foreground);
-	}
-
-	.dialog-close {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 1.5rem;
-		line-height: 1;
-		padding: 0.25rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.dialog-close:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 
 	.form-fields {

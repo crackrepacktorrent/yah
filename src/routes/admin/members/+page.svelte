@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { Button, Input, FormField, Badge, EmptyState, Spinner, ConfirmDialog, DataTable } from '$lib/components/admin';
+	import { Button, Input, FormField, Badge, EmptyState, Spinner, ConfirmDialog, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
-	import { Dialog } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
 	import { listMembers, listInvitations, inviteMember, updateMemberRole, removeMember, cancelInvitation } from '../members.remote';
 	import { getSession } from '../session.remote';
@@ -16,7 +15,20 @@
 	let confirmCancelInvite = $state<{ open: boolean; id: string; email: string }>({ open: false, id: '', email: '' });
 
 	let membersQuery = $derived(listMembers());
+	let _prevMembers: typeof membersQuery.current;
+	let membersData = $derived.by(() => {
+		const val = membersQuery.current;
+		if (val !== undefined) _prevMembers = val;
+		return val ?? _prevMembers;
+	});
+
 	let invitationsQuery = $derived(listInvitations());
+	let _prevInvitations: typeof invitationsQuery.current;
+	let invitationsData = $derived.by(() => {
+		const val = invitationsQuery.current;
+		if (val !== undefined) _prevInvitations = val;
+		return val ?? _prevInvitations;
+	});
 
 	let currentSession = $derived(getSession().current);
 
@@ -194,10 +206,10 @@
 <section class="members-section">
 	<h2>Team Members</h2>
 
-	{#await membersQuery}
+	{#if !membersData && membersQuery.loading}
 		<Spinner size={48} centered />
-	{:then data}
-		{@const members = data.members.members}
+	{:else if membersData}
+		{@const members = membersData.members.members}
 		{#if members.length === 0}
 			<EmptyState message="No members yet." />
 		{:else}
@@ -208,77 +220,50 @@
 })}
 			<DataTable {table} />
 		{/if}
-	{/await}
+	{/if}
 </section>
 
 <section class="members-section">
 	<h2>Pending Invitations</h2>
 
-	{#await invitationsQuery}
+	{#if !invitationsData && invitationsQuery.loading}
 		<Spinner size={32} centered />
-	{:then data}
-		{#if data.invitations.length === 0}
+	{:else if invitationsData}
+		{#if invitationsData.invitations.length === 0}
 			<EmptyState message="No pending invitations." />
 		{:else}
 			{@const table = createSvelteTable({
-				data: data.invitations,
+				data: invitationsData.invitations,
 				columns: inviteColumns,
 				getCoreRowModel: getCoreRowModel(),
 })}
 			<DataTable {table} />
 		{/if}
-	{/await}
+	{/if}
 </section>
 
 <!-- Invite Dialog -->
-<Dialog.Root bind:open={inviteOpen}>
-	<Dialog.Portal>
-		<Dialog.Overlay>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-overlay"></div>
-			{/snippet}
-		</Dialog.Overlay>
-		<Dialog.Content>
-			{#snippet child({ props })}
-				<div {...props} class="dialog-content">
-					<div class="dialog-header">
-						<h2>Invite Member</h2>
-						<Dialog.Close>
-							{#snippet child({ props: closeProps })}
-								<button {...closeProps} class="dialog-close">
-									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<line x1="18" y1="6" x2="6" y2="18"></line>
-										<line x1="6" y1="6" x2="18" y2="18"></line>
-									</svg>
-								</button>
-							{/snippet}
-						</Dialog.Close>
-					</div>
+<DialogShell bind:open={inviteOpen} title="Invite Member" maxWidth="440px">
+	<form class="invite-form" onsubmit={handleInvite}>
+		<FormField label="Email" required>
+			<Input type="email" bind:value={inviteEmail} required placeholder="user@example.com" />
+		</FormField>
 
-					<form class="invite-form" onsubmit={handleInvite}>
-						<FormField label="Email" required>
-							<Input type="email" bind:value={inviteEmail} required placeholder="user@example.com" />
-						</FormField>
+		<FormField label="Role">
+			<select bind:value={inviteRole} class="role-select full-width">
+				<option value="admin">Admin</option>
+				<option value="member">Member</option>
+			</select>
+		</FormField>
 
-						<FormField label="Role">
-							<select bind:value={inviteRole} class="role-select full-width">
-								<option value="admin">Admin</option>
-								<option value="member">Member</option>
-							</select>
-						</FormField>
-
-						<div class="dialog-actions">
-							<button type="button" class="cancel-btn" onclick={() => (inviteOpen = false)}>Cancel</button>
-							<Button variant="primary" type="submit" disabled={invitePending}>
-								{invitePending ? 'Sending...' : 'Send Invitation'}
-							</Button>
-						</div>
-					</form>
-				</div>
-			{/snippet}
-		</Dialog.Content>
-	</Dialog.Portal>
-</Dialog.Root>
+		<div class="dialog-actions">
+			<button type="button" class="cancel-btn" onclick={() => (inviteOpen = false)}>Cancel</button>
+			<Button variant="primary" type="submit" disabled={invitePending}>
+				{invitePending ? 'Sending...' : 'Send Invitation'}
+			</Button>
+		</div>
+	</form>
+</DialogShell>
 
 <ConfirmDialog
 	bind:open={confirmRemove.open}
@@ -362,59 +347,6 @@
 		font-size: 0.85rem;
 		color: var(--color-muted);
 		font-style: italic;
-	}
-
-	/* ─── Dialog ───────────────────────────────────────────────────────── */
-
-	.dialog-overlay {
-		position: fixed;
-		inset: 0;
-		background: var(--color-overlay);
-		z-index: 50;
-	}
-
-	.dialog-content {
-		position: fixed;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		z-index: 51;
-		background: var(--color-surface);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
-		padding: 1.5rem;
-		width: 90vw;
-		max-width: 440px;
-	}
-
-	.dialog-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.25rem;
-	}
-
-	.dialog-header h2 {
-		margin: 0;
-		font-size: 1.1rem;
-		font-weight: 700;
-		color: var(--color-foreground);
-	}
-
-	.dialog-close {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		padding: 0.25rem;
-		border-radius: var(--radius-sm);
-		display: flex;
-		align-items: center;
-	}
-
-	.dialog-close:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 
 	.invite-form {

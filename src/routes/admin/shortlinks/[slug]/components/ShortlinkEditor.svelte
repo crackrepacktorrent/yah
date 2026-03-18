@@ -4,6 +4,7 @@
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
   import { getSession } from "../../../session.remote";
   import { toast } from "svelte-sonner";
+  import type { ShortUrl } from '$lib/server/shlink';
 
   let role = $derived(getSession().current?.role);
   let canEdit = $derived(role === 'admin' || role === 'owner');
@@ -12,7 +13,7 @@
     shortUrl,
     slug,
   }: {
-    shortUrl: any;
+    shortUrl: ShortUrl;
     slug: string;
   } = $props();
 
@@ -124,7 +125,7 @@
 
           <div class="row">
             <FormField label="Max Visits">
-              <Input {...editShortUrl.fields.maxVisits.as("text")} value={shortUrl.meta.maxVisits ?? ""} placeholder="Unlimited" />
+              <Input {...editShortUrl.fields.maxVisits.as("text")} value={shortUrl.meta.maxVisits?.toString() ?? ""} placeholder="Unlimited" />
             </FormField>
 
             <FormField label="Expires">

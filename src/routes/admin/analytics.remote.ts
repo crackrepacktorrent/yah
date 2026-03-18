@@ -5,7 +5,16 @@ import {
 	getPageviews,
 	getMetrics,
 	getActiveVisitors,
+	type UmamiStats,
 } from '$lib/server/umami';
+
+function bounceRate(stats: UmamiStats): number {
+	return stats.visits > 0 ? Math.round((stats.bounces / stats.visits) * 100) : 0;
+}
+
+function avgVisitTime(stats: UmamiStats): number {
+	return stats.visits > 0 ? Math.round(stats.totaltime / stats.visits) : 0;
+}
 
 export const getSiteStats = query(async () => {
 	const now = Date.now();
@@ -22,15 +31,15 @@ export const getSiteStats = query(async () => {
 			pageviews: today.pageviews,
 			visitors: today.visitors,
 			visits: today.visits,
-			bounceRate: today.visits > 0 ? Math.round((today.bounces / today.visits) * 100) : 0,
-			avgTime: today.visits > 0 ? Math.round(today.totaltime / today.visits) : 0,
+			bounceRate: bounceRate(today),
+			avgTime: avgVisitTime(today),
 		},
 		month: {
 			pageviews: month.pageviews,
 			visitors: month.visitors,
 			visits: month.visits,
-			bounceRate: month.visits > 0 ? Math.round((month.bounces / month.visits) * 100) : 0,
-			avgTime: month.visits > 0 ? Math.round(month.totaltime / month.visits) : 0,
+			bounceRate: bounceRate(month),
+			avgTime: avgVisitTime(month),
 		},
 	};
 });
@@ -67,8 +76,8 @@ export const getAnalytics = query(
 				pageviews: stats.pageviews,
 				visitors: stats.visitors,
 				visits: stats.visits,
-				bounceRate: stats.visits > 0 ? Math.round((stats.bounces / stats.visits) * 100) : 0,
-				avgTime: stats.visits > 0 ? Math.round(stats.totaltime / stats.visits) : 0,
+				bounceRate: bounceRate(stats),
+				avgTime: avgVisitTime(stats),
 			},
 			pageviews: pageviews.pageviews,
 			sessions: pageviews.sessions,
