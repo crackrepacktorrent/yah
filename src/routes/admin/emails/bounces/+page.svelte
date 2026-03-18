@@ -43,9 +43,10 @@
 		return `/admin/emails/bounces?${params.toString()}`;
 	}
 
-	function bounceTypeVariant(type: string): 'error' | 'warning' | 'default' {
+	function bounceTypeVariant(type: string): 'error' | 'warning' | 'info' | 'default' {
 		if (type === 'hard') return 'error';
 		if (type === 'soft') return 'warning';
+		if (type === 'complaint') return 'info';
 		return 'default';
 	}
 
@@ -80,6 +81,7 @@
 	type Bounce = {
 		id: number;
 		email: string;
+		campaign_id: number;
 		type: string;
 		source: string;
 		created_at: string;
@@ -97,6 +99,10 @@
 		columnHelper.accessor('email', {
 			header: 'Email',
 			cell: (info) => info.getValue(),
+		}),
+		columnHelper.accessor('campaign_id', {
+			header: 'Campaign',
+			cell: (info) => info.getValue() || '—',
 		}),
 		columnHelper.accessor('type', {
 			header: 'Type',
@@ -134,44 +140,43 @@
 {#if !data && bouncesQuery.loading}
 	<Spinner size={48} centered />
 {:else if data}
+	{#snippet toolbar()}
+		{#if selectedCount > 0 && role === 'owner'}
+			<span class="toolbar-count">{selectedCount} selected</span>
+			<div class="toolbar-actions">
+				<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+				<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+			</div>
+		{:else}
+			<div class="toolbar-spacer"></div>
+			{#if role === 'owner'}
+				<Button variant="danger" onclick={() => (confirmClearAll = true)}>Clear All</Button>
+			{/if}
+		{/if}
+	{/snippet}
+
+	{@const table = createSvelteTable({
+		data: data.bounces,
+		columns,
+		state: { rowSelection },
+		onRowSelectionChange: (updater) => {
+			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+		},
+		getCoreRowModel: getCoreRowModel(),
+		manualPagination: true,
+	})}
+	<DataTable {table} {toolbar} />
 	{#if data.bounces.length === 0}
 		<EmptyState message="No bounces recorded." />
-	{:else}
-		{#snippet toolbar()}
-			{#if selectedCount > 0 && role === 'owner'}
-				<span class="toolbar-count">{selectedCount} selected</span>
-				<div class="toolbar-actions">
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			{:else}
-				<div class="toolbar-spacer"></div>
-				{#if role === 'owner'}
-					<Button variant="danger" onclick={() => (confirmClearAll = true)}>Clear All</Button>
-				{/if}
-			{/if}
-		{/snippet}
+	{/if}
 
-		{@const table = createSvelteTable({
-			data: data.bounces,
-			columns,
-			state: { rowSelection },
-			onRowSelectionChange: (updater) => {
-				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
-			},
-			getCoreRowModel: getCoreRowModel(),
-			manualPagination: true,
-		})}
-		<DataTable {table} {toolbar} />
-
-		{#if data.total > data.perPage}
-			<PaginationNav
-				count={data.total}
-				perPage={data.perPage}
-				page={data.page}
-				onPageChange={(p) => goto(pageUrl(p))}
-			/>
-		{/if}
+	{#if data.total > data.perPage}
+		<PaginationNav
+			count={data.total}
+			perPage={data.perPage}
+			page={data.page}
+			onPageChange={(p) => goto(pageUrl(p))}
+		/>
 	{/if}
 {/if}
 

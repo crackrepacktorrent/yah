@@ -163,45 +163,45 @@
 {#if !shortlinksData && shortlinksQuery.loading}
 	<Spinner size={48} centered />
 {:else if shortlinksData}
+	{#snippet toolbar()}
+		{#if selectedCount > 0 && (role === 'admin' || role === 'owner')}
+			<span class="toolbar-count">{selectedCount} selected</span>
+			<div class="toolbar-actions">
+				<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+				<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+			</div>
+		{:else}
+			<div class="toolbar-search">
+				<Input type="text" placeholder="Filter shortlinks..." bind:value={globalFilter} />
+			</div>
+			{#if role === 'admin' || role === 'owner'}
+				<Button variant="primary" onclick={() => (createOpen = true)}>+ New Shortlink</Button>
+			{/if}
+		{/if}
+	{/snippet}
+
+	{@const table = createSvelteTable({
+		data: shortlinksData.shortUrls,
+		columns,
+		state: { sorting, rowSelection, globalFilter },
+		onSortingChange: (updater) => {
+			sorting = typeof updater === 'function' ? updater(sorting) : updater;
+		},
+		onRowSelectionChange: (updater) => {
+			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+		},
+		onGlobalFilterChange: (updater) => {
+			globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
+		},
+		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+	})}
+
+	<DataTable {table} {toolbar} />
+
 	{#if shortlinksData.shortUrls.length === 0}
 		<EmptyState message="No shortlinks found." />
-	{:else}
-		{#snippet toolbar()}
-			{#if selectedCount > 0 && (role === 'admin' || role === 'owner')}
-				<span class="toolbar-count">{selectedCount} selected</span>
-				<div class="toolbar-actions">
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			{:else}
-				<div class="toolbar-search">
-					<Input type="text" placeholder="Filter shortlinks..." bind:value={globalFilter} />
-				</div>
-				{#if role === 'admin' || role === 'owner'}
-					<Button variant="primary" onclick={() => (createOpen = true)}>+ New Shortlink</Button>
-				{/if}
-			{/if}
-		{/snippet}
-
-		{@const table = createSvelteTable({
-			data: shortlinksData.shortUrls,
-			columns,
-			state: { sorting, rowSelection, globalFilter },
-			onSortingChange: (updater) => {
-				sorting = typeof updater === 'function' ? updater(sorting) : updater;
-			},
-			onRowSelectionChange: (updater) => {
-				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
-			},
-			onGlobalFilterChange: (updater) => {
-				globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
-			},
-			getCoreRowModel: getCoreRowModel(),
-			getFilteredRowModel: getFilteredRowModel(),
-			getSortedRowModel: getSortedRowModel(),
-		})}
-
-		<DataTable {table} {toolbar} />
 	{/if}
 {/if}
 

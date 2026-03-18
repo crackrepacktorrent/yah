@@ -25,6 +25,7 @@
 	let editBody = $state('');
 	let showPreview = $state(false);
 	let editIsDefault = $state(false);
+	let editType = $state('');
 
 	let confirmDelete = $state(false);
 
@@ -64,6 +65,7 @@
 			editSubject = tpl.subject;
 			editBody = tpl.body;
 			editIsDefault = tpl.is_default;
+			editType = tpl.type;
 		} catch (err: any) {
 			toast.error(err?.message || 'Failed to load template.');
 			editOpen = false;
@@ -142,8 +144,8 @@
 	function typeLabel(type: string) {
 		switch (type) {
 			case 'tx': return 'Transactional';
-			case 'campaign': return 'Campaign';
-			case 'campaign_visual': return 'Visual';
+			case 'campaign': return 'Campaign / HTML';
+			case 'campaign_visual': return 'Campaign / Visual';
 			default: return type;
 		}
 	}
@@ -228,44 +230,43 @@
 {#if !templatesData && templatesQuery.loading}
 	<Spinner size={48} centered />
 {:else if templatesData}
+	{#snippet toolbar()}
+		{#if selectedCount > 0 && canDelete}
+			<span class="toolbar-count">{selectedCount} selected</span>
+			<div class="toolbar-actions">
+				<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+				<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+			</div>
+		{:else}
+			<div class="toolbar-search">
+				<Input type="text" placeholder="Filter templates..." bind:value={globalFilter} />
+			</div>
+			{#if role === 'owner'}
+				<Button variant="primary" onclick={openCreateTemplate}>+ New Template</Button>
+			{/if}
+		{/if}
+	{/snippet}
+
+	{@const table = createSvelteTable({
+		data: templatesData.templates,
+		columns,
+		state: { sorting, rowSelection, globalFilter },
+		onSortingChange: (updater) => {
+			sorting = typeof updater === 'function' ? updater(sorting) : updater;
+		},
+		onRowSelectionChange: (updater) => {
+			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+		},
+		onGlobalFilterChange: (updater) => {
+			globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
+		},
+		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+	})}
+	<DataTable {table} {toolbar} />
 	{#if templatesData.templates.length === 0}
 		<EmptyState message="No email templates found." />
-	{:else}
-		{#snippet toolbar()}
-			{#if selectedCount > 0 && canDelete}
-				<span class="toolbar-count">{selectedCount} selected</span>
-				<div class="toolbar-actions">
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			{:else}
-				<div class="toolbar-search">
-					<Input type="text" placeholder="Filter templates..." bind:value={globalFilter} />
-				</div>
-				{#if role === 'owner'}
-					<Button variant="primary" onclick={openCreateTemplate}>+ New Template</Button>
-				{/if}
-			{/if}
-		{/snippet}
-
-		{@const table = createSvelteTable({
-			data: templatesData.templates,
-			columns,
-			state: { sorting, rowSelection, globalFilter },
-			onSortingChange: (updater) => {
-				sorting = typeof updater === 'function' ? updater(sorting) : updater;
-			},
-			onRowSelectionChange: (updater) => {
-				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
-			},
-			onGlobalFilterChange: (updater) => {
-				globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
-			},
-			getCoreRowModel: getCoreRowModel(),
-			getFilteredRowModel: getFilteredRowModel(),
-			getSortedRowModel: getSortedRowModel(),
-		})}
-		<DataTable {table} {toolbar} />
 	{/if}
 {/if}
 
@@ -287,7 +288,8 @@
 		<FormField label="Type">
 			<select class="type-select" bind:value={createType}>
 				<option value="tx">Transactional</option>
-				<option value="campaign">Campaign</option>
+				<option value="campaign">Campaign / HTML</option>
+				<option value="campaign_visual">Campaign / Visual</option>
 			</select>
 		</FormField>
 
@@ -351,7 +353,7 @@
 
 			{#if role === 'owner'}
 				<div class="actions">
-					{#if !editIsDefault}
+					{#if !editIsDefault && editType === 'campaign'}
 						<Button variant="ghost" onclick={handleSetDefault}>Set as Default</Button>
 					{/if}
 					<div class="actions-right">

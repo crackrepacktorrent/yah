@@ -91,13 +91,10 @@
 	<section class="recent">
 		<div class="section-header">
 			<h2>Recent Shortlinks</h2>
-			<a href="/admin/shortlinks" class="view-all">View all →</a>
 		</div>
 
 		{#if dashboardData.recentShortUrls.length === 0}
-			<EmptyState message="No shortlinks yet.">
-				<a href="/admin/shortlinks/new">Create one</a>
-			</EmptyState>
+			<EmptyState message="No shortlinks yet." />
 		{:else}
 			{@const table = createSvelteTable({
 				data: dashboardData.recentShortUrls,
@@ -163,17 +160,6 @@
 		font-size: 1.1rem;
 		margin: 0;
 		color: var(--color-foreground);
-	}
-
-	.view-all {
-		font-size: 0.85rem;
-		color: var(--color-primary);
-		text-decoration: none;
-		font-weight: 500;
-	}
-
-	.view-all:hover {
-		text-decoration: underline;
 	}
 
 	.code {

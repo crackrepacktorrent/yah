@@ -207,6 +207,7 @@ export interface ListmonkTemplate {
 	subject: string;
 	type: 'campaign' | 'tx' | 'campaign_visual';
 	body: string;
+	body_source: string | null;
 	is_default: boolean;
 }
 
@@ -218,7 +219,7 @@ export interface ListmonkSubscriber {
 	email: string;
 	name: string;
 	status: 'enabled' | 'disabled' | 'blocklisted';
-	lists: { id: number; name: string }[];
+	lists: { id: number; name: string; subscription_status: string }[];
 	attribs: Record<string, unknown>;
 }
 
@@ -232,6 +233,9 @@ export interface ListmonkList {
 	optin: 'single' | 'double';
 	description: string;
 	subscriber_count: number;
+	tags: string[];
+	status: 'active' | 'archived';
+	subscriber_statuses: Record<string, number>;
 }
 
 export interface ListmonkBounce {

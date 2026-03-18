@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16.6-alpine
+    image: postgres:latest
     environment:
       POSTGRES_USER: yah
       POSTGRES_PASSWORD: password
@@ -8,7 +8,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
       - ./scripts/init-dev-db.sh:/docker-entrypoint-initdb.d/init-dev-db.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U yah"]
@@ -17,7 +17,7 @@ services:
       retries: 10
 
   shlink:
-    image: shlinkio/shlink:4.3
+    image: shlinkio/shlink:latest
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,7 +35,7 @@ services:
       - "8080:8080"
 
   umami:
-    image: ghcr.io/umami-software/umami:postgresql-v2.15.0
+    image: ghcr.io/umami-software/umami:postgresql-latest
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,7 +46,7 @@ services:
       - "3001:3000"
 
   listmonk:
-    image: listmonk/listmonk:v4.1.0
+    image: listmonk/listmonk:latest
     depends_on:
       postgres:
         condition: service_healthy

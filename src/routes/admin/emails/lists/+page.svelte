@@ -129,6 +129,7 @@
 		description: string;
 		subscriber_count: number;
 		created_at: string;
+		updated_at: string;
 	};
 
 	const columnHelper = createColumnHelper<ListItem>();
@@ -159,6 +160,10 @@
 		}),
 		columnHelper.accessor('created_at', {
 			header: 'Created',
+			cell: (info) => renderSnippet(dateCell, info.getValue()),
+		}),
+		columnHelper.accessor('updated_at', {
+			header: 'Updated',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
 		}),
 	];
@@ -197,44 +202,43 @@
 {#if !listsData && listsQuery.loading}
 	<Spinner size={48} centered />
 {:else if listsData}
+	{#snippet toolbar()}
+		{#if selectedCount > 0 && role === 'owner'}
+			<span class="toolbar-count">{selectedCount} selected</span>
+			<div class="toolbar-actions">
+				<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+				<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+			</div>
+		{:else}
+			<div class="toolbar-search">
+				<Input type="text" placeholder="Filter lists..." bind:value={globalFilter} />
+			</div>
+			{#if role === 'admin' || role === 'owner'}
+				<Button variant="primary" onclick={openCreate}>+ New List</Button>
+			{/if}
+		{/if}
+	{/snippet}
+
+	{@const table = createSvelteTable({
+		data: listsData.lists,
+		columns,
+		state: { sorting, rowSelection, globalFilter },
+		onSortingChange: (updater) => {
+			sorting = typeof updater === 'function' ? updater(sorting) : updater;
+		},
+		onRowSelectionChange: (updater) => {
+			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+		},
+		onGlobalFilterChange: (updater) => {
+			globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
+		},
+		getCoreRowModel: getCoreRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+	})}
+	<DataTable {table} {toolbar} />
 	{#if listsData.lists.length === 0}
 		<EmptyState message="No mailing lists found." />
-	{:else}
-		{#snippet toolbar()}
-			{#if selectedCount > 0 && role === 'owner'}
-				<span class="toolbar-count">{selectedCount} selected</span>
-				<div class="toolbar-actions">
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			{:else}
-				<div class="toolbar-search">
-					<Input type="text" placeholder="Filter lists..." bind:value={globalFilter} />
-				</div>
-				{#if role === 'admin' || role === 'owner'}
-					<Button variant="primary" onclick={openCreate}>+ New List</Button>
-				{/if}
-			{/if}
-		{/snippet}
-
-		{@const table = createSvelteTable({
-			data: listsData.lists,
-			columns,
-			state: { sorting, rowSelection, globalFilter },
-			onSortingChange: (updater) => {
-				sorting = typeof updater === 'function' ? updater(sorting) : updater;
-			},
-			onRowSelectionChange: (updater) => {
-				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
-			},
-			onGlobalFilterChange: (updater) => {
-				globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
-			},
-			getCoreRowModel: getCoreRowModel(),
-			getFilteredRowModel: getFilteredRowModel(),
-			getSortedRowModel: getSortedRowModel(),
-		})}
-		<DataTable {table} {toolbar} />
 	{/if}
 {/if}
 

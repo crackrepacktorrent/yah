@@ -186,6 +186,7 @@
 		status: string;
 		lists: { id: number; name: string }[];
 		created_at: string;
+		updated_at: string;
 	};
 
 	const columnHelper = createColumnHelper<Subscriber>();
@@ -216,6 +217,10 @@
 		}),
 		columnHelper.accessor('created_at', {
 			header: 'Created',
+			cell: (info) => renderSnippet(dateCell, info.getValue()),
+		}),
+		columnHelper.accessor('updated_at', {
+			header: 'Updated',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
 		}),
 	];
@@ -288,49 +293,48 @@
 {#if !data && subscribersQuery.loading}
 	<Spinner size={48} centered />
 {:else if data}
+	{#snippet toolbar()}
+		{#if selectedCount > 0 && role === 'owner'}
+			<span class="toolbar-count">{selectedCount} selected</span>
+			<div class="toolbar-actions">
+				{#if canBlocklist}
+					<Button variant="danger-outline" onclick={() => (confirmBlocklist = true)}>Blocklist</Button>
+				{/if}
+				<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
+				<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
+			</div>
+		{:else}
+			<div class="toolbar-search">
+				<Input type="text" placeholder="Filter by email or name..." bind:value={search} />
+			</div>
+			{#if role === 'admin' || role === 'owner'}
+				<Button variant="primary" onclick={openCreate}>+ New Subscriber</Button>
+			{/if}
+		{/if}
+	{/snippet}
+
+	{@const table = createSvelteTable({
+		data: data.subscribers,
+		columns,
+		state: { rowSelection },
+		onRowSelectionChange: (updater) => {
+			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+		},
+		getCoreRowModel: getCoreRowModel(),
+		manualPagination: true,
+	})}
+	<DataTable {table} {toolbar} />
 	{#if data.subscribers.length === 0}
 		<EmptyState message="No subscribers found." />
-	{:else}
-		{#snippet toolbar()}
-			{#if selectedCount > 0 && role === 'owner'}
-				<span class="toolbar-count">{selectedCount} selected</span>
-				<div class="toolbar-actions">
-					{#if canBlocklist}
-						<Button variant="danger-outline" onclick={() => (confirmBlocklist = true)}>Blocklist</Button>
-					{/if}
-					<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
-					<button class="toolbar-clear" onclick={clearSelection}>Clear</button>
-				</div>
-			{:else}
-				<div class="toolbar-search">
-					<Input type="text" placeholder="Filter by email or name..." bind:value={search} />
-				</div>
-				{#if role === 'admin' || role === 'owner'}
-					<Button variant="primary" onclick={openCreate}>+ New Subscriber</Button>
-				{/if}
-			{/if}
-		{/snippet}
+	{/if}
 
-		{@const table = createSvelteTable({
-			data: data.subscribers,
-			columns,
-			state: { rowSelection },
-			onRowSelectionChange: (updater) => {
-				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
-			},
-			getCoreRowModel: getCoreRowModel(),
-			manualPagination: true,
-		})}
-		<DataTable {table} {toolbar} />
-
-		{#if data.total > data.perPage}
-			<PaginationNav
-				count={data.total}
-				perPage={data.perPage}
-				page={data.page}
-				onPageChange={(p) => goto(pageUrl(p))}
-			/>
-		{/if}
+	{#if data.total > data.perPage}
+		<PaginationNav
+			count={data.total}
+			perPage={data.perPage}
+			page={data.page}
+			onPageChange={(p) => goto(pageUrl(p))}
+		/>
 	{/if}
 {/if}
 
@@ -364,7 +368,6 @@
 		<FormField label="Status">
 			<select class="select" bind:value={createStatus}>
 				<option value="enabled">Enabled</option>
-				<option value="disabled">Disabled</option>
 				<option value="blocklisted">Blocklisted</option>
 			</select>
 		</FormField>
@@ -396,7 +399,6 @@
 		<FormField label="Status">
 			<select class="select" bind:value={editStatus}>
 				<option value="enabled">Enabled</option>
-				<option value="disabled">Disabled</option>
 				<option value="blocklisted">Blocklisted</option>
 			</select>
 		</FormField>
