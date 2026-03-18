@@ -18,4 +18,5 @@ export { default as EmptyState } from './EmptyState.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
 export { default as Sidebar } from './Sidebar.svelte';
 export { default as DataTable } from './DataTable.svelte';
+export { default as ColumnFilterPopover } from './ColumnFilterPopover.svelte';
 export { createSvelteTable, FlexRender, renderComponent, renderSnippet } from './data-table';

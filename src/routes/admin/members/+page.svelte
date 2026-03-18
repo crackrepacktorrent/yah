@@ -102,20 +102,24 @@
 			id: 'name',
 			header: 'Name',
 			cell: (info) => info.getValue() ?? '—',
+			enableColumnFilter: false,
 		}),
 		memberColumnHelper.accessor((row) => row.user.email, {
 			id: 'email',
 			header: 'Email',
 			cell: (info) => renderSnippet(emailCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		memberColumnHelper.accessor('role', {
 			header: 'Role',
 			cell: (info) => renderSnippet(roleBadgeCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		memberColumnHelper.display({
 			id: 'actions',
 			header: 'Actions',
 			cell: (info) => renderSnippet(memberActionsCell, info.row.original),
+			enableColumnFilter: false,
 		}),
 	];
 
@@ -134,19 +138,23 @@
 		inviteColumnHelper.accessor('email', {
 			header: 'Email',
 			cell: (info) => renderSnippet(emailCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		inviteColumnHelper.accessor('role', {
 			header: 'Role',
 			cell: (info) => renderSnippet(roleBadgeCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		inviteColumnHelper.accessor('status', {
 			header: 'Status',
 			cell: (info) => renderSnippet(statusCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		inviteColumnHelper.display({
 			id: 'actions',
 			header: 'Actions',
 			cell: (info) => renderSnippet(inviteActionsCell, info.row.original),
+			enableColumnFilter: false,
 		}),
 	];
 </script>
@@ -198,14 +206,13 @@
 	{/if}
 {/snippet}
 
-<div class="header">
+<div class="page-header">
 	<h1>Members</h1>
 	<Button variant="primary" onclick={() => (inviteOpen = true)}>+ Invite Member</Button>
 </div>
 
 <section class="members-section">
 	<h2>Team Members</h2>
-
 	{#if !membersData && membersQuery.loading}
 		<Spinner size={48} centered />
 	{:else if membersData}
@@ -225,7 +232,6 @@
 
 <section class="members-section">
 	<h2>Pending Invitations</h2>
-
 	{#if !invitationsData && invitationsQuery.loading}
 		<Spinner size={32} centered />
 	{:else if invitationsData}
@@ -282,26 +288,8 @@
 />
 
 <style>
-	.header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.5rem;
-	}
-
-	h1 {
-		margin: 0;
-		color: var(--color-foreground);
-	}
-
 	.members-section {
 		margin-bottom: 2rem;
-	}
-
-	.members-section h2 {
-		font-size: 1.1rem;
-		margin: 0 0 1rem;
-		color: var(--color-foreground);
 	}
 
 	.email {
@@ -353,28 +341,5 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
-	}
-
-	.dialog-actions {
-		display: flex;
-		gap: 0.75rem;
-		align-items: center;
-		justify-content: flex-end;
-		margin-top: 0.25rem;
-	}
-
-	.cancel-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.9rem;
-		padding: 0.4rem 0.75rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.cancel-btn:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 </style>

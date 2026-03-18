@@ -3,6 +3,7 @@
 	import type { Table } from '@tanstack/table-core';
 	import { FlexRender } from './data-table';
 	import TableWrapper from './Table.svelte';
+	import ColumnFilterPopover from './ColumnFilterPopover.svelte';
 
 	let {
 		table,
@@ -55,15 +56,22 @@
 						}}
 					>
 						{#if !header.isPlaceholder}
-							<FlexRender
-								content={header.column.columnDef.header!}
-								context={header.getContext()}
-							/>
-							{#if header.column.getIsSorted() === 'asc'}
-								<span class="sort-indicator"> ↑</span>
-							{:else if header.column.getIsSorted() === 'desc'}
-								<span class="sort-indicator"> ↓</span>
-							{/if}
+							<div class="th-content">
+								<FlexRender
+									content={header.column.columnDef.header!}
+									context={header.getContext()}
+								/>
+								{#if header.column.getIsSorted() === 'asc'}
+									<span class="sort-indicator"> ↑</span>
+								{:else if header.column.getIsSorted() === 'desc'}
+									<span class="sort-indicator"> ↓</span>
+								{/if}
+								{#if header.column.getCanFilter()}
+									<span class="filter-icon-wrap" onclick={(e: MouseEvent) => e.stopPropagation()} onkeydown={(e: KeyboardEvent) => e.stopPropagation()}>
+										<ColumnFilterPopover column={header.column} />
+									</span>
+								{/if}
+							</div>
 						{/if}
 					</th>
 				{/each}
@@ -112,6 +120,17 @@
 {/if}
 
 <style>
+	.th-content {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.125rem;
+	}
+
+	.filter-icon-wrap {
+		display: inline-flex;
+		align-items: center;
+	}
+
 	th.sortable {
 		cursor: pointer;
 		user-select: none;

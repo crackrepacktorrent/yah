@@ -81,7 +81,7 @@ class ListmonkClient {
 
 	// ─── Subscribers ──────────────────────────────────────────────────────────
 
-	async listSubscribers(params: { page?: number; per_page?: number; query?: string } = {}): Promise<{ data: { results: ListmonkSubscriber[]; total: number; page: number; per_page: number } }> {
+	async listSubscribers(params: { page?: number; per_page?: number | 'all'; query?: string } = {}): Promise<{ data: { results: ListmonkSubscriber[]; total: number; page: number; per_page: number } }> {
 		const qs = new URLSearchParams();
 		if (params.page) qs.set('page', String(params.page));
 		if (params.per_page) qs.set('per_page', String(params.per_page));
@@ -161,7 +161,7 @@ class ListmonkClient {
 
 	// ─── Bounces ──────────────────────────────────────────────────────────────
 
-	async listBounces(params: { page?: number; per_page?: number } = {}): Promise<{ data: { results: ListmonkBounce[]; total: number; page: number; per_page: number } }> {
+	async listBounces(params: { page?: number; per_page?: number | 'all' } = {}): Promise<{ data: { results: ListmonkBounce[]; total: number; page: number; per_page: number } }> {
 		const qs = new URLSearchParams();
 		if (params.page) qs.set('page', String(params.page));
 		if (params.per_page) qs.set('per_page', String(params.per_page));
@@ -175,6 +175,101 @@ class ListmonkClient {
 
 	async deleteAllBounces(): Promise<void> {
 		await this.request('/bounces', { method: 'DELETE' });
+	}
+
+	// ─── Campaigns ───────────────────────────────────────────────────────────
+
+	async listCampaigns(params: { page?: number; per_page?: number | 'all'; status?: string; query?: string } = {}): Promise<{ data: { results: ListmonkCampaign[]; total: number; page: number; per_page: number } }> {
+		const qs = new URLSearchParams();
+		if (params.page) qs.set('page', String(params.page));
+		if (params.per_page) qs.set('per_page', String(params.per_page));
+		if (params.status) qs.set('status', params.status);
+		if (params.query) qs.set('query', params.query);
+		const query = qs.toString();
+		return this.request(`/campaigns${query ? `?${query}` : ''}`);
+	}
+
+	async getCampaign(id: number): Promise<ListmonkCampaign> {
+		const res = await this.request<{ data: ListmonkCampaign }>(`/campaigns/${id}`);
+		return res.data;
+	}
+
+	async createCampaign(params: {
+		name: string;
+		subject: string;
+		from_email?: string;
+		lists: number[];
+		body: string;
+		content_type?: 'richtext' | 'html' | 'markdown' | 'plain';
+		template_id?: number;
+		tags?: string[];
+		send_at?: string;
+	}): Promise<ListmonkCampaign> {
+		const res = await this.request<{ data: ListmonkCampaign }>('/campaigns', {
+			method: 'POST',
+			body: JSON.stringify({
+				name: params.name,
+				subject: params.subject,
+				from_email: params.from_email,
+				lists: params.lists,
+				body: params.body,
+				content_type: params.content_type ?? 'richtext',
+				template_id: params.template_id,
+				tags: params.tags ?? [],
+				send_at: params.send_at,
+				type: 'regular',
+			}),
+		});
+		return res.data;
+	}
+
+	async updateCampaign(id: number, params: {
+		name?: string;
+		subject?: string;
+		from_email?: string;
+		lists: number[];
+		body?: string;
+		content_type?: 'richtext' | 'html' | 'markdown' | 'plain';
+		template_id?: number;
+		tags?: string[];
+		send_at?: string | null;
+	}): Promise<ListmonkCampaign> {
+		const res = await this.request<{ data: ListmonkCampaign }>(`/campaigns/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(params),
+		});
+		return res.data;
+	}
+
+	async deleteCampaign(id: number): Promise<void> {
+		await this.request(`/campaigns/${id}`, { method: 'DELETE' });
+	}
+
+	async updateCampaignStatus(id: number, status: 'running' | 'paused' | 'cancelled' | 'scheduled'): Promise<ListmonkCampaign> {
+		const res = await this.request<{ data: ListmonkCampaign }>(`/campaigns/${id}/status`, {
+			method: 'PUT',
+			body: JSON.stringify({ status }),
+		});
+		return res.data;
+	}
+
+	// ─── Analytics ───────────────────────────────────────────────────────────
+
+	async getAnalytics(params: {
+		id?: number;
+		type: 'views' | 'clicks' | 'links' | 'bounces';
+		from: string;
+		to: string;
+	}): Promise<ListmonkAnalyticsPoint[]> {
+		const qs = new URLSearchParams();
+		if (params.id) qs.set('id', String(params.id));
+		qs.set('from', params.from);
+		qs.set('to', params.to);
+		const query = qs.toString();
+		const res = await this.request<{ data: ListmonkAnalyticsPoint[] }>(
+			`/campaigns/analytics/${params.type}${query ? `?${query}` : ''}`,
+		);
+		return res.data;
 	}
 
 	// ─── Transactional ────────────────────────────────────────────────────────
@@ -247,6 +342,40 @@ export interface ListmonkBounce {
 	subscriber_id: number;
 	campaign_id: number;
 	meta: Record<string, unknown>;
+}
+
+export interface ListmonkCampaign {
+	id: number;
+	uuid: string;
+	name: string;
+	subject: string;
+	from_email: string;
+	body: string;
+	body_source: string | null;
+	content_type: 'richtext' | 'html' | 'markdown' | 'plain';
+	type: 'regular';
+	status: string;
+	send_at: string | null;
+	started_at: string | null;
+	to_send: number;
+	sent: number;
+	views: number;
+	clicks: number;
+	bounces: number;
+	lists: { id: number; name: string }[];
+	tags: string[];
+	template_id: number;
+	messenger: string;
+	archive: boolean;
+	archive_slug: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface ListmonkAnalyticsPoint {
+	campaign_id: number;
+	count: number;
+	timestamp: string;
 }
 
 export class ListmonkApiError extends Error {

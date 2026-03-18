@@ -8,3 +8,100 @@
 .admin-layout h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
 .admin-layout h2 { font-size: 1.1rem; margin-bottom: 1rem; }
 .admin-layout h3 { font-size: 0.95rem; margin-bottom: 0.75rem; }
+
+/* ─── Page Header (h1 + inline controls) ──────────────────────────────────── */
+
+.admin-layout .page-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 1.5rem;
+}
+
+.admin-layout .page-header h1 {
+	margin: 0;
+}
+
+/* ─── Stats Grid ──────────────────────────────────────────────────────────── */
+
+.admin-layout .stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 1rem;
+}
+
+/* ─── Form Utilities (no .admin-layout prefix — must work inside portals) ─ */
+
+.form-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.form-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+}
+
+@media (max-width: 640px) {
+	.form-row {
+		grid-template-columns: 1fr;
+	}
+}
+
+.dialog-actions {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	justify-content: flex-end;
+	margin-top: 0.25rem;
+}
+
+.select {
+	width: 100%;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+	color: var(--color-foreground);
+	font-size: 0.9rem;
+}
+
+.select:focus {
+	outline: none;
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.textarea {
+	width: 100%;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+	color: var(--color-foreground);
+	font-size: 0.9rem;
+	resize: vertical;
+}
+
+.textarea:focus {
+	outline: none;
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.cancel-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--color-muted);
+	font-size: 0.9rem;
+	padding: 0.4rem 0.75rem;
+	border-radius: var(--radius-sm);
+}
+
+.cancel-btn:hover {
+	color: var(--color-foreground);
+	background: var(--color-hover);
+}

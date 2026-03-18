@@ -4,30 +4,13 @@ import { protectedQuery, protectedCommand } from '$lib/server/auth-helpers';
 
 export const listSubscribers = protectedQuery(
 	{ subscriber: ['view'] },
-	v.object({
-		page: v.optional(v.number()),
-		perPage: v.optional(v.number()),
-		search: v.optional(v.string()),
-	}),
-	async ({ page, perPage, search }) => {
-		// Listmonk's subscriber query API expects a raw SQL WHERE clause.
-		// We manually escape special characters since parameterized queries aren't supported.
-		let query: string | undefined;
-		if (search) {
-			const escaped = search.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
-			query = `(subscribers.email ILIKE '%${escaped}%' OR subscribers.name ILIKE '%${escaped}%')`;
-		}
-
+	async () => {
 		const res = await getListmonk().listSubscribers({
-			page: page ?? 1,
-			per_page: perPage ?? 20,
-			query,
+			per_page: 'all',
 		});
 		return {
 			subscribers: res.data.results,
 			total: res.data.total,
-			page: res.data.page,
-			perPage: res.data.per_page,
 		};
 	},
 );

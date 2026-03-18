@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
-	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
+	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, getFacetedRowModel, getFacetedUniqueValues, type SortingState, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
 	import { listLists, createList, updateList, deleteList } from '../lists.remote';
 	import { getSession } from '../../session.remote';
@@ -16,6 +16,7 @@
 		return val ?? _prevLists;
 	});
 	let globalFilter = $state('');
+	let columnFilters = $state<ColumnFiltersState>([]);
 
 	// Row selection
 	let rowSelection = $state<RowSelectionState>({});
@@ -136,36 +137,50 @@
 	const columnHelper = createColumnHelper<ListItem>();
 	let sorting = $state<SortingState>([]);
 
+	const multiSelectFilter = (row: any, columnId: string, filterValue: unknown[]) => {
+		if (!filterValue || filterValue.length === 0) return true;
+		return filterValue.includes(row.getValue(columnId));
+	};
+
 	const columns = [
 		columnHelper.display({
 			id: 'select',
 			header: (info) => renderSnippet(selectAllCell, info.table),
 			cell: (info) => renderSnippet(selectRowCell, info.row),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('name', {
 			header: 'Name',
 			cell: (info) => renderSnippet(nameCell, info.row.original),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('type', {
 			header: 'Type',
 			cell: (info) => renderSnippet(typeCell, info.getValue()),
+			enableColumnFilter: true,
+			filterFn: multiSelectFilter,
 		}),
 		columnHelper.accessor('optin', {
 			header: 'Opt-in',
 			cell: (info) => renderSnippet(optinCell, info.getValue()),
+			enableColumnFilter: true,
+			filterFn: multiSelectFilter,
 		}),
 		columnHelper.accessor('subscriber_count', {
 			header: 'Subscribers',
 			cell: (info) => renderSnippet(countCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('created_at', {
 			header: 'Created',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('updated_at', {
 			header: 'Updated',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 	];
 </script>
@@ -223,7 +238,7 @@
 	{@const table = createSvelteTable({
 		data: listsData.lists,
 		columns,
-		state: { sorting, rowSelection, globalFilter },
+		state: { sorting, rowSelection, globalFilter, columnFilters },
 		onSortingChange: (updater) => {
 			sorting = typeof updater === 'function' ? updater(sorting) : updater;
 		},
@@ -233,9 +248,15 @@
 		onGlobalFilterChange: (updater) => {
 			globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
 		},
+		onColumnFiltersChange: (updater) => {
+			columnFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
+		},
+		enableColumnFilters: true,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getSortedRowModel: getSortedRowModel(),
+		getFacetedRowModel: getFacetedRowModel(),
+		getFacetedUniqueValues: getFacetedUniqueValues(),
 	})}
 	<DataTable {table} {toolbar} />
 	{#if listsData.lists.length === 0}
@@ -258,7 +279,7 @@
 			<Input bind:value={createName} required placeholder="Newsletter" />
 		</FormField>
 
-		<div class="row">
+		<div class="form-row">
 			<FormField label="Type">
 				<select class="select" bind:value={createType}>
 					<option value="public">Public</option>
@@ -278,7 +299,7 @@
 			<textarea class="textarea" bind:value={createDescription} rows="3" placeholder="Optional description..."></textarea>
 		</FormField>
 
-		<div class="actions">
+		<div class="dialog-actions">
 			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
 			<Button variant="primary" onclick={handleCreate} disabled={createPending}>
 				{createPending ? 'Creating...' : 'Create'}
@@ -294,7 +315,7 @@
 			<Input bind:value={editName} required />
 		</FormField>
 
-		<div class="row">
+		<div class="form-row">
 			<FormField label="Type">
 				<select class="select" bind:value={editType}>
 					<option value="public">Public</option>
@@ -314,7 +335,7 @@
 			<textarea class="textarea" bind:value={editDescription} rows="3"></textarea>
 		</FormField>
 
-		<div class="actions">
+		<div class="dialog-actions">
 			<button type="button" class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
 			<Button variant="primary" onclick={handleEdit} disabled={editPending}>
 				{editPending ? 'Saving...' : 'Save'}
@@ -324,10 +345,6 @@
 </DialogShell>
 
 <style>
-	h1 {
-		margin: 0 0 1.5rem;
-		color: var(--color-foreground);
-	}
 
 	.count {
 		font-weight: 600;
@@ -361,71 +378,4 @@
 		cursor: pointer;
 	}
 
-	.form-fields {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-	}
-
-	.select {
-		width: 100%;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		color: var(--color-foreground);
-		font-size: 0.9rem;
-	}
-
-	.select:focus {
-		outline: none;
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
-	}
-
-	.textarea {
-		width: 100%;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		color: var(--color-foreground);
-		font-size: 0.9rem;
-		resize: vertical;
-	}
-
-	.textarea:focus {
-		outline: none;
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
-	}
-
-	.actions {
-		display: flex;
-		gap: 0.75rem;
-		align-items: center;
-		justify-content: flex-end;
-		margin-top: 0.25rem;
-	}
-
-	.cancel-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.9rem;
-		padding: 0.4rem 0.75rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.cancel-btn:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
-	}
 </style>

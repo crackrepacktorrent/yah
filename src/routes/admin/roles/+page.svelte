@@ -181,16 +181,19 @@
 			header: (info) => renderSnippet(selectAllCell, info.table),
 			cell: (info) => renderSnippet(selectRowCell, info.row),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('role', {
 			header: 'Name',
 			cell: (info) => renderSnippet(nameCell, info.row.original),
+			enableColumnFilter: false,
 		}),
 		columnHelper.display({
 			id: 'permissions',
 			header: 'Permissions',
 			cell: (info) => renderSnippet(permCell, info.row.original),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 	];
 </script>
@@ -338,10 +341,6 @@
 </DialogShell>
 
 <style>
-	h1 {
-		margin: 0 0 1.5rem;
-		color: var(--color-foreground);
-	}
 
 	.name-link {
 		background: none;
@@ -427,37 +426,14 @@
 
 	/* ─── Dialog shared ────────────────────────────────────────────────── */
 
-	.form-fields {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
 	.dialog-actions {
-		display: flex;
-		align-items: center;
 		justify-content: space-between;
-		gap: 0.75rem;
 	}
 
 	.dialog-actions-right {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-	}
-
-	.cancel-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.9rem;
-		padding: 0.4rem 0.75rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.cancel-btn:hover {
-		color: var(--color-foreground);
 		background: var(--color-hover);
 	}
 

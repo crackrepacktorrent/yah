@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
-	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
+	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, getFacetedRowModel, getFacetedUniqueValues, type SortingState, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
 	import { listTemplates, getTemplate, updateTemplate, deleteTemplate, createTemplate, setDefaultTemplate } from '../emails.remote';
 	import { getSession } from '../session.remote';
@@ -16,6 +16,7 @@
 		return val ?? _prevTemplates;
 	});
 	let globalFilter = $state('');
+	let columnFilters = $state<ColumnFiltersState>([]);
 
 	let editOpen = $state(false);
 	let editLoading = $state(false);
@@ -166,11 +167,17 @@
 		type: string;
 		subject: string;
 		is_default: boolean;
+		created_at: string;
 		updated_at: string;
 	};
 
 	const columnHelper = createColumnHelper<Template>();
 	let sorting = $state<SortingState>([]);
+
+	const multiSelectFilter = (row: any, columnId: string, filterValue: unknown[]) => {
+		if (!filterValue || filterValue.length === 0) return true;
+		return filterValue.includes(row.getValue(columnId));
+	};
 
 	const columns = [
 		columnHelper.display({
@@ -178,22 +185,28 @@
 			header: (info) => renderSnippet(selectAllCell, info.table),
 			cell: (info) => renderSnippet(selectRowCell, info.row),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('name', {
 			header: 'Name',
 			cell: (info) => renderSnippet(nameCell, info.row.original),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('type', {
 			header: 'Type',
 			cell: (info) => renderSnippet(typeCell, info.row.original),
+			enableColumnFilter: true,
+			filterFn: multiSelectFilter,
 		}),
-		columnHelper.accessor('subject', {
-			header: 'Subject',
-			cell: (info) => renderSnippet(subjectCell, info.getValue()),
+		columnHelper.accessor('created_at', {
+			header: 'Created',
+			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('updated_at', {
 			header: 'Updated',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 	];
 </script>
@@ -251,7 +264,7 @@
 	{@const table = createSvelteTable({
 		data: templatesData.templates,
 		columns,
-		state: { sorting, rowSelection, globalFilter },
+		state: { sorting, rowSelection, globalFilter, columnFilters },
 		onSortingChange: (updater) => {
 			sorting = typeof updater === 'function' ? updater(sorting) : updater;
 		},
@@ -261,9 +274,15 @@
 		onGlobalFilterChange: (updater) => {
 			globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
 		},
+		onColumnFiltersChange: (updater) => {
+			columnFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
+		},
+		enableColumnFilters: true,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getSortedRowModel: getSortedRowModel(),
+		getFacetedRowModel: getFacetedRowModel(),
+		getFacetedUniqueValues: getFacetedUniqueValues(),
 	})}
 	<DataTable {table} {toolbar} />
 	{#if templatesData.templates.length === 0}

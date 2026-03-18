@@ -124,7 +124,7 @@
             <Input {...editShortUrl.fields.tags.as("text")} value={shortUrl.tags.join(", ")} />
           </FormField>
 
-          <div class="row">
+          <div class="form-row">
             <FormField label="Max Visits">
               <Input {...editShortUrl.fields.maxVisits.as("text")} value={shortUrl.meta.maxVisits?.toString() ?? ""} placeholder="Unlimited" />
             </FormField>
@@ -216,18 +216,6 @@
   .edit-fieldset:disabled {
     opacity: 0.6;
     pointer-events: none;
-  }
-
-  .row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  @media (max-width: 640px) {
-    .row {
-      grid-template-columns: 1fr;
-    }
   }
 
   .switches {

@@ -8,6 +8,7 @@ export const statements = {
 	subscriber: ['view', 'create', 'edit', 'delete', 'blocklist'],
 	list: ['view', 'create', 'edit', 'delete'],
 	bounce: ['view', 'delete', 'clear-all'],
+	campaign: ['view', 'create', 'edit', 'delete', 'send'],
 	analytics: ['view'],
 } as const;
 
@@ -27,6 +28,7 @@ export const defaultRolePermissions: Record<string, Record<string, string[]>> = 
 		subscriber: ['view', 'create', 'edit', 'delete', 'blocklist'],
 		list: ['view', 'create', 'edit', 'delete'],
 		bounce: ['view', 'delete', 'clear-all'],
+		campaign: ['view', 'create', 'edit', 'delete', 'send'],
 		analytics: ['view'],
 	},
 	admin: {
@@ -37,6 +39,7 @@ export const defaultRolePermissions: Record<string, Record<string, string[]>> = 
 		subscriber: ['view', 'create', 'edit'],
 		list: ['view', 'create', 'edit'],
 		bounce: ['view'],
+		campaign: ['view', 'create', 'edit'],
 		analytics: ['view'],
 	},
 	member: {

@@ -96,32 +96,38 @@
 			header: (info) => renderSnippet(selectAllCell, info.table),
 			cell: (info) => renderSnippet(selectRowCell, info.row),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('shortCode', {
 			header: 'Short URL',
 			cell: (info) => renderSnippet(shortCodeCell, info.row.original),
 			enableSorting: true,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('longUrl', {
 			header: 'Destination',
 			cell: (info) => renderSnippet(longUrlCell, info.getValue()),
 			enableSorting: true,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('tags', {
 			header: 'Tags',
 			cell: (info) => renderSnippet(tagsCell, info.getValue()),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor((row) => row.visitsSummary.total, {
 			id: 'visits',
 			header: 'Clicks',
 			cell: (info) => renderSnippet(clicksCell, info.getValue()),
 			enableSorting: true,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('dateCreated', {
 			header: 'Created',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
 			enableSorting: true,
+			enableColumnFilter: false,
 		}),
 	];
 </script>
@@ -217,7 +223,7 @@
 {#if can(session, 'shortlink', 'create')}
 <!-- Create Shortlink Dialog -->
 <DialogShell bind:open={createOpen} title="New Shortlink" maxWidth="520px">
-	<form class="create-form" onsubmit={handleCreate}>
+	<form class="form-fields" onsubmit={handleCreate}>
 		<FormField label="Destination URL" required>
 			<Input name="longUrl" type="url" required placeholder="https://example.com/long/path" />
 		</FormField>
@@ -234,7 +240,7 @@
 			<Input name="tags" placeholder="campaign, social" />
 		</FormField>
 
-		<div class="row">
+		<div class="form-row">
 			<FormField label="Max Visits" hint="(optional)">
 				<Input name="maxVisits" placeholder="Unlimited" />
 			</FormField>
@@ -249,7 +255,7 @@
 			<Switch label="Allow search engine crawling" checked={false} name="crawlable" />
 		</div>
 
-		<div class="actions">
+		<div class="dialog-actions">
 			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
 			<Button variant="primary" type="submit" disabled={createPending}>
 				{createPending ? 'Creating...' : 'Create Shortlink'}
@@ -260,11 +266,6 @@
 {/if}
 
 <style>
-	h1 {
-		margin: 0 0 1.5rem;
-		color: var(--color-foreground);
-	}
-
 	.code {
 		font-family: monospace;
 		color: var(--color-primary);
@@ -313,50 +314,9 @@
 		cursor: pointer;
 	}
 
-	.create-form {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-	}
-
-	@media (max-width: 640px) {
-		.row {
-			grid-template-columns: 1fr;
-		}
-	}
-
 	.switches {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-	}
-
-	.actions {
-		display: flex;
-		gap: 0.75rem;
-		align-items: center;
-		justify-content: flex-end;
-		margin-top: 0.25rem;
-	}
-
-	.cancel-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.9rem;
-		padding: 0.4rem 0.75rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.cancel-btn:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
 	}
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { StatCard, EmptyState, Spinner, Card, DataTable } from '$lib/components/admin';
+	import { StatCard, EmptyState, Spinner, Card, DataTable, Section } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { ToggleGroup } from 'bits-ui';
@@ -76,7 +76,7 @@
 	<span class="num">{value}</span>
 {/snippet}
 
-<div class="header">
+<div class="page-header">
 	<h1>Analytics</h1>
 	<ToggleGroup.Root
 		type="single"
@@ -141,15 +141,14 @@
 	<div class="metrics-grid">
 		{#each sections as section}
 			{@const items = data[section.key]}
-			<div class="metric-section">
-				<h3>{section.title}</h3>
+			<Section title={section.title}>
 				{#if items.length === 0}
 					<EmptyState message="No {section.title.toLowerCase()} data yet." />
 				{:else}
 					{@const table = createMetricTable(items, section.label, section.mono, 'emptyLabel' in section ? section.emptyLabel : undefined)}
 					<DataTable {table} pageSize={5} />
 				{/if}
-			</div>
+			</Section>
 		{/each}
 	</div>
 {/if}
@@ -161,24 +160,6 @@
 {/if}
 
 <style>
-	.header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1.5rem;
-	}
-
-	h1 {
-		margin: 0;
-		color: var(--color-foreground);
-	}
-
-	h2 {
-		font-size: 1.1rem;
-		margin: 0 0 0.75rem;
-		color: var(--color-foreground);
-	}
-
 	.period-tabs {
 		display: flex;
 		gap: 2px;
@@ -210,13 +191,16 @@
 	}
 
 	.stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-		gap: 1rem;
 		margin-bottom: 1.5rem;
 	}
 
-	/* ─── Chart ────────────────────────────────────────────────────────── */
+	.chart-section {
+		margin-bottom: 1.5rem;
+	}
+
+	.stats-grid {
+		margin-bottom: 1.5rem;
+	}
 
 	.chart-section {
 		margin-bottom: 1.5rem;
@@ -291,13 +275,6 @@
 		.metrics-grid {
 			grid-template-columns: 1fr;
 		}
-	}
-
-	.metric-section h3 {
-		font-size: 1rem;
-		font-weight: 600;
-		margin: 0 0 0.5rem;
-		color: var(--color-foreground);
 	}
 
 	.path {

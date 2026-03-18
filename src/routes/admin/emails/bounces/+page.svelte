@@ -1,18 +1,16 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import { Badge, Button, ConfirmDialog, EmptyState, PaginationNav, Spinner, DataTable } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, Spinner, DataTable } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
-	import { createColumnHelper, getCoreRowModel, type RowSelectionState } from '@tanstack/table-core';
+	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
 	import { listBounces, deleteBounce, deleteAllBounces } from '../bounces.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
 	let session = $derived(getSession().current);
-	let currentPage = $derived(Number($page.url.searchParams.get('page')) || 1);
+	let columnFilters = $state<ColumnFiltersState>([]);
 
-	let bouncesQuery = $derived(listBounces({ page: currentPage, perPage: 20 }));
+	let bouncesQuery = $derived(listBounces());
 	let _prev: typeof bouncesQuery.current;
 	let data = $derived.by(() => {
 		const val = bouncesQuery.current;
@@ -37,12 +35,6 @@
 
 	let confirmDelete = $state(false);
 	let confirmClearAll = $state(false);
-
-	function pageUrl(p: number) {
-		const params = new URLSearchParams($page.url.searchParams);
-		params.set('page', String(p));
-		return `/admin/emails/bounces?${params.toString()}`;
-	}
 
 	function bounceTypeVariant(type: string): 'error' | 'warning' | 'info' | 'default' {
 		if (type === 'hard') return 'error';
@@ -76,7 +68,7 @@
 	}
 
 	function refreshList() {
-		listBounces({ page: currentPage, perPage: 20 }).refresh();
+		listBounces().refresh();
 	}
 
 	type Bounce = {
@@ -90,32 +82,44 @@
 
 	const columnHelper = createColumnHelper<Bounce>();
 
+	const multiSelectFilter = (row: any, columnId: string, filterValue: unknown[]) => {
+		if (!filterValue || filterValue.length === 0) return true;
+		return filterValue.includes(row.getValue(columnId));
+	};
+
 	const columns = [
 		columnHelper.display({
 			id: 'select',
 			header: (info) => renderSnippet(selectAllCell, info.table),
 			cell: (info) => renderSnippet(selectRowCell, info.row),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('email', {
 			header: 'Email',
 			cell: (info) => info.getValue(),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('campaign_id', {
 			header: 'Campaign',
 			cell: (info) => info.getValue() || '—',
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('type', {
 			header: 'Type',
 			cell: (info) => renderSnippet(typeCell, info.getValue()),
+			enableColumnFilter: true,
+			filterFn: multiSelectFilter,
 		}),
 		columnHelper.accessor('source', {
 			header: 'Source',
 			cell: (info) => info.getValue() || '—',
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('created_at', {
 			header: 'Date',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 	];
 </script>
@@ -159,25 +163,22 @@
 	{@const table = createSvelteTable({
 		data: data.bounces,
 		columns,
-		state: { rowSelection },
+		state: { rowSelection, columnFilters },
 		onRowSelectionChange: (updater) => {
 			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
 		},
+		onColumnFiltersChange: (updater) => {
+			columnFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
+		},
+		enableColumnFilters: true,
 		getCoreRowModel: getCoreRowModel(),
-		manualPagination: true,
+		getFilteredRowModel: getFilteredRowModel(),
+		getFacetedRowModel: getFacetedRowModel(),
+		getFacetedUniqueValues: getFacetedUniqueValues(),
 	})}
-	<DataTable {table} {toolbar} />
+	<DataTable {table} {toolbar} pageSize={20} />
 	{#if data.bounces.length === 0}
 		<EmptyState message="No bounces recorded." />
-	{/if}
-
-	{#if data.total > data.perPage}
-		<PaginationNav
-			count={data.total}
-			perPage={data.perPage}
-			page={data.page}
-			onPageChange={(p) => goto(pageUrl(p))}
-		/>
 	{/if}
 {/if}
 
@@ -198,10 +199,6 @@
 />
 
 <style>
-	h1 {
-		margin: 0 0 1.5rem;
-		color: var(--color-foreground);
-	}
 
 	.date {
 		color: var(--color-muted);

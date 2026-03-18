@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, PaginationNav, Spinner, DataTable, DialogShell } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
-	import { createColumnHelper, getCoreRowModel, type RowSelectionState } from '@tanstack/table-core';
+	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
 	import { listSubscribers, createSubscriber, updateSubscriber, deleteSubscriber, blocklistSubscriber } from '../subscribers.remote';
 	import { listLists } from '../lists.remote';
@@ -12,22 +10,10 @@
 
 	let session = $derived(getSession().current);
 
-	let search = $state('');
-	let currentPage = $derived(Number($page.url.searchParams.get('page')) || 1);
+	let globalFilter = $state('');
+	let columnFilters = $state<ColumnFiltersState>([]);
 
-	// Debounce search → re-query
-	let debouncedSearch = $state('');
-	let debounceTimer: ReturnType<typeof setTimeout>;
-	$effect(() => {
-		const value = search;
-		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => {
-			debouncedSearch = value;
-		}, 300);
-		return () => clearTimeout(debounceTimer);
-	});
-
-	let subscribersQuery = $derived(listSubscribers({ page: currentPage, perPage: 20, search: debouncedSearch || undefined }));
+	let subscribersQuery = $derived(listSubscribers());
 	let _prev: typeof subscribersQuery.current;
 	let data = $derived.by(() => {
 		const val = subscribersQuery.current;
@@ -72,12 +58,6 @@
 	// Confirm dialogs
 	let confirmDelete = $state(false);
 	let confirmBlocklist = $state(false);
-
-	function pageUrl(p: number) {
-		const params = new URLSearchParams($page.url.searchParams);
-		params.set('page', String(p));
-		return `/admin/emails/subscribers?${params.toString()}`;
-	}
 
 	function openCreate() {
 		createEmail = '';
@@ -163,7 +143,7 @@
 	}
 
 	function refreshList() {
-		listSubscribers({ page: currentPage, perPage: 20, search: search || undefined }).refresh();
+		listSubscribers().refresh();
 	}
 
 	function statusVariant(status: string): 'success' | 'error' | 'default' {
@@ -192,37 +172,50 @@
 
 	const columnHelper = createColumnHelper<Subscriber>();
 
+	const multiSelectFilter = (row: any, columnId: string, filterValue: unknown[]) => {
+		if (!filterValue || filterValue.length === 0) return true;
+		return filterValue.includes(row.getValue(columnId));
+	};
+
 	const columns = [
 		columnHelper.display({
 			id: 'select',
 			header: (info) => renderSnippet(selectAllCell, info.table),
 			cell: (info) => renderSnippet(selectRowCell, info.row),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('email', {
 			header: 'Email',
 			cell: (info) => renderSnippet(emailCell, info.row.original),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('name', {
 			header: 'Name',
 			cell: (info) => info.getValue() || '—',
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('status', {
 			header: 'Status',
 			cell: (info) => renderSnippet(statusCell, info.getValue()),
+			enableColumnFilter: true,
+			filterFn: multiSelectFilter,
 		}),
 		columnHelper.accessor('lists', {
 			header: 'Lists',
 			cell: (info) => renderSnippet(listsCell, info.getValue()),
 			enableSorting: false,
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('created_at', {
 			header: 'Created',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('updated_at', {
 			header: 'Updated',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 	];
 </script>
@@ -306,7 +299,7 @@
 			</div>
 		{:else}
 			<div class="toolbar-search">
-				<Input type="text" placeholder="Filter by email or name..." bind:value={search} />
+				<Input type="text" placeholder="Filter by email or name..." bind:value={globalFilter} />
 			</div>
 			{#if can(session, 'subscriber', 'create')}
 				<Button variant="primary" onclick={openCreate}>+ New Subscriber</Button>
@@ -317,25 +310,25 @@
 	{@const table = createSvelteTable({
 		data: data.subscribers,
 		columns,
-		state: { rowSelection },
+		state: { rowSelection, columnFilters, globalFilter },
 		onRowSelectionChange: (updater) => {
 			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
 		},
+		onColumnFiltersChange: (updater) => {
+			columnFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
+		},
+		onGlobalFilterChange: (updater) => {
+			globalFilter = typeof updater === 'function' ? updater(globalFilter) : updater;
+		},
+		enableColumnFilters: true,
 		getCoreRowModel: getCoreRowModel(),
-		manualPagination: true,
+		getFilteredRowModel: getFilteredRowModel(),
+		getFacetedRowModel: getFacetedRowModel(),
+		getFacetedUniqueValues: getFacetedUniqueValues(),
 	})}
-	<DataTable {table} {toolbar} />
+	<DataTable {table} {toolbar} pageSize={20} />
 	{#if data.subscribers.length === 0}
 		<EmptyState message="No subscribers found." />
-	{/if}
-
-	{#if data.total > data.perPage}
-		<PaginationNav
-			count={data.total}
-			perPage={data.perPage}
-			page={data.page}
-			onPageChange={(p) => goto(pageUrl(p))}
-		/>
 	{/if}
 {/if}
 
@@ -377,7 +370,7 @@
 			{@render listCheckboxes(createListIds, (id) => (createListIds = toggleListId(id, createListIds)))}
 		</FormField>
 
-		<div class="actions">
+		<div class="dialog-actions">
 			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
 			<Button variant="primary" onclick={handleCreate} disabled={createPending}>
 				{createPending ? 'Creating...' : 'Create'}
@@ -408,7 +401,7 @@
 			{@render listCheckboxes(editListIds, (id) => (editListIds = toggleListId(id, editListIds)))}
 		</FormField>
 
-		<div class="actions">
+		<div class="dialog-actions">
 			<button type="button" class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
 			<Button variant="primary" onclick={handleEdit} disabled={editPending}>
 				{editPending ? 'Saving...' : 'Save'}
@@ -418,10 +411,6 @@
 </DialogShell>
 
 <style>
-	h1 {
-		margin: 0 0 1.5rem;
-		color: var(--color-foreground);
-	}
 
 	.date {
 		color: var(--color-muted);
@@ -460,28 +449,6 @@
 		cursor: pointer;
 	}
 
-	.form-fields {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.select {
-		width: 100%;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		color: var(--color-foreground);
-		font-size: 0.9rem;
-	}
-
-	.select:focus {
-		outline: none;
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
-	}
-
 	.list-checkboxes {
 		display: flex;
 		flex-direction: column;
@@ -501,26 +468,4 @@
 		accent-color: var(--color-primary);
 	}
 
-	.actions {
-		display: flex;
-		gap: 0.75rem;
-		align-items: center;
-		justify-content: flex-end;
-		margin-top: 0.25rem;
-	}
-
-	.cancel-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.9rem;
-		padding: 0.4rem 0.75rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.cancel-btn:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
-	}
 </style>

@@ -23,6 +23,10 @@
 		flex-direction: column;
 	}
 
+	:global(.section-stack > .admin-section + .admin-section) {
+		margin-top: 1.5rem;
+	}
+
 	.admin-section-title {
 		font-size: 0.75rem;
 		font-weight: 600;

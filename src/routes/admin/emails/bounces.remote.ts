@@ -4,20 +4,13 @@ import { protectedQuery, protectedCommand } from '$lib/server/auth-helpers';
 
 export const listBounces = protectedQuery(
 	{ bounce: ['view'] },
-	v.object({
-		page: v.optional(v.number()),
-		perPage: v.optional(v.number()),
-	}),
-	async ({ page, perPage }) => {
+	async () => {
 		const res = await getListmonk().listBounces({
-			page: page ?? 1,
-			per_page: perPage ?? 20,
+			per_page: 'all',
 		});
 		return {
 			bounces: res.data.results,
 			total: res.data.total,
-			page: res.data.page,
-			perPage: res.data.per_page,
 		};
 	},
 );

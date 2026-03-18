@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { StatCard, EmptyState, Spinner, DataTable } from '$lib/components/admin';
+	import { StatCard, EmptyState, Spinner, DataTable, Section } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { getDashboard } from './shortlinks.remote';
@@ -81,18 +81,15 @@
 {#if !dashboardData && dashboardQuery.loading}
 	<Spinner size={48} centered />
 {:else if dashboardData}
-	<div class="stats-grid">
+	<div class="stats-grid stats-grid-bottom">
 		<StatCard value={dashboardData.totalShortUrls} label="Short URLs" accent="var(--brand-orange)" />
 		<StatCard value={dashboardData.visits.nonOrphanVisits.total.toLocaleString()} label="Total Clicks" accent="var(--brand-amber)" />
 		<StatCard value={dashboardData.visits.nonOrphanVisits.nonBots.toLocaleString()} label="Human Clicks" accent="var(--brand-olive)" />
 		<StatCard value={dashboardData.visits.nonOrphanVisits.bots.toLocaleString()} label="Bot Clicks" accent="var(--brand-magenta)" />
 	</div>
 
-	<section class="recent">
-		<div class="section-header">
-			<h2>Recent Shortlinks</h2>
-		</div>
-
+	<section class="dashboard-section">
+		<h2>Recent Shortlinks</h2>
 		{#if dashboardData.recentShortUrls.length === 0}
 			<EmptyState message="No shortlinks yet." />
 		{:else}
@@ -109,59 +106,37 @@
 {#if siteStatsQuery.error}
 	<!-- Analytics unavailable — Umami may not be configured -->
 {:else if siteStats}
-	<section class="site-analytics">
-		<div class="section-header">
-			<h2>Site Analytics</h2>
-		</div>
-
+	<section class="dashboard-section">
+		<h2>Site Analytics</h2>
 		<div class="analytics-periods">
-			<div class="period">
-				<h3>Last 24 Hours</h3>
+			<Section title="Last 24 Hours">
 				<div class="stats-grid">
 					<StatCard value={siteStats.today.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
 					<StatCard value={siteStats.today.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
 					<StatCard value="{siteStats.today.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
 					<StatCard value={formatDuration(siteStats.today.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
 				</div>
-			</div>
+			</Section>
 
-			<div class="period">
-				<h3>Last 30 Days</h3>
+			<Section title="Last 30 Days">
 				<div class="stats-grid">
 					<StatCard value={siteStats.month.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
 					<StatCard value={siteStats.month.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
 					<StatCard value="{siteStats.month.bounceRate}%" label="Bounce Rate" accent="var(--brand-magenta)" />
 					<StatCard value={formatDuration(siteStats.month.avgTime)} label="Avg. Visit" accent="var(--brand-orange)" />
 				</div>
-			</div>
+			</Section>
 		</div>
 	</section>
 {/if}
 
 <style>
-	h1 {
-		margin-bottom: 1.5rem;
-		color: var(--color-foreground);
-	}
-
-	.stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-		gap: 1rem;
+	.stats-grid-bottom {
 		margin-bottom: 2rem;
 	}
 
-	.section-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 1rem;
-	}
-
-	h2 {
-		font-size: 1.1rem;
-		margin: 0;
-		color: var(--color-foreground);
+	.dashboard-section {
+		margin-top: 2rem;
 	}
 
 	.code {
@@ -198,26 +173,14 @@
 		color: var(--color-muted);
 	}
 
-	.site-analytics {
-		margin-top: 2rem;
-	}
-
 	.analytics-periods {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 1.5rem;
 	}
 
-	.period h3 {
-		font-size: 0.9rem;
-		font-weight: 600;
-		color: var(--color-muted);
-		margin: 0 0 0.75rem;
-	}
-
-	.period .stats-grid {
+	.analytics-periods :global(.stats-grid) {
 		grid-template-columns: repeat(2, 1fr);
-		margin-bottom: 0;
 	}
 
 	@media (max-width: 768px) {
@@ -225,7 +188,7 @@
 			grid-template-columns: 1fr;
 		}
 
-		.period .stats-grid {
+		.analytics-periods :global(.stats-grid) {
 			grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 		}
 	}
