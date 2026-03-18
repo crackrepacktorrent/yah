@@ -1,17 +1,15 @@
-import { query, command } from '$app/server';
 import * as v from 'valibot';
 import { getListmonk } from '$lib/server/listmonk';
-import { requireRole } from '$lib/server/auth-helpers';
+import { protectedQuery, protectedCommand } from '$lib/server/auth-helpers';
 
-export const listSubscribers = query(
+export const listSubscribers = protectedQuery(
+	{ subscriber: ['view'] },
 	v.object({
 		page: v.optional(v.number()),
 		perPage: v.optional(v.number()),
 		search: v.optional(v.string()),
 	}),
 	async ({ page, perPage, search }) => {
-		await requireRole('owner', 'admin');
-
 		// Listmonk's subscriber query API expects a raw SQL WHERE clause.
 		// We manually escape special characters since parameterized queries aren't supported.
 		let query: string | undefined;
@@ -34,15 +32,16 @@ export const listSubscribers = query(
 	},
 );
 
-export const getSubscriber = query(
+export const getSubscriber = protectedQuery(
+	{ subscriber: ['view'] },
 	v.number(),
 	async (id) => {
-		await requireRole('owner', 'admin');
 		return getListmonk().getSubscriber(id);
 	},
 );
 
-export const createSubscriber = command(
+export const createSubscriber = protectedCommand(
+	{ subscriber: ['create'] },
 	v.object({
 		email: v.pipe(v.string(), v.nonEmpty('Email is required'), v.email('Invalid email')),
 		name: v.optional(v.string()),
@@ -50,12 +49,12 @@ export const createSubscriber = command(
 		listIds: v.optional(v.array(v.number())),
 	}),
 	async ({ email, name, status, listIds }) => {
-		await requireRole('owner', 'admin');
 		return getListmonk().createSubscriber({ email, name, status, lists: listIds });
 	},
 );
 
-export const updateSubscriber = command(
+export const updateSubscriber = protectedCommand(
+	{ subscriber: ['edit'] },
 	v.object({
 		id: v.number(),
 		email: v.optional(v.pipe(v.string(), v.nonEmpty('Email is required'), v.email('Invalid email'))),
@@ -64,23 +63,22 @@ export const updateSubscriber = command(
 		listIds: v.optional(v.array(v.number())),
 	}),
 	async ({ id, email, name, status, listIds }) => {
-		await requireRole('owner', 'admin');
 		return getListmonk().updateSubscriber(id, { email, name, status, lists: listIds });
 	},
 );
 
-export const deleteSubscriber = command(
+export const deleteSubscriber = protectedCommand(
+	{ subscriber: ['delete'] },
 	v.number(),
 	async (id) => {
-		await requireRole('owner');
 		await getListmonk().deleteSubscriber(id);
 	},
 );
 
-export const blocklistSubscriber = command(
+export const blocklistSubscriber = protectedCommand(
+	{ subscriber: ['blocklist'] },
 	v.number(),
 	async (id) => {
-		await requireRole('owner');
 		await getListmonk().blocklistSubscriber(id);
 	},
 );

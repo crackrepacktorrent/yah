@@ -1,11 +1,9 @@
-import { query, command } from '$app/server';
+import { getRequestEvent } from '$app/server';
 import * as v from 'valibot';
 import { auth } from '$lib/server/auth';
-import { getRequestEvent } from '$app/server';
-import { requireRole, getSessionOrThrow } from '$lib/server/auth-helpers';
+import { protectedQuery, protectedCommand, getSessionOrThrow } from '$lib/server/auth-helpers';
 
-export const listMembers = query(async () => {
-	await requireRole('owner');
+export const listMembers = protectedQuery({ member: ['create'] }, async () => {
 	const event = getRequestEvent();
 
 	const members = await auth.api.listMembers({
@@ -15,8 +13,7 @@ export const listMembers = query(async () => {
 	return { members };
 });
 
-export const listInvitations = query(async () => {
-	await requireRole('owner');
+export const listInvitations = protectedQuery({ member: ['create'] }, async () => {
 	const event = getRequestEvent();
 
 	const invitations = await auth.api.listInvitations({
@@ -26,13 +23,13 @@ export const listInvitations = query(async () => {
 	return { invitations };
 });
 
-export const inviteMember = command(
+export const inviteMember = protectedCommand(
+	{ member: ['create'] },
 	v.object({
 		email: v.pipe(v.string(), v.nonEmpty('Email is required'), v.email('Invalid email')),
 		role: v.picklist(['admin', 'member']),
 	}),
 	async ({ email, role }) => {
-		await requireRole('owner');
 		const event = getRequestEvent();
 
 		await auth.api.createInvitation({
@@ -46,13 +43,13 @@ export const inviteMember = command(
 	},
 );
 
-export const updateMemberRole = command(
+export const updateMemberRole = protectedCommand(
+	{ member: ['update'] },
 	v.object({
 		memberId: v.string(),
 		role: v.picklist(['owner', 'admin', 'member']),
 	}),
 	async ({ memberId, role }) => {
-		await requireRole('owner');
 		const event = getRequestEvent();
 
 		await auth.api.updateMemberRole({
@@ -65,10 +62,10 @@ export const updateMemberRole = command(
 	},
 );
 
-export const removeMember = command(
+export const removeMember = protectedCommand(
+	{ member: ['delete'] },
 	v.string(),
 	async (memberId) => {
-		await requireRole('owner');
 		const event = getRequestEvent();
 
 		await auth.api.removeMember({
@@ -80,10 +77,10 @@ export const removeMember = command(
 	},
 );
 
-export const cancelInvitation = command(
+export const cancelInvitation = protectedCommand(
+	{ invitation: ['cancel'] },
 	v.string(),
 	async (invitationId) => {
-		await requireRole('owner');
 		const event = getRequestEvent();
 
 		await auth.api.cancelInvitation({

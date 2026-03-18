@@ -1,14 +1,13 @@
-import { query, command } from '$app/server';
 import * as v from 'valibot';
 import { getListmonk } from '$lib/server/listmonk';
-import { requireRole } from '$lib/server/auth-helpers';
+import { protectedQuery, protectedCommand } from '$lib/server/auth-helpers';
 
-export const listLists = query(async () => {
-	await requireRole('owner', 'admin');
+export const listLists = protectedQuery({ list: ['view'] }, async () => {
 	return { lists: await getListmonk().listLists() };
 });
 
-export const createList = command(
+export const createList = protectedCommand(
+	{ list: ['create'] },
 	v.object({
 		name: v.pipe(v.string(), v.nonEmpty('Name is required')),
 		type: v.picklist(['public', 'private']),
@@ -16,12 +15,12 @@ export const createList = command(
 		description: v.optional(v.string()),
 	}),
 	async (params) => {
-		await requireRole('owner', 'admin');
 		return getListmonk().createList(params);
 	},
 );
 
-export const updateList = command(
+export const updateList = protectedCommand(
+	{ list: ['edit'] },
 	v.object({
 		id: v.number(),
 		name: v.optional(v.pipe(v.string(), v.nonEmpty())),
@@ -30,15 +29,14 @@ export const updateList = command(
 		description: v.optional(v.string()),
 	}),
 	async ({ id, ...params }) => {
-		await requireRole('owner', 'admin');
 		return getListmonk().updateList(id, params);
 	},
 );
 
-export const deleteList = command(
+export const deleteList = protectedCommand(
+	{ list: ['delete'] },
 	v.number(),
 	async (id) => {
-		await requireRole('owner');
 		await getListmonk().deleteList(id);
 	},
 );

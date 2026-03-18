@@ -5,6 +5,7 @@ import { getRequestEvent } from '$app/server';
 import { Pool } from 'pg';
 import { env } from '$env/dynamic/private';
 import { getListmonk } from '$lib/server/listmonk';
+import { ac, roles } from '$lib/permissions';
 
 export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET!,
@@ -17,6 +18,9 @@ export const auth = betterAuth({
 	},
 	plugins: [
 		organization({
+			ac,
+			roles,
+			dynamicAccessControl: { enabled: true },
 			async sendInvitationEmail(data) {
 				const inviteLink = `${env.BETTER_AUTH_URL}/admin/members/accept/${data.id}`;
 				try {

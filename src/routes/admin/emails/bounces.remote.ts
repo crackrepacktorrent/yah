@@ -1,15 +1,14 @@
-import { query, command } from '$app/server';
 import * as v from 'valibot';
 import { getListmonk } from '$lib/server/listmonk';
-import { requireRole } from '$lib/server/auth-helpers';
+import { protectedQuery, protectedCommand } from '$lib/server/auth-helpers';
 
-export const listBounces = query(
+export const listBounces = protectedQuery(
+	{ bounce: ['view'] },
 	v.object({
 		page: v.optional(v.number()),
 		perPage: v.optional(v.number()),
 	}),
 	async ({ page, perPage }) => {
-		await requireRole('owner', 'admin');
 		const res = await getListmonk().listBounces({
 			page: page ?? 1,
 			per_page: perPage ?? 20,
@@ -23,15 +22,14 @@ export const listBounces = query(
 	},
 );
 
-export const deleteBounce = command(
+export const deleteBounce = protectedCommand(
+	{ bounce: ['delete'] },
 	v.number(),
 	async (id) => {
-		await requireRole('owner');
 		await getListmonk().deleteBounce(id);
 	},
 );
 
-export const deleteAllBounces = command(async () => {
-	await requireRole('owner');
+export const deleteAllBounces = protectedCommand({ bounce: ['clear-all'] }, async () => {
 	await getListmonk().deleteAllBounces();
 });

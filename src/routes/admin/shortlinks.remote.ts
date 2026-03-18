@@ -1,8 +1,8 @@
-import { query, form, command } from '$app/server';
+import { query, form } from '$app/server';
 import * as v from 'valibot';
 import { getShlink, ShlinkApiError } from '$lib/server/shlink';
 import { error, invalid, redirect } from '@sveltejs/kit';
-import { requireRole } from '$lib/server/auth-helpers';
+import { protectedQuery, protectedCommand, enforcePermissions } from '$lib/server/auth-helpers';
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ export const getDashboard = query(async () => {
 	};
 });
 
-export const listShortUrls = query(async () => {
+export const listShortUrls = protectedQuery({ shortlink: ['view'] }, async () => {
 	const shlink = getShlink();
 
 	const res = await shlink.listShortUrls({
@@ -62,7 +62,8 @@ export const getShortUrlVisits = query(
 
 // ─── Forms ────────────────────────────────────────────────────────────────────
 
-export const createShortUrl = command(
+export const createShortUrl = protectedCommand(
+	{ shortlink: ['create'] },
 	v.object({
 		longUrl: v.pipe(v.string(), v.nonEmpty('Destination URL is required'), v.url()),
 		customSlug: v.optional(v.string(), ''),
@@ -74,8 +75,6 @@ export const createShortUrl = command(
 		forwardQuery: v.optional(v.boolean(), true),
 	}),
 	async (data) => {
-		await requireRole('admin', 'owner');
-
 		const tags = data.tags
 			.split(',')
 			.map((t: string) => t.trim())
@@ -108,7 +107,7 @@ export const editShortUrl = form(
 		forwardQuery: v.optional(v.boolean(), false),
 	}),
 	async (data, issue) => {
-		await requireRole('admin', 'owner');
+		await enforcePermissions({ shortlink: ['edit'] });
 
 		const tags = data.tags
 			.split(',')
@@ -136,19 +135,19 @@ export const editShortUrl = form(
 	},
 );
 
-export const deleteShortUrl = command(
+export const deleteShortUrl = protectedCommand(
+	{ shortlink: ['delete'] },
 	v.string(),
 	async (shortCode) => {
-		await requireRole('admin', 'owner');
 		const shlink = getShlink();
 		await shlink.deleteShortUrl(shortCode);
 	},
 );
 
-export const resetShortUrlVisits = command(
+export const resetShortUrlVisits = protectedCommand(
+	{ shortlink: ['edit'] },
 	v.string(),
 	async (shortCode) => {
-		await requireRole('admin', 'owner');
 		const shlink = getShlink();
 		const result = await shlink.deleteShortUrlVisits(shortCode);
 		return { deletedCount: result.deletedVisits };

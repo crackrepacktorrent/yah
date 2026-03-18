@@ -1,4 +1,3 @@
-import { query } from '$app/server';
 import * as v from 'valibot';
 import {
 	getWebsiteStats,
@@ -7,6 +6,7 @@ import {
 	getActiveVisitors,
 	type UmamiStats,
 } from '$lib/server/umami';
+import { protectedQuery } from '$lib/server/auth-helpers';
 
 function bounceRate(stats: UmamiStats): number {
 	return stats.visits > 0 ? Math.round((stats.bounces / stats.visits) * 100) : 0;
@@ -16,7 +16,7 @@ function avgVisitTime(stats: UmamiStats): number {
 	return stats.visits > 0 ? Math.round(stats.totaltime / stats.visits) : 0;
 }
 
-export const getSiteStats = query(async () => {
+export const getSiteStats = protectedQuery({ analytics: ['view'] }, async () => {
 	const now = Date.now();
 	const oneDayAgo = now - 24 * 60 * 60 * 1000;
 	const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
@@ -44,7 +44,8 @@ export const getSiteStats = query(async () => {
 	};
 });
 
-export const getAnalytics = query(
+export const getAnalytics = protectedQuery(
+	{ analytics: ['view'] },
 	v.object({
 		period: v.optional(v.picklist(['24h', '7d', '30d']), '7d'),
 	}),
