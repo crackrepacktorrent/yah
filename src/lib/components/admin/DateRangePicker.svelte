@@ -212,7 +212,7 @@
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-lg);
 		padding: 1rem;
-		z-index: 52;
+		z-index: var(--z-dropdown);
 	}
 
 	.drp-calendar {

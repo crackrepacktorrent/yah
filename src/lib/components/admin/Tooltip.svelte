@@ -47,6 +47,6 @@
 		max-width: 400px;
 		word-break: break-all;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-		z-index: 50;
+		z-index: var(--z-tooltip);
 	}
 </style>

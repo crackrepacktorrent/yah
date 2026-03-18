@@ -15,14 +15,6 @@ export const listSubscribers = protectedQuery(
 	},
 );
 
-export const getSubscriber = protectedQuery(
-	{ subscriber: ['view'] },
-	v.number(),
-	async (id) => {
-		return getListmonk().getSubscriber(id);
-	},
-);
-
 export const createSubscriber = protectedCommand(
 	{ subscriber: ['create'] },
 	v.object({

@@ -120,7 +120,7 @@
 		padding: 0.25rem;
 		max-height: 260px;
 		overflow-y: auto;
-		z-index: 52;
+		z-index: var(--z-dropdown);
 		min-width: var(--bits-select-anchor-width);
 	}
 

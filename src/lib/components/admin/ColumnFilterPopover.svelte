@@ -184,7 +184,7 @@
 		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-lg);
 		width: 240px;
-		z-index: 52;
+		z-index: var(--z-dropdown);
 		display: flex;
 		flex-direction: column;
 	}

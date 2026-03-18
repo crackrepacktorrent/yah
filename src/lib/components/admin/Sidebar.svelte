@@ -379,7 +379,7 @@
     border-radius: var(--radius-sm);
     font-size: 0.8rem;
     white-space: nowrap;
-    z-index: 50;
+    z-index: var(--z-tooltip);
   }
 
   /* ─── Sidebar footer ───────────────────────────────────────────────── */
@@ -468,7 +468,7 @@
     position: fixed;
     inset: 0;
     background: var(--brand-brown-muted);
-    z-index: 45;
+    z-index: var(--z-sidebar-backdrop);
   }
 
   .drawer {
@@ -476,7 +476,7 @@
     top: 0;
     left: 0;
     bottom: 0;
-    z-index: 50;
+    z-index: var(--z-sidebar);
     box-shadow: 4px 0 16px var(--brand-brown-muted);
   }
 
@@ -490,7 +490,7 @@
     color: var(--brand-brown-lighter);
     padding: 0.25rem;
     border-radius: var(--radius-sm);
-    z-index: 1;
+    z-index: var(--z-base);
   }
 
   .drawer-close:hover {
@@ -514,7 +514,7 @@
       border-bottom: none;
       position: sticky;
       top: 0;
-      z-index: 30;
+      z-index: var(--z-sidebar-backdrop);
     }
 
     .menu-toggle {

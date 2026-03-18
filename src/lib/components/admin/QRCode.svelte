@@ -102,12 +102,10 @@
     qr.append(qrContainer);
   }
 
+  // Re-render QR code when any option changes.
+  // Variables are read to register as reactive dependencies.
   $effect(() => {
-    selectedPreset;
-    selectedDotStyle;
-    selectedCornerStyle;
-    showLogo;
-    url;
+    void selectedPreset, selectedDotStyle, selectedCornerStyle, showLogo, url;
     renderQR();
   });
 

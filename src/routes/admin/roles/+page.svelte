@@ -60,7 +60,7 @@
 		editRoleId = role.id;
 		editName = role.role;
 		editOriginalName = role.role;
-		editPermissions = JSON.parse(JSON.stringify(role.permission));
+		editPermissions = structuredClone(role.permission);
 		editReadOnly = role.builtIn;
 		editOpen = true;
 	}
@@ -137,7 +137,7 @@
 
 	function openClone(role: RoleItem) {
 		createName = `${role.role} (copy)`;
-		clonePermissions = JSON.parse(JSON.stringify(role.permission));
+		clonePermissions = structuredClone(role.permission);
 		createOpen = true;
 	}
 
@@ -314,7 +314,7 @@
 		</div>
 
 		<div class="dialog-actions">
-			<Button variant="ghost" onclick={() => { editOpen = false; openClone({ id: editRoleId, role: editName, permission: JSON.parse(JSON.stringify(editPermissions)), createdAt: new Date(), builtIn: false }); }}>Clone</Button>
+			<Button variant="ghost" onclick={() => { editOpen = false; openClone({ id: editRoleId, role: editName, permission: structuredClone(editPermissions), createdAt: new Date(), builtIn: false }); }}>Clone</Button>
 			{#if !editReadOnly}
 				<div class="dialog-actions-right">
 					<button class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>

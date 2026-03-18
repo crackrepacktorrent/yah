@@ -76,7 +76,7 @@
 		position: fixed;
 		inset: 0;
 		background: var(--color-overlay);
-		z-index: 60;
+		z-index: var(--z-confirm);
 	}
 
 	.confirm-content {
@@ -89,7 +89,7 @@
 		padding: 1.5rem;
 		max-width: 420px;
 		width: 90%;
-		z-index: 61;
+		z-index: var(--z-confirm-content);
 		box-shadow: var(--shadow-lg);
 	}
 

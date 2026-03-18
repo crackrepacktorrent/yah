@@ -9,8 +9,10 @@
 		RichTextEditor = mod.default;
 	});
 
+	import * as v from 'valibot';
 	import { toast } from 'svelte-sonner';
 	import { toastError } from '$lib/utils/toast-error';
+	import { useForm } from '$lib/utils/use-form.svelte';
 	import { createCampaign, updateCampaign, deleteCampaign, updateCampaignStatus, previewCampaign, testCampaign } from '../campaigns.remote';
 	import { listLists } from '../lists.remote';
 	import { listTemplates } from '../../emails.remote';
@@ -34,16 +36,31 @@
 	let activeTab = $state('campaign');
 
 	// ─── Form state (initialized from campaign prop) ─────────────
-	let name = $state(campaign?.name ?? '');
-	let subject = $state(campaign?.subject ?? '');
-	let fromEmail = $state(campaign?.from_email ?? '');
-	let listIds = $state<string[]>(campaign?.lists.map((l) => String(l.id)) ?? []);
-	let body = $state(campaign?.body ?? '');
-	let contentType = $state<'richtext' | 'html' | 'markdown' | 'plain'>(campaign?.content_type ?? 'richtext');
+	const campaignSchema = v.object({
+		name: v.pipe(v.string(), v.nonEmpty('Name is required')),
+		subject: v.pipe(v.string(), v.nonEmpty('Subject is required')),
+		fromEmail: v.string(),
+		listIds: v.pipe(v.array(v.string()), v.minLength(1, 'Select at least one list')),
+		body: v.string(),
+		contentType: v.picklist(['richtext', 'html', 'markdown', 'plain']),
+		tags: v.array(v.string()),
+		sendLater: v.boolean(),
+		sendAt: v.string(),
+	});
+
+	const form = useForm({
+		name: campaign?.name ?? '',
+		subject: campaign?.subject ?? '',
+		fromEmail: campaign?.from_email ?? '',
+		listIds: campaign?.lists.map((l) => String(l.id)) ?? [] as string[],
+		body: campaign?.body ?? '',
+		contentType: (campaign?.content_type ?? 'richtext') as 'richtext' | 'html' | 'markdown' | 'plain',
+		tags: campaign ? [...campaign.tags] : [] as string[],
+		sendLater: !!campaign?.send_at,
+		sendAt: campaign?.send_at ? campaign.send_at.slice(0, 16) : '',
+	}, campaignSchema);
+
 	let templateId = $state<number | undefined>(campaign?.template_id);
-	let tags = $state<string[]>(campaign ? [...campaign.tags] : []);
-	let sendLater = $state(!!campaign?.send_at);
-	let sendAt = $state(campaign?.send_at ? campaign.send_at.slice(0, 16) : '');
 
 	let savePending = $state(false);
 
@@ -52,7 +69,7 @@
 	let previewHtml = $state('');
 	let previewLoading = $state(false);
 	let testOpen = $state(false);
-	let testEmails = $state('');
+	let testEmails = $state<string[]>([]);
 	let testPending = $state(false);
 
 	// ─── Confirm Dialogs ─────────────────────────────────────────
@@ -63,10 +80,9 @@
 	let canEdit = $derived(isDraft && can(session, 'campaign', 'edit'));
 
 	async function handleSave() {
-		if (!name.trim()) { toast.error('Name is required.'); return; }
-		if (!subject.trim()) { toast.error('Subject is required.'); return; }
-		if (listIds.length === 0) { toast.error('Select at least one list.'); return; }
+		if (!form.validate()) return;
 
+		const { name, subject, fromEmail, listIds, body, contentType, tags, sendLater, sendAt } = form.values;
 		savePending = true;
 		try {
 			if (mode === 'create') {
@@ -121,16 +137,15 @@
 
 	async function handleTestSend() {
 		if (!campaign) return;
-		const emails = testEmails.split(',').map((e) => e.trim()).filter(Boolean);
-		if (emails.length === 0) {
+		if (testEmails.length === 0) {
 			toast.error('Enter at least one email address.');
 			return;
 		}
 		testPending = true;
 		try {
-			await testCampaign({ id: campaign.id, subscribers: emails });
-			toast.success(`Test email sent to ${emails.join(', ')}.`);
-			testEmails = '';
+			await testCampaign({ id: campaign.id, subscribers: testEmails });
+			toast.success(`Test email sent to ${testEmails.join(', ')}.`);
+			testEmails = [];
 		} catch (err) {
 			toastError(err, 'Failed to send test email.');
 		} finally {
@@ -175,12 +190,12 @@
 
 <Breadcrumb items={[
 	{ label: 'Campaigns', href: '/admin/emails/campaigns' },
-	{ label: mode === 'create' ? 'New Campaign' : name || 'Campaign' },
+	{ label: mode === 'create' ? 'New Campaign' : form.values.name || 'Campaign' },
 ]} />
 
 <div class="campaign-header">
 	<div class="campaign-title">
-		<h1>{mode === 'create' ? 'New Campaign' : name}</h1>
+		<h1>{mode === 'create' ? 'New Campaign' : form.values.name}</h1>
 		{#if campaign}
 			<Badge variant={statusVariant(campaign.status)}>{campaign.status}</Badge>
 		{/if}
@@ -208,22 +223,22 @@
 			<Tabs bind:value={activeTab} tabs={[{ value: 'campaign', label: 'Campaign' }, { value: 'content', label: 'Content' }]}>
 				<TabContent value="campaign">
 					<div class="form-fields">
-						<FormField label="Name" required>
-							<Input bind:value={name} required placeholder="My Campaign" disabled={!canEdit} />
+						<FormField label="Name" required error={form.fieldError('name')}>
+							<Input bind:value={form.values.name} onblur={() => form.touch('name')} placeholder="My Campaign" disabled={!canEdit} />
 						</FormField>
 
-						<FormField label="Subject" required>
-							<Input bind:value={subject} required placeholder="Email subject line" disabled={!canEdit} />
+						<FormField label="Subject" required error={form.fieldError('subject')}>
+							<Input bind:value={form.values.subject} onblur={() => form.touch('subject')} placeholder="Email subject line" disabled={!canEdit} />
 						</FormField>
 
 						<FormField label="From Email" hint="Leave blank for default">
-							<Input type="email" bind:value={fromEmail} placeholder="noreply@example.com" disabled={!canEdit} />
+							<Input type="email" bind:value={form.values.fromEmail} placeholder="noreply@example.com" disabled={!canEdit} />
 						</FormField>
 
-						<FormField label="Lists" required>
+						<FormField label="Lists" required error={form.fieldError('listIds')}>
 							{@const allLists = listsQuery.current?.lists ?? []}
 							<MultiSelect
-								bind:selected={listIds}
+								bind:selected={form.values.listIds}
 								options={allLists.map((l) => ({ value: String(l.id), label: l.name, detail: l.type }))}
 								placeholder="Search lists..."
 								disabled={!canEdit}
@@ -231,17 +246,17 @@
 						</FormField>
 
 						<FormField label="Tags" hint="Press Enter to add">
-							<TagInput bind:tags disabled={!canEdit} placeholder="Add a tag..." />
+							<TagInput bind:tags={form.values.tags} disabled={!canEdit} placeholder="Add a tag..." />
 						</FormField>
 
 						{#if canEdit}
 							<div class="send-later">
 								<label class="send-later-toggle">
-									<input type="checkbox" bind:checked={sendLater} />
+									<input type="checkbox" bind:checked={form.values.sendLater} />
 									<span>Schedule for later</span>
 								</label>
-								{#if sendLater}
-									<DatePicker bind:value={sendAt} granularity="minute" />
+								{#if form.values.sendLater}
+									<DatePicker bind:value={form.values.sendAt} granularity="minute" />
 								{/if}
 							</div>
 						{/if}
@@ -252,7 +267,7 @@
 					<div class="form-fields">
 						<div class="content-header-row">
 							<FormField label="Content Type">
-								<Select bind:value={contentType} disabled={!canEdit} options={[
+								<Select bind:value={form.values.contentType} disabled={!canEdit} options={[
 									{ value: 'richtext', label: 'Rich Text' },
 									{ value: 'html', label: 'Raw HTML' },
 									{ value: 'markdown', label: 'Markdown' },
@@ -281,17 +296,17 @@
 							{/if}
 						</div>
 
-						{#if contentType === 'richtext'}
+						{#if form.values.contentType === 'richtext'}
 							<FormField label="Body">
 								{#if RichTextEditor}
-									<RichTextEditor value={body} onchange={(html: string) => (body = html)} />
+									<RichTextEditor value={form.values.body} onchange={(html: string) => (form.values.body = html)} />
 								{:else}
 									<Spinner centered />
 								{/if}
 							</FormField>
 						{:else}
 							<FormField label="Body">
-								<textarea class="textarea" bind:value={body} rows="16" placeholder="Email content..." disabled={!canEdit}></textarea>
+								<textarea class="textarea" bind:value={form.values.body} rows="16" placeholder="Email content..." disabled={!canEdit}></textarea>
 							</FormField>
 						{/if}
 
@@ -320,7 +335,7 @@
 <ConfirmDialog
 	bind:open={confirmSend}
 	title="Send Campaign"
-	description="Start sending &quot;{name}&quot; to all subscribers on the selected lists? This cannot be undone."
+	description="Start sending &quot;{form.values.name}&quot; to all subscribers on the selected lists? This cannot be undone."
 	confirmLabel="Yes, send now"
 	variant="primary"
 	onconfirm={handleSendNow}
@@ -337,8 +352,8 @@
 <!-- Test Send Dialog -->
 <DialogShell bind:open={testOpen} title="Send Test Email" maxWidth="480px">
 	<div class="form-fields">
-		<FormField label="Recipients" hint="Comma-separated. Must be existing subscribers.">
-			<Input bind:value={testEmails} placeholder="email1@example.com, email2@example.com" />
+		<FormField label="Recipients" hint="Press Enter to add. Must be existing subscribers.">
+			<TagInput bind:tags={testEmails} placeholder="Add email..." />
 		</FormField>
 		<div class="dialog-actions">
 			<button type="button" class="cancel-btn" onclick={() => (testOpen = false)}>Cancel</button>

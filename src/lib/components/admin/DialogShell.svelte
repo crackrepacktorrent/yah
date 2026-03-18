@@ -50,7 +50,7 @@
 		position: fixed;
 		inset: 0;
 		background: var(--color-overlay);
-		z-index: 50;
+		z-index: var(--z-dialog);
 	}
 
 	.dialog-content {
@@ -58,7 +58,7 @@
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		z-index: 51;
+		z-index: var(--z-dialog-content);
 		background: var(--color-surface);
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-lg);

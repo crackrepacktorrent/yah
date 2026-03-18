@@ -27,7 +27,8 @@
 	);
 
 	// ─── Date range ──────────────────────────────────────────────
-	let nowDate = today(getLocalTimeZone());
+	// Computed once per page load — stale if page stays open past midnight (acceptable)
+	const nowDate = today(getLocalTimeZone());
 	let dateRange = $state({ start: nowDate.subtract({ days: 7 }) as DateValue | undefined, end: nowDate as DateValue | undefined });
 
 	function formatDateValue(d: DateValue): string {
@@ -306,7 +307,7 @@
 		position: fixed;
 		top: 1rem;
 		right: 1rem;
-		z-index: 10;
+		z-index: var(--z-loading);
 	}
 
 	@media (max-width: 640px) {

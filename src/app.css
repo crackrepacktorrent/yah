@@ -117,6 +117,18 @@
   --color-hover: var(--brand-warm-hover);
   --color-active: var(--brand-warm-active);
 
+  /* Z-index scale */
+  --z-base: 1;
+  --z-dropdown: 50;       /* select, combobox, popover, multiselect dropdowns */
+  --z-sidebar: 50;        /* mobile sidebar overlay */
+  --z-sidebar-backdrop: 45; /* behind mobile sidebar */
+  --z-dialog: 55;         /* dialog overlay + content */
+  --z-dialog-content: 56;
+  --z-confirm: 60;        /* confirm dialog (above regular dialogs) */
+  --z-confirm-content: 61;
+  --z-tooltip: 70;        /* tooltips float above everything */
+  --z-loading: 10;        /* loading overlay */
+
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);

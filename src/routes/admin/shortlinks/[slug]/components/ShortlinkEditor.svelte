@@ -186,7 +186,7 @@
     position: absolute;
     top: -1rem;
     right: -1rem;
-    z-index: 1;
+    z-index: var(--z-base);
   }
 
   .lock-btn {
