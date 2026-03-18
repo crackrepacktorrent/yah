@@ -107,6 +107,8 @@
 
 {#if !data && analyticsQuery.loading}
 	<Spinner size={48} centered />
+{:else if analyticsQuery.error}
+	<EmptyState message="Analytics unavailable. Umami may not be configured." />
 {:else if data}
 	<div class="stats-grid">
 		<StatCard value={data.stats.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />

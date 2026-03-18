@@ -5,8 +5,9 @@
 	import { toast } from 'svelte-sonner';
 	import { listLists, createList, updateList, deleteList } from '../lists.remote';
 	import { getSession } from '../../session.remote';
+	import { can } from '../../can';
 
-	let role = $derived(getSession().current?.role);
+	let session = $derived(getSession().current);
 	let listsQuery = $derived(listLists());
 	let _prevLists: typeof listsQuery.current;
 	let listsData = $derived.by(() => {
@@ -203,7 +204,7 @@
 	<Spinner size={48} centered />
 {:else if listsData}
 	{#snippet toolbar()}
-		{#if selectedCount > 0 && role === 'owner'}
+		{#if selectedCount > 0 && can(session, 'list', 'delete')}
 			<span class="toolbar-count">{selectedCount} selected</span>
 			<div class="toolbar-actions">
 				<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
@@ -213,7 +214,7 @@
 			<div class="toolbar-search">
 				<Input type="text" placeholder="Filter lists..." bind:value={globalFilter} />
 			</div>
-			{#if role === 'admin' || role === 'owner'}
+			{#if can(session, 'list', 'create')}
 				<Button variant="primary" onclick={openCreate}>+ New List</Button>
 			{/if}
 		{/if}

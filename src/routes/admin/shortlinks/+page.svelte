@@ -6,7 +6,8 @@
 	import { toast } from 'svelte-sonner';
 	import { listShortUrls, createShortUrl, deleteShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
-	let role = $derived(getSession().current?.role);
+	import { can } from '../can';
+	let session = $derived(getSession().current);
 
 	let shortlinksQuery = $derived(listShortUrls());
 	let _prevShortlinks: typeof shortlinksQuery.current;
@@ -164,7 +165,7 @@
 	<Spinner size={48} centered />
 {:else if shortlinksData}
 	{#snippet toolbar()}
-		{#if selectedCount > 0 && (role === 'admin' || role === 'owner')}
+		{#if selectedCount > 0 && can(session, 'shortlink', 'delete')}
 			<span class="toolbar-count">{selectedCount} selected</span>
 			<div class="toolbar-actions">
 				<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
@@ -174,7 +175,7 @@
 			<div class="toolbar-search">
 				<Input type="text" placeholder="Filter shortlinks..." bind:value={globalFilter} />
 			</div>
-			{#if role === 'admin' || role === 'owner'}
+			{#if can(session, 'shortlink', 'create')}
 				<Button variant="primary" onclick={() => (createOpen = true)}>+ New Shortlink</Button>
 			{/if}
 		{/if}
@@ -213,7 +214,7 @@
 	onconfirm={handleDelete}
 />
 
-{#if role === 'admin' || role === 'owner'}
+{#if can(session, 'shortlink', 'create')}
 <!-- Create Shortlink Dialog -->
 <DialogShell bind:open={createOpen} title="New Shortlink" maxWidth="520px">
 	<form class="create-form" onsubmit={handleCreate}>

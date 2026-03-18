@@ -8,8 +8,9 @@
 	import { listSubscribers, createSubscriber, updateSubscriber, deleteSubscriber, blocklistSubscriber } from '../subscribers.remote';
 	import { listLists } from '../lists.remote';
 	import { getSession } from '../../session.remote';
+	import { can } from '../../can';
 
-	let role = $derived(getSession().current?.role);
+	let session = $derived(getSession().current);
 
 	let search = $state('');
 	let currentPage = $derived(Number($page.url.searchParams.get('page')) || 1);
@@ -176,7 +177,7 @@
 	}
 
 	let canBlocklist = $derived(
-		role === 'owner' && selectedRows.some((s) => s.status !== 'blocklisted'),
+		can(session, 'subscriber', 'blocklist') && selectedRows.some((s) => s.status !== 'blocklisted'),
 	);
 
 	type Subscriber = {
@@ -294,7 +295,7 @@
 	<Spinner size={48} centered />
 {:else if data}
 	{#snippet toolbar()}
-		{#if selectedCount > 0 && role === 'owner'}
+		{#if selectedCount > 0 && can(session, 'subscriber', 'delete')}
 			<span class="toolbar-count">{selectedCount} selected</span>
 			<div class="toolbar-actions">
 				{#if canBlocklist}
@@ -307,7 +308,7 @@
 			<div class="toolbar-search">
 				<Input type="text" placeholder="Filter by email or name..." bind:value={search} />
 			</div>
-			{#if role === 'admin' || role === 'owner'}
+			{#if can(session, 'subscriber', 'create')}
 				<Button variant="primary" onclick={openCreate}>+ New Subscriber</Button>
 			{/if}
 		{/if}

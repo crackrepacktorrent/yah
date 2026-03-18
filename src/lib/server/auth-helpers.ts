@@ -1,5 +1,5 @@
 import { auth } from '$lib/server/auth';
-import { query, command, getRequestEvent } from '$app/server';
+import { query, command, form, getRequestEvent } from '$app/server';
 import { error } from '@sveltejs/kit';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
@@ -80,4 +80,18 @@ export function protectedCommand(permissions: Permissions, schemaOrFn: any, mayb
 		await enforcePermissions(permissions);
 		return maybeFn(arg);
 	});
+}
+
+// ─── Protected form ──────────────────────────────────────────────────────────
+
+// Wraps form() with permission check. Uses `typeof form` to preserve full type inference.
+export function protectedForm<S extends Parameters<typeof form>[0], F extends Parameters<typeof form>[1]>(
+	permissions: Permissions,
+	schema: S,
+	fn: F,
+): ReturnType<typeof form> {
+	return form(schema as Parameters<typeof form>[0], async (data: Record<string, unknown>, issue: Record<string | number, unknown>) => {
+		await enforcePermissions(permissions);
+		return (fn as Function)(data, issue);
+	}) as ReturnType<typeof form>;
 }

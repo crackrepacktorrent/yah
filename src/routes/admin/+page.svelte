@@ -106,7 +106,9 @@
 	</section>
 {/if}
 
-{#if siteStats}
+{#if siteStatsQuery.error}
+	<!-- Analytics unavailable — Umami may not be configured -->
+{:else if siteStats}
 	<section class="site-analytics">
 		<div class="section-header">
 			<h2>Site Analytics</h2>

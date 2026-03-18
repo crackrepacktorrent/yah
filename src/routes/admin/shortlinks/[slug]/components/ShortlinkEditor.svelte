@@ -3,11 +3,12 @@
   import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section } from "$lib/components/admin";
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
   import { getSession } from "../../../session.remote";
+  import { can } from "../../../can";
   import { toast } from "svelte-sonner";
   import type { ShortUrl } from '$lib/server/shlink';
 
-  let role = $derived(getSession().current?.role);
-  let canEdit = $derived(role === 'admin' || role === 'owner');
+  let session = $derived(getSession().current);
+  let canEdit = $derived(can(session, 'shortlink', 'edit'));
 
   let {
     shortUrl,
@@ -91,7 +92,7 @@
         {...editShortUrl.enhance(async ({ submit }) => {
           try {
             await submit();
-            if (editShortUrl.result?.success) {
+            if ((editShortUrl.result as { success?: boolean })?.success) {
               unlocked = false;
               dirty = false;
               toast.success("Shortlink updated.");

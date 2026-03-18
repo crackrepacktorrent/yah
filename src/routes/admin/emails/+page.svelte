@@ -5,8 +5,9 @@
 	import { toast } from 'svelte-sonner';
 	import { listTemplates, getTemplate, updateTemplate, deleteTemplate, createTemplate, setDefaultTemplate } from '../emails.remote';
 	import { getSession } from '../session.remote';
+	import { can } from '../can';
 
-	let role = $derived(getSession().current?.role);
+	let session = $derived(getSession().current);
 	let templatesQuery = $derived(listTemplates());
 	let _prevTemplates: typeof templatesQuery.current;
 	let templatesData = $derived.by(() => {
@@ -40,7 +41,7 @@
 			.filter(Boolean);
 	});
 	let selectedCount = $derived(selectedRows.length);
-	let canDelete = $derived(role === 'owner' && selectedRows.every((t) => !t.is_default));
+	let canDelete = $derived(can(session, 'template', 'delete') && selectedRows.every((t) => !t.is_default));
 
 	function clearSelection() {
 		rowSelection = {};
@@ -241,7 +242,7 @@
 			<div class="toolbar-search">
 				<Input type="text" placeholder="Filter templates..." bind:value={globalFilter} />
 			</div>
-			{#if role === 'owner'}
+			{#if can(session, 'template', 'create')}
 				<Button variant="primary" onclick={openCreateTemplate}>+ New Template</Button>
 			{/if}
 		{/if}
@@ -317,17 +318,17 @@
 </DialogShell>
 
 <!-- Edit Template Dialog -->
-<DialogShell bind:open={editOpen} title={role === 'owner' ? 'Edit Template' : 'View Template'} maxWidth="700px">
+<DialogShell bind:open={editOpen} title={can(session, 'template', 'edit') ? 'Edit Template' : 'View Template'} maxWidth="700px">
 	{#if editLoading}
 		<Spinner size={32} centered />
 	{:else}
 		<div class="edit-form">
 			<FormField label="Name">
-				<Input bind:value={editName} disabled={role !== 'owner'} />
+				<Input bind:value={editName} disabled={!can(session, 'template', 'edit')} />
 			</FormField>
 
 			<FormField label="Subject" hint="Use {'{{ .Tx.Data.field }}'} for template variables">
-				<Input bind:value={editSubject} disabled={role !== 'owner'} />
+				<Input bind:value={editSubject} disabled={!can(session, 'template', 'edit')} />
 			</FormField>
 
 			<div class="body-field">
@@ -345,13 +346,13 @@
 					<textarea
 						class="body-editor"
 						bind:value={editBody}
-						disabled={role !== 'owner'}
+						disabled={!can(session, 'template', 'edit')}
 						rows="16"
 					></textarea>
 				{/if}
 			</div>
 
-			{#if role === 'owner'}
+			{#if can(session, 'template', 'edit')}
 				<div class="actions">
 					{#if !editIsDefault && editType === 'campaign'}
 						<Button variant="ghost" onclick={handleSetDefault}>Set as Default</Button>

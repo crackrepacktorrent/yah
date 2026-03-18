@@ -3,9 +3,9 @@
   import { Collapsible, Dialog, Tooltip } from "bits-ui";
   import { Logo } from "$lib/components/admin";
   import {
-    AlertCircle, BarChart3, ChevronRight, Contact,
-    LayoutDashboard, Link, ListChecks, LogOut, Mail,
-    Menu, Shield, Users, X,
+    AlertCircle, BarChart3, ChevronRight, ClipboardList, Contact,
+    Image, LayoutDashboard, Link, ListChecks, LogOut, Mail,
+    Megaphone, Menu, PieChart, Shield, Users, X,
   } from "lucide-svelte";
 
   const icons: Record<string, any> = {
@@ -18,6 +18,10 @@
     'list-checks': ListChecks,
     'alert-circle': AlertCircle,
     shield: Shield,
+    megaphone: Megaphone,
+    image: Image,
+    'pie-chart': PieChart,
+    'clipboard-list': ClipboardList,
   };
 
   export type NavItem = {

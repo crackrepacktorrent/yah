@@ -7,8 +7,9 @@
 	import { toast } from 'svelte-sonner';
 	import { listBounces, deleteBounce, deleteAllBounces } from '../bounces.remote';
 	import { getSession } from '../../session.remote';
+	import { can } from '../../can';
 
-	let role = $derived(getSession().current?.role);
+	let session = $derived(getSession().current);
 	let currentPage = $derived(Number($page.url.searchParams.get('page')) || 1);
 
 	let bouncesQuery = $derived(listBounces({ page: currentPage, perPage: 20 }));
@@ -141,7 +142,7 @@
 	<Spinner size={48} centered />
 {:else if data}
 	{#snippet toolbar()}
-		{#if selectedCount > 0 && role === 'owner'}
+		{#if selectedCount > 0 && can(session, 'bounce', 'delete')}
 			<span class="toolbar-count">{selectedCount} selected</span>
 			<div class="toolbar-actions">
 				<Button variant="danger-outline" onclick={() => (confirmDelete = true)}>Delete</Button>
@@ -149,7 +150,7 @@
 			</div>
 		{:else}
 			<div class="toolbar-spacer"></div>
-			{#if role === 'owner'}
+			{#if can(session, 'bounce', 'clear-all')}
 				<Button variant="danger" onclick={() => (confirmClearAll = true)}>Clear All</Button>
 			{/if}
 		{/if}

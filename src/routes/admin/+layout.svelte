@@ -6,11 +6,11 @@
   import { goto } from "$app/navigation";
   import { Toaster } from "svelte-sonner";
   import { getSession } from "./session.remote";
+  import { can } from "./can";
 
   let { children }: { children: any } = $props();
 
   let session = $derived(getSession());
-  let role = $derived(session.current?.role);
 
   const navSections = $derived.by(() => {
     const sections = [
@@ -20,22 +20,45 @@
           { href: "/admin", label: "Dashboard", icon: "dashboard" },
           { href: "/admin/shortlinks", label: "Shortlinks", icon: "link" },
           { href: "/admin/analytics", label: "Analytics", icon: "chart" },
+        ],
+      },
+      {
+        label: "Email",
+        items: [
           {
-            href: "/admin/emails",
-            label: "Email",
-            icon: "mail",
+            href: "/admin/emails/campaigns",
+            label: "Campaigns",
+            icon: "megaphone",
             children: [
+              { href: "/admin/emails/campaigns", label: "All Campaigns", icon: "megaphone" },
               { href: "/admin/emails", label: "Templates", icon: "mail" },
-              { href: "/admin/emails/subscribers", label: "Subscribers", icon: "contact" },
-              { href: "/admin/emails/lists", label: "Lists", icon: "list-checks" },
+              { href: "/admin/emails/media", label: "Media", icon: "image" },
+              { href: "/admin/emails/analytics", label: "Analytics", icon: "pie-chart" },
+            ],
+          },
+          {
+            href: "/admin/emails/subscribers",
+            label: "Subscribers",
+            icon: "contact",
+            children: [
+              { href: "/admin/emails/subscribers", label: "All Subscribers", icon: "contact" },
               { href: "/admin/emails/bounces", label: "Bounces", icon: "alert-circle" },
+            ],
+          },
+          {
+            href: "/admin/emails/lists",
+            label: "Lists",
+            icon: "list-checks",
+            children: [
+              { href: "/admin/emails/lists", label: "All Lists", icon: "list-checks" },
+              { href: "/admin/emails/forms", label: "Forms", icon: "clipboard-list" },
             ],
           },
         ],
       },
     ];
 
-    if (role === 'owner') {
+    if (can(session.current, 'member', 'create')) {
       sections.push({
         label: "Organization",
         items: [

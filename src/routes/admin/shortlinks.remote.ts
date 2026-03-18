@@ -1,8 +1,8 @@
-import { query, form } from '$app/server';
+import { query } from '$app/server';
 import * as v from 'valibot';
 import { getShlink, ShlinkApiError } from '$lib/server/shlink';
 import { error, invalid, redirect } from '@sveltejs/kit';
-import { protectedQuery, protectedCommand, enforcePermissions } from '$lib/server/auth-helpers';
+import { protectedQuery, protectedCommand, protectedForm } from '$lib/server/auth-helpers';
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
@@ -95,7 +95,8 @@ export const createShortUrl = protectedCommand(
 	},
 );
 
-export const editShortUrl = form(
+export const editShortUrl = protectedForm(
+	{ shortlink: ['edit'] },
 	v.object({
 		shortCode: v.string(),
 		longUrl: v.optional(v.string(), ''),
@@ -107,11 +108,9 @@ export const editShortUrl = form(
 		forwardQuery: v.optional(v.boolean(), false),
 	}),
 	async (data, issue) => {
-		await enforcePermissions({ shortlink: ['edit'] });
-
 		const tags = data.tags
 			.split(',')
-			.map((t) => t.trim())
+			.map((t: string) => t.trim())
 			.filter(Boolean);
 
 		try {
