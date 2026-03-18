@@ -1,7 +1,7 @@
 <script lang="ts">
   import { storyblokEditable, StoryblokComponent } from "@storyblok/svelte";
-  import type { CardGridBlok } from "$lib/types/storyblok";
-  import Dropdown from "$lib/components/Dropdown.svelte";
+  import type { CardGridBlok } from "$lib/storyblok/types";
+  import Dropdown from "./Dropdown.svelte";
   import ChevronDown from "lucide-svelte/icons/chevron-down";
 
   let { blok }: { blok: CardGridBlok } = $props();

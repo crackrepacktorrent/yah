@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.6-alpine
     environment:
       POSTGRES_USER: yah
       POSTGRES_PASSWORD: password
@@ -17,7 +17,7 @@ services:
       retries: 10
 
   shlink:
-    image: shlinkio/shlink:4
+    image: shlinkio/shlink:4.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,7 +35,7 @@ services:
       - "8080:8080"
 
   umami:
-    image: ghcr.io/umami-software/umami:postgresql-latest
+    image: ghcr.io/umami-software/umami:postgresql-v2.15.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,7 +46,7 @@ services:
       - "3001:3000"
 
   listmonk:
-    image: listmonk/listmonk:latest
+    image: listmonk/listmonk:v4.1.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,7 +55,7 @@ services:
     volumes:
       - ./config/listmonk-dev.toml:/listmonk/config.toml
     command: >
-      sh -c "yes | ./listmonk --install --idempotent --config /listmonk/config.toml 2>&1 || true;
+      sh -c "yes | ./listmonk --install --idempotent --config /listmonk/config.toml &&
              ./listmonk --config /listmonk/config.toml"
 
   mailpit:

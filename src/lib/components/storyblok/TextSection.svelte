@@ -1,6 +1,6 @@
 <script lang="ts">
   import { storyblokEditable, renderRichText } from "@storyblok/svelte";
-  import type { TextSectionBlok } from "$lib/types/storyblok";
+  import type { TextSectionBlok } from "$lib/storyblok/types";
 
   let { blok }: { blok: TextSectionBlok } = $props();
 

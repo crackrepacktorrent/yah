@@ -1,6 +1,6 @@
 import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
-import { getStoryblokVersion } from "$lib/utils/storyblok-helpers";
+import { getStoryblokVersion } from "$lib/storyblok/helpers";
 
 export const load: PageLoad = async ({ parent, params, fetch }) => {
   const { storyblokApi, lang } = await parent();

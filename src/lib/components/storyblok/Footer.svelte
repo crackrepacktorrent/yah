@@ -1,7 +1,7 @@
 <script lang="ts">
   import { storyblokEditable } from "@storyblok/svelte";
   import { Instagram, Twitter, Facebook, Linkedin, Youtube } from "@lucide/svelte";
-  import type { FooterBlok } from "$lib/types/storyblok";
+  import type { FooterBlok } from "$lib/storyblok/types";
 
   let { blok }: { blok: FooterBlok } = $props();
 

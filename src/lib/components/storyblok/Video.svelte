@@ -1,6 +1,6 @@
 <script lang="ts">
   import { storyblokEditable } from "@storyblok/svelte";
-  import type { VideoBlok } from "$lib/types/storyblok";
+  import type { VideoBlok } from "$lib/storyblok/types";
 
   let { blok }: { blok: VideoBlok } = $props();
 

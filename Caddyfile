@@ -1,18 +1,43 @@
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+}
+
 y4h.org, www.y4h.org {
+	import security_headers
+	encode gzip
+
 	@www host www.y4h.org
 	redir @www https://y4h.org{uri} permanent
+
+	# Legacy shortlink redirects — preserves existing QR codes
+	redir /donate https://y4h.link/donate permanent
+	redir /apply  https://y4h.link/apply permanent
 
 	reverse_proxy sveltekit:3000
 }
 
 y4h.link {
+	import security_headers
+	encode gzip
 	reverse_proxy shlink:8080
 }
 
 analytics.y4h.org {
+	import security_headers
+	encode gzip
+	header X-Frame-Options "SAMEORIGIN"
 	reverse_proxy umami:3000
 }
 
 preview.y4h.org {
+	import security_headers
+	encode gzip
 	reverse_proxy sveltekit-preview:3001
 }

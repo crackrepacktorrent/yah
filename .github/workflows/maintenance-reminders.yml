@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci
@@ -162,7 +162,7 @@ jobs:
               '#### Verification',
               '',
               '- [ ] Production site: https://www.y4h.org',
-              '- [ ] Preview deployment: https://yah-git-preview-crackrepacktorrents-projects.vercel.app',
+              '- [ ] Preview deployment: https://preview.y4h.org',
               '- [ ] Test main pages',
               '- [ ] Mobile view works'
             ].join('\n');
@@ -186,7 +186,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm ci

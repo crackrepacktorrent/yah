@@ -1,20 +1,20 @@
 #!/bin/bash
 set -e
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
+psql -v ON_ERROR_STOP=0 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
     -- Shlink
-    CREATE USER shlink WITH PASSWORD '$SHLINK_DB_PASSWORD';
-    CREATE DATABASE shlink OWNER shlink;
+    DO \$\$ BEGIN CREATE ROLE shlink WITH LOGIN PASSWORD '$SHLINK_DB_PASSWORD'; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
+    SELECT 'CREATE DATABASE shlink OWNER shlink' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'shlink')\gexec
 
     -- Umami
-    CREATE USER umami WITH PASSWORD '$UMAMI_DB_PASSWORD';
-    CREATE DATABASE umami OWNER umami;
+    DO \$\$ BEGIN CREATE ROLE umami WITH LOGIN PASSWORD '$UMAMI_DB_PASSWORD'; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
+    SELECT 'CREATE DATABASE umami OWNER umami' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'umami')\gexec
 
     -- Listmonk
-    CREATE USER listmonk WITH PASSWORD '$LISTMONK_DB_PASSWORD';
-    CREATE DATABASE listmonk OWNER listmonk;
+    DO \$\$ BEGIN CREATE ROLE listmonk WITH LOGIN PASSWORD '$LISTMONK_DB_PASSWORD'; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
+    SELECT 'CREATE DATABASE listmonk OWNER listmonk' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'listmonk')\gexec
 
     -- YAH (Better Auth, SvelteKit)
-    CREATE USER yah WITH PASSWORD '$YAH_DB_PASSWORD';
-    CREATE DATABASE yah OWNER yah;
+    DO \$\$ BEGIN CREATE ROLE yah WITH LOGIN PASSWORD '$YAH_DB_PASSWORD'; EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
+    SELECT 'CREATE DATABASE yah OWNER yah' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'yah')\gexec
 EOSQL

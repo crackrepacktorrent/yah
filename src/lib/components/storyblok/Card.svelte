@@ -1,7 +1,7 @@
 <script lang="ts">
   import { storyblokEditable, StoryblokComponent } from "@storyblok/svelte";
-  import type { CardBlok } from "$lib/types/storyblok";
-  import { getLinkUrl } from "$lib/utils/storyblok";
+  import type { CardBlok } from "$lib/storyblok/types";
+  import { getLinkUrl } from "$lib/storyblok/client";
 
   let { blok }: { blok: CardBlok } = $props();
 

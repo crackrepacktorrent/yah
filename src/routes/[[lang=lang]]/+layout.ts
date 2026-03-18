@@ -1,21 +1,21 @@
 import type { LayoutLoad } from "./$types";
 import { storyblokInit, apiPlugin, getStoryblokApi } from "@storyblok/svelte";
 import { getLanguage } from "$lib/lang";
-import { getStoryblokVersion, shouldEnableBridge } from "$lib/utils/storyblok-helpers";
-import type { HeaderButtonBlok, CardBlok } from "$lib/types/storyblok";
-import Page from "$lib/components/Page.svelte";
-import Separator from "$lib/components/Separator.svelte";
-import Image from "$lib/components/Image.svelte";
-import Video from "$lib/components/Video.svelte";
-import PDF from "$lib/components/PDF.svelte";
-import Carousel from "$lib/components/Carousel.svelte";
-import TextSection from "$lib/components/TextSection.svelte";
-import CardGrid from "$lib/components/CardGrid.svelte";
-import Card from "$lib/components/Card.svelte";
-import Section from "$lib/components/Section.svelte";
-import Grid from "$lib/components/Grid.svelte";
-import Button from "$lib/components/Button.svelte";
-import Footer from "$lib/components/Footer.svelte";
+import { getStoryblokVersion, shouldEnableBridge } from "$lib/storyblok/helpers";
+import type { HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
+import Page from "$lib/components/storyblok/Page.svelte";
+import Separator from "$lib/components/storyblok/Separator.svelte";
+import Image from "$lib/components/storyblok/Image.svelte";
+import Video from "$lib/components/storyblok/Video.svelte";
+import PDF from "$lib/components/storyblok/PDF.svelte";
+import Carousel from "$lib/components/storyblok/Carousel.svelte";
+import TextSection from "$lib/components/storyblok/TextSection.svelte";
+import CardGrid from "$lib/components/storyblok/CardGrid.svelte";
+import Card from "$lib/components/storyblok/Card.svelte";
+import Section from "$lib/components/storyblok/Section.svelte";
+import Grid from "$lib/components/storyblok/Grid.svelte";
+import Button from "$lib/components/storyblok/Button.svelte";
+import Footer from "$lib/components/storyblok/Footer.svelte";
 
 
 storyblokInit({

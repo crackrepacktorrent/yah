@@ -1,4 +1,4 @@
-import type { LinkField, AssetField } from "$lib/types/storyblok";
+import type { LinkField, AssetField } from "$lib/storyblok/types";
 
 /**
  * Extracts URL from Storyblok link field

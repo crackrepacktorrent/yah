@@ -1,6 +1,6 @@
 <script lang="ts">
   import { storyblokEditable } from "@storyblok/svelte";
-  import type { SeparatorBlok } from "$lib/types/storyblok";
+  import type { SeparatorBlok } from "$lib/storyblok/types";
 
   let { blok }: { blok: SeparatorBlok } = $props();
 

@@ -2,7 +2,7 @@
   import { storyblokEditable, StoryblokComponent } from "@storyblok/svelte";
   import * as CarouselPrimitive from "$lib/components/ui/carousel";
   import Autoplay from "embla-carousel-autoplay";
-  import type { CarouselBlok } from "$lib/types/storyblok";
+  import type { CarouselBlok } from "$lib/storyblok/types";
 
   let { blok }: { blok: CarouselBlok } = $props();
 

@@ -2,9 +2,9 @@
   import { page } from "$app/state";
   import { storyblokEditable } from "@storyblok/svelte";
   import { languages, type Language } from "$lib/lang";
-  import type { HeaderBlok, HeaderButtonBlok, CardBlok } from "$lib/types/storyblok";
+  import type { HeaderBlok, HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
   import { Dialog } from "bits-ui";
-  import Dropdown from "$lib/components/Dropdown.svelte";
+  import Dropdown from "./Dropdown.svelte";
   import logo from "$lib/assets/logo.png";
   import Menu from "lucide-svelte/icons/menu";
   import ChevronDown from "lucide-svelte/icons/chevron-down";

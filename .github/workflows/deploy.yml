@@ -2,16 +2,22 @@ name: Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 jobs:
+  check:
+    uses: ./.github/workflows/check.yml
   deploy:
+    needs: check
     runs-on: ubuntu-latest
     steps:
-      - uses: appleboy/ssh-action@v1
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@e31e3a83be6821f3b02f85412e703fd0e2eca08d # v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: deploy
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
             cd /home/deploy/yah
             git pull origin main
             docker compose up -d --build sveltekit sveltekit-preview

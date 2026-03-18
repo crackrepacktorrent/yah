@@ -1,6 +1,6 @@
 <script lang="ts">
   import { StoryblokComponent } from "@storyblok/svelte";
-  import Header from "$lib/components/Header.svelte";
+  import Header from "$lib/components/storyblok/Header.svelte";
   import type { LayoutData } from "./$types";
   import { parse } from 'css-tree';
   let { data, children }: { data: LayoutData; children: any } = $props();
