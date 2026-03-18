@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { StatCard, EmptyState, Spinner, Card, DataTable, Section } from '$lib/components/admin';
+	import { StatCard, EmptyState, Spinner, Card, DataTable, Section, ToggleGroup } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
-	import { ToggleGroup } from 'bits-ui';
 	import { getAnalytics } from '../analytics.remote';
 	import type { UmamiPageview } from '$lib/server/umami';
 	let period = $state<'24h' | '7d' | '30d'>('7d');
@@ -42,10 +41,12 @@
 						? renderSnippet(monoCell, val)
 						: val;
 				},
+				enableColumnFilter: false,
 			}),
 			columnHelper.accessor('y', {
 				header: 'Visitors',
 				cell: (info) => renderSnippet(numCell, info.getValue()),
+				enableColumnFilter: false,
 			}),
 		];
 	}
@@ -78,31 +79,16 @@
 
 <div class="page-header">
 	<h1>Analytics</h1>
-	<ToggleGroup.Root
-		type="single"
-		value={period}
-		onValueChange={(v) => { if (v) period = v as typeof period; }}
-	>
-		{#snippet child({ props })}
-			<div {...props} class="period-tabs">
-				<ToggleGroup.Item value="24h">
-					{#snippet child({ props: itemProps })}
-						<button {...itemProps} class="period-tab" class:active={period === '24h'}>24h</button>
-					{/snippet}
-				</ToggleGroup.Item>
-				<ToggleGroup.Item value="7d">
-					{#snippet child({ props: itemProps })}
-						<button {...itemProps} class="period-tab" class:active={period === '7d'}>7d</button>
-					{/snippet}
-				</ToggleGroup.Item>
-				<ToggleGroup.Item value="30d">
-					{#snippet child({ props: itemProps })}
-						<button {...itemProps} class="period-tab" class:active={period === '30d'}>30d</button>
-					{/snippet}
-				</ToggleGroup.Item>
-			</div>
-		{/snippet}
-	</ToggleGroup.Root>
+	<div class="header-controls">
+		{#if analyticsQuery.loading && data}
+			<Spinner size={20} />
+		{/if}
+		<ToggleGroup bind:value={period} options={[
+			{ value: '24h', label: '24h' },
+			{ value: '7d', label: '7d' },
+			{ value: '30d', label: '30d' },
+		]} />
+	</div>
 </div>
 
 {#if !data && analyticsQuery.loading}
@@ -153,43 +139,7 @@
 	</div>
 {/if}
 
-{#if analyticsQuery.loading && data}
-	<div class="loading-overlay">
-		<Spinner size={32} />
-	</div>
-{/if}
-
 <style>
-	.period-tabs {
-		display: flex;
-		gap: 2px;
-		background: var(--color-border);
-		border-radius: var(--radius-md);
-		padding: 2px;
-	}
-
-	.period-tab {
-		background: none;
-		border: none;
-		padding: 0.35rem 0.75rem;
-		font-size: 0.85rem;
-		font-weight: 500;
-		color: var(--color-muted);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		transition: all 0.15s;
-	}
-
-	.period-tab.active {
-		background: var(--color-surface);
-		color: var(--color-foreground);
-		box-shadow: var(--shadow-sm);
-	}
-
-	.period-tab:hover:not(.active) {
-		color: var(--color-foreground);
-	}
-
 	.stats-grid {
 		margin-bottom: 1.5rem;
 	}
@@ -294,12 +244,9 @@
 		text-align: right;
 	}
 
-	/* ─── Loading overlay ──────────────────────────────────────────────── */
-
-	.loading-overlay {
-		position: fixed;
-		top: 1rem;
-		right: 1rem;
-		z-index: 10;
+	.header-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
 	}
 </style>

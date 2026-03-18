@@ -253,6 +253,33 @@ class ListmonkClient {
 		return res.data;
 	}
 
+	// ─── Campaign Preview & Test ─────────────────────────────────────────────
+
+	async previewCampaign(id: number): Promise<string> {
+		const res = await fetch(`${this.baseUrl}/api/campaigns/${id}/preview`, {
+			headers: { Authorization: this.authHeader },
+		});
+		if (!res.ok) {
+			throw new ListmonkApiError(`Preview failed: ${res.status}`, res.status);
+		}
+		return res.text();
+	}
+
+	async testCampaign(id: number, subscribers: string[]): Promise<void> {
+		await this.request(`/campaigns/${id}/test`, {
+			method: 'POST',
+			body: JSON.stringify({ subscribers }),
+		});
+	}
+
+	// ─── Subscriber Opt-in ───────────────────────────────────────────────────
+
+	async sendOptinConfirmation(subscriberId: number): Promise<void> {
+		await this.request(`/subscribers/${subscriberId}/optin`, {
+			method: 'POST',
+		});
+	}
+
 	// ─── Analytics ───────────────────────────────────────────────────────────
 
 	async getAnalytics(params: {

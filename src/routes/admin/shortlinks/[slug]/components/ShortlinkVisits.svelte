@@ -36,7 +36,7 @@
 </script>
 
 {#snippet dateCell(date: string)}
-  <span class="date">{new Date(date).toLocaleString()}</span>
+  <span class="cell-date">{new Date(date).toLocaleString()}</span>
 {/snippet}
 
 {#snippet refererCell(referer: string)}
@@ -72,11 +72,6 @@
 </Section>
 
 <style>
-  .date {
-    white-space: nowrap;
-    color: var(--color-muted);
-  }
-
   .referer {
     max-width: 200px;
     overflow: hidden;

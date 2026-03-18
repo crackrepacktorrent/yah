@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, getFacetedRowModel, getFacetedUniqueValues, type SortingState, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
-	import { listLists, createList, updateList, deleteList } from '../lists.remote';
+	import { listLists, createList, updateList, deleteList, sendOptinCampaign } from '../lists.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
@@ -123,6 +123,22 @@
 		}
 	}
 
+	let confirmOptin = $state<{ open: boolean; listId: number; listName: string }>({ open: false, listId: 0, listName: '' });
+	let optinPending = $state(false);
+
+	async function handleSendOptin() {
+		optinPending = true;
+		try {
+			const result = await sendOptinCampaign(confirmOptin.listId);
+			toast.success(`Opt-in confirmations sent to ${result.sent} of ${result.total} subscribers.`);
+			confirmOptin = { open: false, listId: 0, listName: '' };
+		} catch (err: any) {
+			toast.error(err?.message || 'Failed to send opt-in campaign.');
+		} finally {
+			optinPending = false;
+		}
+	}
+
 	type ListItem = {
 		id: number;
 		name: string;
@@ -130,6 +146,7 @@
 		optin: 'single' | 'double';
 		description: string;
 		subscriber_count: number;
+		subscriber_statuses: Record<string, number>;
 		created_at: string;
 		updated_at: string;
 	};
@@ -169,7 +186,7 @@
 		}),
 		columnHelper.accessor('subscriber_count', {
 			header: 'Subscribers',
-			cell: (info) => renderSnippet(countCell, info.getValue()),
+			cell: (info) => renderSnippet(subscriberCell, info.row.original),
 			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('created_at', {
@@ -194,7 +211,7 @@
 {/snippet}
 
 {#snippet nameCell(list: ListItem)}
-	<button class="name-link" onclick={() => openEdit(list)}>{list.name}</button>
+	<button class="cell-link" onclick={() => openEdit(list)}>{list.name}</button>
 {/snippet}
 
 {#snippet typeCell(type: string)}
@@ -205,12 +222,23 @@
 	<Badge variant={optin === 'double' ? 'warning' : 'success'}>{optin}</Badge>
 {/snippet}
 
-{#snippet countCell(count: number)}
-	<span class="count">{count}</span>
+{#snippet subscriberCell(list: ListItem)}
+	{@const unconfirmed = list.subscriber_statuses?.unconfirmed ?? 0}
+	<span class="count">{list.subscriber_count}</span>
+	{#if unconfirmed > 0}
+		<span class="unconfirmed">
+			{unconfirmed} unconfirmed
+			{#if list.optin === 'double' && can(session, 'list', 'edit')}
+				<button class="optin-btn" onclick={() => (confirmOptin = { open: true, listId: list.id, listName: list.name })}>
+					Send opt-in
+				</button>
+			{/if}
+		</span>
+	{/if}
 {/snippet}
 
 {#snippet dateCell(date: string)}
-	<span class="date">{new Date(date).toLocaleDateString()}</span>
+	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
 <h1>Mailing Lists</h1>
@@ -272,6 +300,15 @@
 	onconfirm={handleDelete}
 />
 
+<ConfirmDialog
+	bind:open={confirmOptin.open}
+	title="Send Opt-in Campaign"
+	description="Send opt-in confirmation emails to all unconfirmed subscribers on &quot;{confirmOptin.listName}&quot;?"
+	confirmLabel="Yes, send"
+	variant="primary"
+	onconfirm={handleSendOptin}
+/>
+
 <!-- Create List Dialog -->
 <DialogShell bind:open={createOpen} title="New List">
 	<div class="form-fields">
@@ -280,18 +317,12 @@
 		</FormField>
 
 		<div class="form-row">
-			<FormField label="Type">
-				<select class="select" bind:value={createType}>
-					<option value="public">Public</option>
-					<option value="private">Private</option>
-				</select>
+			<FormField label="Type" hint="Public lists are open to the world to subscribe and may appear on public pages.">
+				<Select bind:value={createType} options={[{ value: 'public', label: 'Public' }, { value: 'private', label: 'Private' }]} />
 			</FormField>
 
-			<FormField label="Opt-in">
-				<select class="select" bind:value={createOptin}>
-					<option value="single">Single</option>
-					<option value="double">Double</option>
-				</select>
+			<FormField label="Opt-in" hint="Double opt-in sends a confirmation email. Campaigns are only sent to confirmed subscribers.">
+				<Select bind:value={createOptin} options={[{ value: 'single', label: 'Single' }, { value: 'double', label: 'Double' }]} />
 			</FormField>
 		</div>
 
@@ -316,18 +347,12 @@
 		</FormField>
 
 		<div class="form-row">
-			<FormField label="Type">
-				<select class="select" bind:value={editType}>
-					<option value="public">Public</option>
-					<option value="private">Private</option>
-				</select>
+			<FormField label="Type" hint="Public lists are open to the world to subscribe and may appear on public pages.">
+				<Select bind:value={editType} options={[{ value: 'public', label: 'Public' }, { value: 'private', label: 'Private' }]} />
 			</FormField>
 
-			<FormField label="Opt-in">
-				<select class="select" bind:value={editOptin}>
-					<option value="single">Single</option>
-					<option value="double">Double</option>
-				</select>
+			<FormField label="Opt-in" hint="Double opt-in sends a confirmation email. Campaigns are only sent to confirmed subscribers.">
+				<Select bind:value={editOptin} options={[{ value: 'single', label: 'Single' }, { value: 'double', label: 'Double' }]} />
 			</FormField>
 		</div>
 
@@ -351,31 +376,25 @@
 		color: var(--brand-amber-dark);
 	}
 
-	.date {
+	.unconfirmed {
+		display: block;
+		font-size: 0.75rem;
 		color: var(--color-muted);
-		white-space: nowrap;
 	}
 
-	.name-link {
+	.optin-btn {
 		background: none;
 		border: none;
 		cursor: pointer;
 		color: var(--color-primary);
-		font-weight: 600;
-		font-size: inherit;
+		font-size: 0.75rem;
 		padding: 0;
-		text-decoration: none;
+		margin-left: 0.25rem;
 	}
 
-	.name-link:hover {
+	.optin-btn:hover {
 		text-decoration: underline;
 	}
 
-	:global(.row-checkbox) {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--color-primary);
-		cursor: pointer;
-	}
 
 </style>

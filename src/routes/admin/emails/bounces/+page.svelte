@@ -137,7 +137,7 @@
 {/snippet}
 
 {#snippet dateCell(date: string)}
-	<span class="date">{new Date(date).toLocaleDateString()}</span>
+	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
 <h1>Bounces</h1>
@@ -199,16 +199,4 @@
 />
 
 <style>
-
-	.date {
-		color: var(--color-muted);
-		white-space: nowrap;
-	}
-
-	:global(.row-checkbox) {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--color-primary);
-		cursor: pointer;
-	}
 </style>

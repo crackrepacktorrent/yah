@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { Switch } from "$lib/components/admin";
+  import Select from "./Select.svelte";
   import { getLogoDataUrl } from "./logo-path";
 
   let {
@@ -145,33 +146,11 @@
     </div>
     <div class="qr-picker">
       <span class="picker-label">Dots</span>
-      <select
-        class="picker-select"
-        value={selectedDotStyle}
-        onchange={(e) =>
-          (selectedDotStyle = Number(
-            (e.target as HTMLSelectElement).value,
-          ))}
-      >
-        {#each dotStyles as style, i}
-          <option value={i}>{style.name}</option>
-        {/each}
-      </select>
+      <Select value={String(selectedDotStyle)} onValueChange={(v) => (selectedDotStyle = Number(v))} options={dotStyles.map((s, i) => ({ value: String(i), label: s.name }))} />
     </div>
     <div class="qr-picker">
       <span class="picker-label">Corners</span>
-      <select
-        class="picker-select"
-        value={selectedCornerStyle}
-        onchange={(e) =>
-          (selectedCornerStyle = Number(
-            (e.target as HTMLSelectElement).value,
-          ))}
-      >
-        {#each cornerStyles as style, i}
-          <option value={i}>{style.name}</option>
-        {/each}
-      </select>
+      <Select value={String(selectedCornerStyle)} onValueChange={(v) => (selectedCornerStyle = Number(v))} options={cornerStyles.map((s, i) => ({ value: String(i), label: s.name }))} />
     </div>
     <Switch label="Logo" bind:checked={showLogo} />
   </div>
@@ -269,23 +248,4 @@
     color: var(--color-muted);
   }
 
-  .picker-select {
-    padding: 0.3rem 0.5rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface);
-    color: var(--color-foreground);
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-
-  .picker-select:hover {
-    border-color: var(--color-primary);
-  }
-
-  .picker-select:focus {
-    outline: none;
-    border-color: var(--color-primary);
-  }
 </style>

@@ -207,7 +207,7 @@
 {/snippet}
 
 {#snippet nameCell(role: RoleItem)}
-	<button class="name-link" onclick={() => openEdit(role)}>{role.role}</button>
+	<button class="cell-link role-name" onclick={() => openEdit(role)}>{role.role}</button>
 {/snippet}
 
 {#snippet permCell(role: RoleItem)}
@@ -215,7 +215,7 @@
 {/snippet}
 
 {#snippet dateCell(date: Date)}
-	<span class="date">{date.toLocaleDateString()}</span>
+	<span class="cell-date">{date.toLocaleDateString()}</span>
 {/snippet}
 
 <h1>Roles & Permissions</h1>
@@ -342,19 +342,8 @@
 
 <style>
 
-	.name-link {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-primary);
-		font-weight: 600;
-		font-size: inherit;
-		padding: 0;
+	.role-name {
 		text-transform: capitalize;
-	}
-
-	.name-link:hover {
-		text-decoration: underline;
 	}
 
 	.perm-summary {

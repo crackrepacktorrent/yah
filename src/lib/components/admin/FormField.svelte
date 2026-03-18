@@ -17,9 +17,9 @@
 <label class="form-field">
 	<span class="form-field-label">
 		{label}{#if required}<span class="required-mark"> *</span>{/if}
-		{#if hint}<span class="form-field-hint">{hint}</span>{/if}
 	</span>
 	{@render children()}
+	{#if hint}<span class="form-field-hint">{hint}</span>{/if}
 </label>
 
 <style>
@@ -36,7 +36,6 @@
 		display: flex;
 		align-items: baseline;
 		gap: 0.25rem;
-		flex-wrap: wrap;
 	}
 
 	.required-mark {

@@ -1,18 +1,10 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
-	import { onMount } from 'svelte';
-
-	let RichTextEditor: any = $state(null);
-	onMount(async () => {
-		const mod = await import('$lib/components/admin/RichTextEditor.svelte');
-		RichTextEditor = mod.default;
-	});
+	import { goto } from '$app/navigation';
+	import { Badge, Button, ConfirmDialog, EmptyState, Input, Spinner, DataTable } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
-	import { Tabs } from 'bits-ui';
 	import { toast } from 'svelte-sonner';
-	import { listCampaigns, createCampaign, updateCampaign, deleteCampaign, updateCampaignStatus } from '../campaigns.remote';
-	import { listLists } from '../lists.remote';
+	import { listCampaigns, deleteCampaign, updateCampaignStatus } from '../campaigns.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
@@ -30,8 +22,6 @@
 		return val ?? _prev;
 	});
 
-	let listsQuery = $derived(listLists());
-
 	// ─── Row Selection ────────────────────────────────────────────────
 	let rowSelection = $state<RowSelectionState>({});
 	let selectedRows = $derived.by(() => {
@@ -48,99 +38,10 @@
 		rowSelection = {};
 	}
 
-	// ─── Create/Edit Dialog ───────────────────────────────────────────
-	let dialogOpen = $state(false);
-	let dialogMode = $state<'create' | 'edit'>('create');
-	let dialogPending = $state(false);
-	let dialogTab = $state('campaign');
-
-	let editId = $state(0);
-	let editName = $state('');
-	let editSubject = $state('');
-	let editFromEmail = $state('');
-	let editListIds = $state<number[]>([]);
-	let editBody = $state('');
-	let editContentType = $state<'richtext' | 'html' | 'markdown' | 'plain'>('richtext');
-	let editTags = $state('');
-	let editSendLater = $state(false);
-	let editSendAt = $state('');
-
 	// ─── Confirm Dialogs ──────────────────────────────────────────────
 	let confirmDelete = $state(false);
 	let confirmSend = $state(false);
 	let sendTarget = $state<Campaign | null>(null);
-
-	function openCreate() {
-		dialogMode = 'create';
-		dialogTab = 'campaign';
-		editId = 0;
-		editName = '';
-		editSubject = '';
-		editFromEmail = '';
-		editListIds = [];
-		editBody = '';
-		editContentType = 'richtext';
-		editTags = '';
-		editSendLater = false;
-		editSendAt = '';
-		dialogOpen = true;
-	}
-
-	function openEdit(campaign: Campaign) {
-		dialogMode = 'edit';
-		dialogTab = 'campaign';
-		editId = campaign.id;
-		editName = campaign.name;
-		editSubject = campaign.subject;
-		editFromEmail = campaign.from_email;
-		editListIds = campaign.lists.map((l) => l.id);
-		editBody = campaign.body;
-		editContentType = campaign.content_type;
-		editTags = campaign.tags.join(', ');
-		editSendLater = !!campaign.send_at;
-		editSendAt = campaign.send_at ? campaign.send_at.slice(0, 16) : '';
-		dialogOpen = true;
-	}
-
-	async function handleSave() {
-		dialogPending = true;
-		try {
-			const tags = editTags.split(',').map((t) => t.trim()).filter(Boolean);
-			if (dialogMode === 'create') {
-				await createCampaign({
-					name: editName,
-					subject: editSubject,
-					fromEmail: editFromEmail || undefined,
-					lists: editListIds,
-					body: editBody,
-					contentType: editContentType,
-					tags: tags.length ? tags : undefined,
-					sendAt: editSendLater && editSendAt ? new Date(editSendAt).toISOString() : undefined,
-				});
-				toast.success('Campaign created.');
-			} else {
-				await updateCampaign({
-					id: editId,
-					name: editName,
-					subject: editSubject,
-					fromEmail: editFromEmail || undefined,
-					lists: editListIds,
-					body: editBody,
-					contentType: editContentType,
-					tags,
-					sendAt: editSendLater && editSendAt ? new Date(editSendAt).toISOString() : null,
-				});
-				toast.success('Campaign updated.');
-			}
-			dialogOpen = false;
-			clearSelection();
-			refreshList();
-		} catch (err: any) {
-			toast.error(err?.message || 'Failed to save campaign.');
-		} finally {
-			dialogPending = false;
-		}
-	}
 
 	async function handleDelete() {
 		try {
@@ -149,7 +50,7 @@
 			}
 			toast.success(`${selectedCount} campaign${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
-			refreshList();
+			listCampaigns().refresh();
 		} catch (err: any) {
 			toast.error(err?.message || 'Failed to delete campaign.');
 		}
@@ -165,7 +66,7 @@
 		try {
 			await updateCampaignStatus({ id: sendTarget.id, status: 'running' });
 			toast.success(`Campaign "${sendTarget.name}" started.`);
-			refreshList();
+			listCampaigns().refresh();
 		} catch (err: any) {
 			toast.error(err?.message || 'Failed to start campaign.');
 		}
@@ -175,20 +76,10 @@
 		try {
 			await updateCampaignStatus({ id: campaign.id, status });
 			toast.success(`Campaign status updated.`);
-			refreshList();
+			listCampaigns().refresh();
 		} catch (err: any) {
 			toast.error(err?.message || 'Failed to update status.');
 		}
-	}
-
-	function refreshList() {
-		listCampaigns().refresh();
-	}
-
-	function toggleListId(id: number) {
-		editListIds = editListIds.includes(id)
-			? editListIds.filter((x) => x !== id)
-			: [...editListIds, id];
 	}
 
 	function statusVariant(status: string): 'default' | 'success' | 'error' | 'warning' | 'info' {
@@ -213,8 +104,6 @@
 		name: string;
 		subject: string;
 		from_email: string;
-		body: string;
-		content_type: 'richtext' | 'html' | 'markdown' | 'plain';
 		status: string;
 		send_at: string | null;
 		started_at: string | null;
@@ -295,31 +184,16 @@
 </script>
 
 {#snippet selectAllCell(table: any)}
-	<input
-		type="checkbox"
-		class="row-checkbox"
-		checked={table.getIsAllRowsSelected()}
-		indeterminate={table.getIsSomeRowsSelected()}
-		onchange={table.getToggleAllRowsSelectedHandler()}
-	/>
+	<input type="checkbox" class="row-checkbox" checked={table.getIsAllRowsSelected()} indeterminate={table.getIsSomeRowsSelected()} onchange={table.getToggleAllRowsSelectedHandler()} />
 {/snippet}
 
 {#snippet selectRowCell(row: any)}
-	<input
-		type="checkbox"
-		class="row-checkbox"
-		checked={row.getIsSelected()}
-		onchange={row.getToggleSelectedHandler()}
-	/>
+	<input type="checkbox" class="row-checkbox" checked={row.getIsSelected()} onchange={row.getToggleSelectedHandler()} />
 {/snippet}
 
 {#snippet nameCell(campaign: Campaign)}
 	<div class="name-col">
-		{#if campaign.status === 'draft' && can(session, 'campaign', 'edit')}
-			<button class="name-link" onclick={() => openEdit(campaign)}>{campaign.name}</button>
-		{:else}
-			<span class="name-text">{campaign.name}</span>
-		{/if}
+		<a href="/admin/emails/campaigns/{campaign.id}" class="cell-link">{campaign.name}</a>
 		<span class="subject-text">{campaign.subject}</span>
 	</div>
 {/snippet}
@@ -329,12 +203,12 @@
 {/snippet}
 
 {#snippet listsCell(lists: { id: number; name: string }[])}
-	<div class="list-badges">
+	<div class="cell-badges">
 		{#each lists as list}
 			<Badge>{list.name}</Badge>
 		{/each}
 		{#if lists.length === 0}
-			<span class="muted">—</span>
+			<span class="cell-muted">—</span>
 		{/if}
 	</div>
 {/snippet}
@@ -350,61 +224,31 @@
 {/snippet}
 
 {#snippet dateCell(date: string)}
-	<span class="date">{new Date(date).toLocaleDateString()}</span>
+	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
 {#snippet optionalDateCell(date: string | null)}
 	{#if date}
-		<span class="date">{new Date(date).toLocaleDateString()}</span>
+		<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
 	{:else}
-		<span class="muted">—</span>
+		<span class="cell-muted">—</span>
 	{/if}
 {/snippet}
 
 {#snippet actionsCell(campaign: Campaign)}
 	<div class="actions-col">
 		{#if campaign.status === 'draft' && can(session, 'campaign', 'send')}
-			<button class="action-btn send" onclick={() => handleSendNow(campaign)} title="Send now">
-				Send
-			</button>
+			<button class="action-btn send" onclick={() => handleSendNow(campaign)} title="Send now">Send</button>
 		{/if}
 		{#if campaign.status === 'running' && can(session, 'campaign', 'send')}
-			<button class="action-btn" onclick={() => handleStatusChange(campaign, 'paused')} title="Pause">
-				Pause
-			</button>
+			<button class="action-btn" onclick={() => handleStatusChange(campaign, 'paused')} title="Pause">Pause</button>
 		{/if}
 		{#if campaign.status === 'paused' && can(session, 'campaign', 'send')}
-			<button class="action-btn send" onclick={() => handleStatusChange(campaign, 'running')} title="Resume">
-				Resume
-			</button>
-			<button class="action-btn danger" onclick={() => handleStatusChange(campaign, 'cancelled')} title="Cancel">
-				Cancel
-			</button>
+			<button class="action-btn send" onclick={() => handleStatusChange(campaign, 'running')} title="Resume">Resume</button>
+			<button class="action-btn danger" onclick={() => handleStatusChange(campaign, 'cancelled')} title="Cancel">Cancel</button>
 		{/if}
 		{#if campaign.status === 'scheduled' && can(session, 'campaign', 'send')}
-			<button class="action-btn danger" onclick={() => handleStatusChange(campaign, 'cancelled')} title="Cancel">
-				Cancel
-			</button>
-		{/if}
-	</div>
-{/snippet}
-
-{#snippet listCheckboxes()}
-	{@const allLists = listsQuery.current?.lists ?? []}
-	<div class="list-checkboxes">
-		{#each allLists as list}
-			<label class="list-checkbox">
-				<input
-					type="checkbox"
-					checked={editListIds.includes(list.id)}
-					onchange={() => toggleListId(list.id)}
-				/>
-				<span>{list.name}</span>
-				<Badge variant={list.type === 'public' ? 'info' : 'default'}>{list.type}</Badge>
-			</label>
-		{/each}
-		{#if allLists.length === 0}
-			<span class="muted">No lists available</span>
+			<button class="action-btn danger" onclick={() => handleStatusChange(campaign, 'cancelled')} title="Cancel">Cancel</button>
 		{/if}
 	</div>
 {/snippet}
@@ -431,7 +275,7 @@
 				<Input type="text" placeholder="Search campaigns..." bind:value={globalFilter} />
 			</div>
 			{#if can(session, 'campaign', 'create')}
-				<Button variant="primary" onclick={openCreate}>+ New Campaign</Button>
+				<Button variant="primary" href="/admin/emails/campaigns/new">+ New Campaign</Button>
 			{/if}
 		{/if}
 	{/snippet}
@@ -455,13 +299,12 @@
 		getFacetedRowModel: getFacetedRowModel(),
 		getFacetedUniqueValues: getFacetedUniqueValues(),
 	})}
-	<DataTable {table} {toolbar} pageSize={20} />
+	<DataTable {table} {toolbar} pageSize={20} onrowclick={(row) => goto(`/admin/emails/campaigns/${row.id}`)} />
 	{#if data.campaigns.length === 0}
 		<EmptyState message="No campaigns found." />
 	{/if}
 {/if}
 
-<!-- Delete confirmation -->
 <ConfirmDialog
 	bind:open={confirmDelete}
 	title="Delete Campaign{selectedCount > 1 ? 's' : ''}"
@@ -470,7 +313,6 @@
 	onconfirm={handleDelete}
 />
 
-<!-- Send confirmation -->
 <ConfirmDialog
 	bind:open={confirmSend}
 	title="Send Campaign"
@@ -480,153 +322,15 @@
 	onconfirm={confirmSendCampaign}
 />
 
-<!-- Create/Edit Campaign Dialog -->
-<DialogShell bind:open={dialogOpen} title={dialogMode === 'create' ? 'New Campaign' : 'Edit Campaign'} maxWidth="700px">
-	<Tabs.Root bind:value={dialogTab}>
-		<Tabs.List>
-			{#snippet child({ props })}
-				<div {...props} class="tabs-list">
-					<Tabs.Trigger value="campaign">
-						{#snippet child({ props: triggerProps })}
-							<button {...triggerProps} class="tab-trigger" class:active={dialogTab === 'campaign'}>Campaign</button>
-						{/snippet}
-					</Tabs.Trigger>
-					<Tabs.Trigger value="content">
-						{#snippet child({ props: triggerProps })}
-							<button {...triggerProps} class="tab-trigger" class:active={dialogTab === 'content'}>Content</button>
-						{/snippet}
-					</Tabs.Trigger>
-				</div>
-			{/snippet}
-		</Tabs.List>
-
-		<Tabs.Content value="campaign">
-			{#snippet child({ props })}
-				<div {...props} class="tab-content">
-					<div class="form-fields">
-						<FormField label="Name" required>
-							<Input bind:value={editName} required placeholder="My Campaign" />
-						</FormField>
-
-						<FormField label="Subject" required>
-							<Input bind:value={editSubject} required placeholder="Email subject line" />
-						</FormField>
-
-						<FormField label="From Email" hint="Leave blank for default">
-							<Input type="email" bind:value={editFromEmail} placeholder="noreply@example.com" />
-						</FormField>
-
-						<FormField label="Lists" required>
-							{@render listCheckboxes()}
-						</FormField>
-
-						<FormField label="Tags" hint="Comma-separated">
-							<Input bind:value={editTags} placeholder="newsletter, announcement" />
-						</FormField>
-
-						<div class="send-later">
-							<label class="send-later-toggle">
-								<input type="checkbox" bind:checked={editSendLater} />
-								<span>Schedule for later</span>
-							</label>
-							{#if editSendLater}
-								<Input type="datetime-local" bind:value={editSendAt} />
-							{/if}
-						</div>
-					</div>
-				</div>
-			{/snippet}
-		</Tabs.Content>
-
-		<Tabs.Content value="content">
-			{#snippet child({ props })}
-				<div {...props} class="tab-content">
-					<div class="form-fields">
-						<FormField label="Content Type">
-							<select class="select" bind:value={editContentType}>
-								<option value="richtext">Rich Text</option>
-								<option value="html">Raw HTML</option>
-								<option value="markdown">Markdown</option>
-								<option value="plain">Plain Text</option>
-							</select>
-						</FormField>
-
-						{#if editContentType === 'richtext'}
-							<FormField label="Body">
-								{#if RichTextEditor}
-								<RichTextEditor value={editBody} onchange={(html: string) => (editBody = html)} />
-							{:else}
-								<Spinner centered />
-							{/if}
-							</FormField>
-						{:else}
-							<FormField label="Body">
-								<textarea class="textarea" bind:value={editBody} rows="12" placeholder="Email content..."></textarea>
-							</FormField>
-						{/if}
-
-						<div class="template-vars">
-							<span class="template-vars-label">Template variables:</span>
-							<code>{'{{ .Subscriber.Name }}'}</code>
-							<code>{'{{ .Subscriber.Email }}'}</code>
-							<code>{'{{ .Subscriber.Attribs }}'}</code>
-						</div>
-					</div>
-				</div>
-			{/snippet}
-		</Tabs.Content>
-	</Tabs.Root>
-
-	<div class="dialog-actions">
-		<button type="button" class="cancel-btn" onclick={() => (dialogOpen = false)}>Cancel</button>
-		<Button variant="primary" onclick={handleSave} disabled={dialogPending}>
-			{dialogPending ? 'Saving...' : dialogMode === 'create' ? 'Create Draft' : 'Save'}
-		</Button>
-	</div>
-</DialogShell>
-
 <style>
-	/* ─── Table cells ─────────────────────────────────────────────── */
-
 	.name-col {
 		display: flex;
 		flex-direction: column;
 		gap: 0.125rem;
 	}
 
-	.name-link {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-primary);
-		font-weight: 600;
-		font-size: inherit;
-		padding: 0;
-		text-decoration: none;
-		text-align: left;
-	}
-
-	.name-link:hover {
-		text-decoration: underline;
-	}
-
-	.name-text {
-		font-weight: 600;
-		color: var(--color-foreground);
-	}
-
 	.subject-text {
 		font-size: 0.8rem;
-		color: var(--color-muted);
-	}
-
-	.list-badges {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-	}
-
-	.muted {
 		color: var(--color-muted);
 	}
 
@@ -639,11 +343,6 @@
 
 	.stats-sep {
 		color: var(--color-muted);
-	}
-
-	.date {
-		color: var(--color-muted);
-		white-space: nowrap;
 	}
 
 	.actions-col {
@@ -684,122 +383,9 @@
 		background: color-mix(in srgb, var(--brand-magenta) 10%, transparent);
 	}
 
-	/* ─── Toolbar ─────────────────────────────────────────────────── */
-
-	:global(.row-checkbox) {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--color-primary);
-		cursor: pointer;
-	}
-
 	.toolbar-filters {
 		display: flex;
 		gap: 0.5rem;
 		flex: 1;
-	}
-
-	/* ─── Tabs ────────────────────────────────────────────────────── */
-
-	.tabs-list {
-		display: flex;
-		gap: 0;
-		border-bottom: 1px solid var(--color-border);
-		margin-bottom: 1.25rem;
-	}
-
-	.tab-trigger {
-		background: none;
-		border: none;
-		border-bottom: 2px solid transparent;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.9rem;
-		font-weight: 500;
-		padding: 0.5rem 1rem;
-		transition: all 0.15s ease;
-	}
-
-	.tab-trigger:hover {
-		color: var(--color-foreground);
-	}
-
-	.tab-trigger.active {
-		color: var(--color-primary);
-		border-bottom-color: var(--color-primary);
-	}
-
-	.tab-content {
-		min-height: 0;
-	}
-
-	/* ─── Form ────────────────────────────────────────────────────── */
-
-	.textarea {
-		font-family: monospace;
-	}
-
-	.list-checkboxes {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.list-checkbox {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.9rem;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.list-checkbox input[type='checkbox'] {
-		accent-color: var(--color-primary);
-	}
-
-	.send-later {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.send-later-toggle {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.9rem;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.send-later-toggle input[type='checkbox'] {
-		accent-color: var(--color-primary);
-	}
-
-	.template-vars {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.375rem;
-		align-items: center;
-		font-size: 0.8rem;
-	}
-
-	.template-vars-label {
-		color: var(--color-muted);
-	}
-
-	.template-vars code {
-		background: var(--color-hover);
-		padding: 0.15rem 0.4rem;
-		border-radius: var(--radius-sm);
-		font-size: 0.75rem;
-		color: var(--color-foreground);
-	}
-
-	.dialog-actions {
-		margin-top: 1.25rem;
-		padding-top: 1rem;
-		border-top: 1px solid var(--color-border);
 	}
 </style>

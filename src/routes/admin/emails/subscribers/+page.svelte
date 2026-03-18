@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -240,7 +240,7 @@
 {/snippet}
 
 {#snippet emailCell(sub: Subscriber)}
-	<button class="name-link" onclick={() => openEdit(sub)}>{sub.email}</button>
+	<button class="cell-link" onclick={() => openEdit(sub)}>{sub.email}</button>
 {/snippet}
 
 {#snippet statusCell(status: string)}
@@ -248,18 +248,18 @@
 {/snippet}
 
 {#snippet listsCell(lists: { id: number; name: string }[])}
-	<div class="list-badges">
+	<div class="cell-badges">
 		{#each lists as list}
 			<Badge>{list.name}</Badge>
 		{/each}
 		{#if lists.length === 0}
-			<span class="muted">—</span>
+			<span class="cell-muted">—</span>
 		{/if}
 	</div>
 {/snippet}
 
 {#snippet dateCell(date: string)}
-	<span class="date">{new Date(date).toLocaleDateString()}</span>
+	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
 {#snippet listCheckboxes(selectedIds: number[], onToggle: (id: number) => void)}
@@ -277,7 +277,7 @@
 			</label>
 		{/each}
 		{#if allLists.length === 0}
-			<span class="muted">No lists available</span>
+			<span class="cell-muted">No lists available</span>
 		{/if}
 	</div>
 {/snippet}
@@ -359,11 +359,8 @@
 			<Input bind:value={createName} placeholder="Full name" />
 		</FormField>
 
-		<FormField label="Status">
-			<select class="select" bind:value={createStatus}>
-				<option value="enabled">Enabled</option>
-				<option value="blocklisted">Blocklisted</option>
-			</select>
+		<FormField label="Status" hint="Blocklisted subscribers will never receive any emails.">
+			<Select bind:value={createStatus} options={[{ value: 'enabled', label: 'Enabled' }, { value: 'blocklisted', label: 'Blocklisted' }]} />
 		</FormField>
 
 		<FormField label="Lists">
@@ -390,11 +387,8 @@
 			<Input bind:value={editName} placeholder="Full name" />
 		</FormField>
 
-		<FormField label="Status">
-			<select class="select" bind:value={editStatus}>
-				<option value="enabled">Enabled</option>
-				<option value="blocklisted">Blocklisted</option>
-			</select>
+		<FormField label="Status" hint="Blocklisted subscribers will never receive any emails.">
+			<Select bind:value={editStatus} options={[{ value: 'enabled', label: 'Enabled' }, { value: 'blocklisted', label: 'Blocklisted' }]} />
 		</FormField>
 
 		<FormField label="Lists">
@@ -411,61 +405,4 @@
 </DialogShell>
 
 <style>
-
-	.date {
-		color: var(--color-muted);
-		white-space: nowrap;
-	}
-
-	.muted {
-		color: var(--color-muted);
-	}
-
-	.list-badges {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-	}
-
-	.name-link {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-primary);
-		font-weight: 600;
-		font-size: inherit;
-		padding: 0;
-		text-decoration: none;
-	}
-
-	.name-link:hover {
-		text-decoration: underline;
-	}
-
-	:global(.row-checkbox) {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--color-primary);
-		cursor: pointer;
-	}
-
-	.list-checkboxes {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.list-checkbox {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.9rem;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.list-checkbox input[type='checkbox'] {
-		accent-color: var(--color-primary);
-	}
-
 </style>

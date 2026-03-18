@@ -1,9 +1,10 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section } from "$lib/components/admin";
+  import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section, DatePicker } from "$lib/components/admin";
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
   import { getSession } from "../../../session.remote";
   import { can } from "../../../can";
+  import { today, getLocalTimeZone } from '@internationalized/date';
   import { toast } from "svelte-sonner";
   import type { ShortUrl } from '$lib/server/shlink';
 
@@ -130,7 +131,11 @@
             </FormField>
 
             <FormField label="Expires">
-              <Input {...editShortUrl.fields.validUntil.as("text")} type="date" min={new Date().toLocaleDateString("en-CA")} value={shortUrl.meta.validUntil?.slice(0, 10) ?? ""} />
+              <DatePicker
+                value={shortUrl.meta.validUntil?.slice(0, 10) ?? ''}
+                name="validUntil"
+                minValue={today(getLocalTimeZone())}
+              />
             </FormField>
           </div>
 

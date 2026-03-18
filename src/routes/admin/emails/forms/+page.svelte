@@ -23,7 +23,7 @@
 		pendingToggle = list.id;
 		try {
 			const newType = list.type === 'public' ? 'private' : 'public';
-			await updateList({ id: list.id, type: newType });
+			await updateList({ id: list.id, name: list.name, type: newType, optin: list.optin });
 			toast.success(`"${list.name}" is now ${newType}.`);
 			listLists().refresh();
 		} catch (err: any) {

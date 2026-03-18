@@ -40,3 +40,31 @@ export const deleteList = protectedCommand(
 		await getListmonk().deleteList(id);
 	},
 );
+
+export const sendOptinCampaign = protectedCommand(
+	{ list: ['edit'] },
+	v.number(),
+	async (listId) => {
+		const lm = getListmonk();
+		// Get unconfirmed subscribers for this list
+		const res = await lm.listSubscribers({
+			per_page: 'all',
+			query: `subscribers.id IN (SELECT subscriber_id FROM subscriber_lists WHERE list_id = ${listId} AND status = 'unconfirmed')`,
+		});
+		const subscribers = res.data.results;
+		if (subscribers.length === 0) {
+			throw new Error('No unconfirmed subscribers on this list.');
+		}
+		// Send opt-in confirmation to each
+		let sent = 0;
+		for (const sub of subscribers) {
+			try {
+				await lm.sendOptinConfirmation(sub.id);
+				sent++;
+			} catch {
+				// Some may fail (e.g. email config), continue with others
+			}
+		}
+		return { sent, total: subscribers.length };
+	},
+);

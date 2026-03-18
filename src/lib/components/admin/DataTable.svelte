@@ -67,7 +67,7 @@
 									<span class="sort-indicator"> ↓</span>
 								{/if}
 								{#if header.column.getCanFilter()}
-									<span class="filter-icon-wrap" onclick={(e: MouseEvent) => e.stopPropagation()} onkeydown={(e: KeyboardEvent) => e.stopPropagation()}>
+									<span class="filter-icon-wrap" role="presentation" onclick={(e: MouseEvent) => e.stopPropagation()} onkeydown={(e: KeyboardEvent) => e.stopPropagation()}>
 										<ColumnFilterPopover column={header.column} />
 									</span>
 								{/if}

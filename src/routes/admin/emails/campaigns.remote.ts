@@ -116,6 +116,25 @@ export const getCampaignAnalytics = protectedQuery(
 	},
 );
 
+export const previewCampaign = protectedQuery(
+	{ campaign: ['view'] },
+	v.number(),
+	async (id) => {
+		return getListmonk().previewCampaign(id);
+	},
+);
+
+export const testCampaign = protectedCommand(
+	{ campaign: ['send'] },
+	v.object({
+		id: v.number(),
+		subscribers: v.array(v.pipe(v.string(), v.nonEmpty())),
+	}),
+	async ({ id, subscribers }) => {
+		await getListmonk().testCampaign(id, subscribers);
+	},
+);
+
 export const updateCampaignStatus = protectedCommand(
 	{ campaign: ['send'] },
 	v.object({

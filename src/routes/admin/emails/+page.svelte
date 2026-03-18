@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, Spinner, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, getFacetedRowModel, getFacetedUniqueValues, type SortingState, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -220,7 +220,7 @@
 {/snippet}
 
 {#snippet nameCell(tpl: Template)}
-	<button class="name-link" onclick={() => openEdit(tpl.id)}>{tpl.name}</button>
+	<button class="cell-link" onclick={() => openEdit(tpl.id)}>{tpl.name}</button>
 {/snippet}
 
 {#snippet typeCell(tpl: Template)}
@@ -235,7 +235,7 @@
 {/snippet}
 
 {#snippet dateCell(date: string)}
-	<span class="date">{new Date(date).toLocaleDateString()}</span>
+	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
 
@@ -306,11 +306,11 @@
 		</FormField>
 
 		<FormField label="Type">
-			<select class="type-select" bind:value={createType}>
-				<option value="tx">Transactional</option>
-				<option value="campaign">Campaign / HTML</option>
-				<option value="campaign_visual">Campaign / Visual</option>
-			</select>
+			<Select bind:value={createType} options={[
+				{ value: 'tx', label: 'Transactional' },
+				{ value: 'campaign', label: 'Campaign / HTML' },
+				{ value: 'campaign_visual', label: 'Campaign / Visual' },
+			]} />
 		</FormField>
 
 		<FormField label="Subject" hint="Use {'{{ .Tx.Data.field }}'} for template variables">
@@ -325,6 +325,7 @@
 				rows="12"
 				placeholder="<html>...</html>"
 			></textarea>
+			<p style="margin: 0; font-weight: 400; color: var(--color-muted); font-size: 0.8rem;">The placeholder {'{{ template "content" . }}'} should appear exactly once in the template.</p>
 		</div>
 
 		<div class="actions">
@@ -369,6 +370,7 @@
 						rows="16"
 					></textarea>
 				{/if}
+				<p style="margin: 0; font-weight: 400; color: var(--color-muted); font-size: 0.8rem;">The placeholder {'{{ template "content" . }}'} should appear exactly once in the template.</p>
 			</div>
 
 			{#if can(session, 'template', 'edit')}
@@ -398,33 +400,6 @@
 		font-family: monospace;
 		font-size: 0.85rem;
 		color: var(--color-muted);
-	}
-
-	.date {
-		color: var(--color-muted);
-		white-space: nowrap;
-	}
-
-	:global(.row-checkbox) {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--color-primary);
-		cursor: pointer;
-	}
-
-	.name-link {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-primary);
-		font-weight: 600;
-		font-size: inherit;
-		padding: 0;
-		text-decoration: none;
-	}
-
-	.name-link:hover {
-		text-decoration: underline;
 	}
 
 	/* ─── Edit Form ────────────────────────────────────────────────────── */
@@ -537,19 +512,5 @@
 		background: var(--color-hover);
 	}
 
-	.type-select {
-		width: 100%;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		color: var(--color-foreground);
-		font-size: 0.9rem;
-	}
 
-	.type-select:focus {
-		outline: none;
-		border-color: var(--color-primary);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
-	}
 </style>

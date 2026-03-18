@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog, DialogShell } from '$lib/components/admin';
+	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog, DialogShell, DatePicker } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
+	import { today, getLocalTimeZone } from '@internationalized/date';
 	import { toast } from 'svelte-sonner';
 	import { listShortUrls, createShortUrl, deleteShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
@@ -162,7 +163,7 @@
 {/snippet}
 
 {#snippet dateCell(date: string)}
-	<span class="date">{new Date(date).toLocaleDateString()}</span>
+	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
 <h1>Shortlinks</h1>
@@ -246,7 +247,7 @@
 			</FormField>
 
 			<FormField label="Expires" hint="(optional)">
-				<Input name="validUntil" type="date" min={new Date().toLocaleDateString('en-CA')} />
+				<DatePicker name="validUntil" minValue={today(getLocalTimeZone())} />
 			</FormField>
 		</div>
 
@@ -300,18 +301,6 @@
 	.clicks {
 		font-weight: 600;
 		color: var(--brand-amber-dark);
-	}
-
-	.date {
-		color: var(--color-muted);
-		white-space: nowrap;
-	}
-
-	:global(.row-checkbox) {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--color-primary);
-		cursor: pointer;
 	}
 
 	.switches {

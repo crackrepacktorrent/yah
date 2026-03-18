@@ -42,19 +42,23 @@
 		columnHelper.accessor('shortCode', {
 			header: 'Short URL',
 			cell: (info) => renderSnippet(shortCodeCell, info.row.original),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('longUrl', {
 			header: 'Destination',
 			cell: (info) => renderSnippet(longUrlCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor((row) => row.visitsSummary.total, {
 			id: 'clicks',
 			header: 'Clicks',
 			cell: (info) => renderSnippet(clicksCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 		columnHelper.accessor('dateCreated', {
 			header: 'Created',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
+			enableColumnFilter: false,
 		}),
 	];
 </script>
@@ -73,7 +77,7 @@
 {/snippet}
 
 {#snippet dateCell(date: string)}
-	<span class="date">{new Date(date).toLocaleDateString()}</span>
+	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
 {/snippet}
 
 <h1>Dashboard</h1>
@@ -167,10 +171,6 @@
 	.clicks {
 		font-weight: 600;
 		color: var(--brand-amber-dark);
-	}
-
-	.date {
-		color: var(--color-muted);
 	}
 
 	.analytics-periods {

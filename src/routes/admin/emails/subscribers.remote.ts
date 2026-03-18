@@ -65,3 +65,11 @@ export const blocklistSubscriber = protectedCommand(
 		await getListmonk().blocklistSubscriber(id);
 	},
 );
+
+export const sendOptinConfirmation = protectedCommand(
+	{ subscriber: ['edit'] },
+	v.number(),
+	async (subscriberId) => {
+		await getListmonk().sendOptinConfirmation(subscriberId);
+	},
+);

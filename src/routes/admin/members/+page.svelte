@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Input, FormField, Badge, EmptyState, Spinner, ConfirmDialog, DataTable, DialogShell } from '$lib/components/admin';
+	import { Button, Input, FormField, Badge, EmptyState, Spinner, ConfirmDialog, DataTable, DialogShell, Select } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -174,15 +174,15 @@
 {#snippet memberActionsCell(member: Member)}
 	<div class="actions-cell">
 		{#if member.user.email !== currentSession?.user.email}
-			<select
+			<Select
 				value={member.role}
-				onchange={(e) => handleRoleChange(member.id, (e.target as HTMLSelectElement).value)}
-				class="role-select"
-			>
-				<option value="owner">Owner</option>
-				<option value="admin">Admin</option>
-				<option value="member">Member</option>
-			</select>
+				onValueChange={(v) => handleRoleChange(member.id, v)}
+				options={[
+					{ value: 'owner', label: 'Owner' },
+					{ value: 'admin', label: 'Admin' },
+					{ value: 'member', label: 'Member' },
+				]}
+			/>
 			<button
 				class="remove-btn"
 				onclick={() => (confirmRemove = { open: true, memberId: member.id, name: member.user.name ?? member.user.email })}
@@ -256,10 +256,13 @@
 		</FormField>
 
 		<FormField label="Role">
-			<select bind:value={inviteRole} class="role-select full-width">
-				<option value="admin">Admin</option>
-				<option value="member">Member</option>
-			</select>
+			<Select
+				bind:value={inviteRole}
+				options={[
+					{ value: 'admin', label: 'Admin' },
+					{ value: 'member', label: 'Member' },
+				]}
+			/>
 		</FormField>
 
 		<div class="dialog-actions">
@@ -302,22 +305,7 @@
 		align-items: center;
 	}
 
-	.role-select {
-		padding: 0.3rem 0.5rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
-		background: var(--color-surface);
-		color: var(--color-foreground);
-		font-size: 0.85rem;
-		cursor: pointer;
-	}
-
-	.role-select.full-width {
-		width: 100%;
-		padding: 0.5rem 0.75rem;
-	}
-
-	.remove-btn {
+.remove-btn {
 		background: none;
 		border: none;
 		cursor: pointer;
