@@ -58,7 +58,7 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
     const buildUrl = (slug: string) => {
       const url = new URL(`https://api.storyblok.com/v2/cdn/stories/${slug}`);
       url.searchParams.set('version', version);
-      url.searchParams.set('resolve_links', 'url');
+      url.searchParams.set('resolve_links', 'story');
       url.searchParams.set('language', lang);
       url.searchParams.set('fallback_lang', 'en');
       url.searchParams.set('token', token);
