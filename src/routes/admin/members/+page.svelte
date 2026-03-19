@@ -216,11 +216,12 @@
 <section class="members-section">
 	<h2>Pending Invitations</h2>
 	{#if invitationsData}
-		{#if invitationsData.invitations.length === 0}
+		{@const pending = invitationsData.invitations.filter((i: any) => i.status === 'pending')}
+		{#if pending.length === 0}
 			<EmptyState message="No pending invitations." />
 		{:else}
 			{@const table = createSvelteTable({
-				data: invitationsData.invitations,
+				data: pending,
 				columns: inviteColumns,
 				getCoreRowModel: getCoreRowModel(),
 })}

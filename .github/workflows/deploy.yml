@@ -20,5 +20,8 @@ jobs:
             set -e
             cd /home/deploy/yah
             git pull origin main
-            docker compose up -d --build sveltekit sveltekit-preview
+            docker compose stop sveltekit sveltekit-preview
+            docker compose build sveltekit
+            docker compose build sveltekit-preview
+            docker compose up -d
             docker image prune -f
