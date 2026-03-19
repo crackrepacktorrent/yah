@@ -25,6 +25,15 @@ y4h.org, www.y4h.org {
 	redir /whatsapp        https://y4h.link/whatsapp permanent
 	redir /donate          https://y4h.link/donate permanent
 
+	# Umami analytics — proxied as first-party to avoid adblockers
+	# Script: /t.js, collection endpoint: /api/t (configured via Umami env vars)
+	handle /t.js {
+		reverse_proxy umami:3000
+	}
+	handle /api/t {
+		reverse_proxy umami:3000
+	}
+
 	reverse_proxy sveltekit:3000
 }
 
@@ -32,13 +41,6 @@ y4h.link {
 	import security_headers
 	encode gzip
 	reverse_proxy shlink:8080
-}
-
-analytics.y4h.org {
-	import security_headers
-	encode gzip
-	header X-Frame-Options "SAMEORIGIN"
-	reverse_proxy umami:3000
 }
 
 mail.y4h.org {

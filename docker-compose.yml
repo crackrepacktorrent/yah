@@ -142,6 +142,8 @@ services:
     environment:
       DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@postgres:5432/umami
       APP_SECRET: ${UMAMI_APP_SECRET}
+      TRACKER_SCRIPT_NAME: t
+      COLLECT_API_ENDPOINT: /api/t
     expose:
       - "3000"
     depends_on:
