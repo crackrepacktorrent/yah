@@ -44,8 +44,22 @@
 	gap: 1rem;
 }
 
+.form-row-3 {
+	display: grid;
+	grid-template-columns: auto 1fr 1fr;
+	gap: 1rem;
+}
+
+.form-row-4 {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr 1fr;
+	gap: 1rem;
+}
+
 @media (max-width: 640px) {
-	.form-row {
+	.form-row,
+	.form-row-3,
+	.form-row-4 {
 		grid-template-columns: 1fr;
 	}
 }
@@ -55,7 +69,7 @@
 	gap: 0.75rem;
 	align-items: center;
 	justify-content: flex-end;
-	margin-top: 0.25rem;
+	margin-top: 1.25rem;
 }
 
 /* ─── Settings Page Utilities ──────────────────────────────────────────────── */

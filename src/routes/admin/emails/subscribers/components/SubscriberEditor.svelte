@@ -341,7 +341,7 @@
 		{/if}
 	</Tabs>
 
-	<div class="dialog-actions" style="margin-top: 1.25rem">
+	<div class="dialog-actions">
 		<Button variant="ghost" onclick={() => (open = false)}>Cancel</Button>
 		{#if canEdit}
 			<Button variant="primary" onclick={handleSave} disabled={saving}>

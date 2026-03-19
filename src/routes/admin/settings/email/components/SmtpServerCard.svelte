@@ -116,7 +116,7 @@
 	</div>
 
 	<div class="smtp-fields">
-		<div class="cols cols-2">
+		<div class="form-row">
 			<FormField label="Host" hint="SMTP server's host address." error={form.fieldError('host')}>
 				<Input bind:value={form.values.host} onblur={() => form.touch('host')} disabled={!canEdit} placeholder="smtp.yoursite.com" />
 			</FormField>
@@ -125,7 +125,7 @@
 			</FormField>
 		</div>
 
-		<div class="cols cols-3">
+		<div class="form-row-3">
 			<FormField label="Auth protocol">
 				<Select bind:value={form.values.auth_protocol} options={authOptions} disabled={!canEdit} />
 			</FormField>
@@ -152,7 +152,7 @@
 			{/each}
 		</div>
 
-		<div class="cols cols-2">
+		<div class="form-row">
 			<FormField label="HELO hostname" hint="Optional. Some SMTP servers require a FQDN. By default, HELLOs go with 'localhost'.">
 				<Input bind:value={form.values.hello_hostname} disabled={!canEdit} />
 			</FormField>
@@ -163,7 +163,7 @@
 
 		<Switch bind:checked={form.values.tls_skip_verify} label="Skip TLS verification" hint="Skip hostname check on the TLS certificate." disabled={!canEdit} />
 
-		<div class="cols cols-4">
+		<div class="form-row-4">
 			<FormField label="Max. connections" hint="Maximum concurrent connections to the server.">
 				<Input type="number" bind:value={form.values.max_conns} disabled={!canEdit} />
 			</FormField>
@@ -202,15 +202,6 @@
 		gap: 1.25rem;
 	}
 
-	.cols {
-		display: grid;
-		gap: 0.75rem;
-	}
-
-	.cols-2 { grid-template-columns: 1fr 1fr; }
-	.cols-3 { grid-template-columns: auto 1fr 1fr; }
-	.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
-
 	.presets {
 		display: flex;
 		flex-wrap: wrap;
@@ -236,7 +227,4 @@
 		cursor: not-allowed;
 	}
 
-	@media (max-width: 640px) {
-		.cols { grid-template-columns: 1fr; }
-	}
 </style>
