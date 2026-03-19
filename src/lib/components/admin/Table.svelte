@@ -10,23 +10,29 @@
 	} = $props();
 </script>
 
-<div class="admin-table-wrapper">
+<div class="admin-table-outer">
 	{#if toolbar}
 		<div class="admin-table-toolbar">
 			{@render toolbar()}
 		</div>
 	{/if}
-	<table class="admin-table">
-		{@render children()}
-	</table>
+	<div class="admin-table-wrapper">
+		<table class="admin-table">
+			{@render children()}
+		</table>
+	</div>
 </div>
 
 <style>
+	.admin-table-outer {
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-sm);
+		background: var(--color-surface);
+	}
+
 	.admin-table-wrapper {
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-sm);
 	}
 
 	.admin-table-toolbar {
@@ -117,6 +123,7 @@
 		padding: 0.75rem 1rem;
 		border-bottom: 1px solid var(--color-border-light);
 		color: var(--color-foreground);
+		background: var(--color-surface);
 	}
 
 	.admin-table :global(tr:last-child td) {
