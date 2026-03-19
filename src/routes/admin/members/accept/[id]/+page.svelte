@@ -10,7 +10,7 @@
 	const invitationId = $derived(page.params.id!);
 
 	$effect(() => {
-		if (invitationId) acceptInvitation(invitationId);
+		if (invitationId && status === 'loading') acceptInvitation(invitationId);
 	});
 
 	async function acceptInvitation(id: string) {

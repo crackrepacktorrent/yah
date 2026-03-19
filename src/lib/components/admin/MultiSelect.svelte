@@ -11,6 +11,7 @@
 		disabled?: boolean;
 	} = $props();
 
+	const listboxId = `ms-${Math.random().toString(36).slice(2, 8)}`;
 	let open = $state(false);
 	let search = $state('');
 	let inputEl = $state<HTMLInputElement | null>(null);
@@ -64,7 +65,7 @@
 {:else}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div class="ms-root" bind:this={rootEl} onfocusout={handleFocusOut}>
-		<div class="chip-input-wrap" role="combobox" tabindex="-1" aria-expanded={open} aria-controls="ms-listbox" onclick={() => inputEl?.focus()}>
+		<div class="chip-input-wrap" role="combobox" tabindex="-1" aria-expanded={open} aria-controls={listboxId} onclick={() => inputEl?.focus()}>
 			{#each selected as value (value)}
 				{@const label = options.find((o) => o.value === value)?.label ?? value}
 				<span class="chip">
@@ -82,7 +83,7 @@
 			/>
 		</div>
 		{#if open}
-			<div class="ms-dropdown" id="ms-listbox" role="listbox">
+			<div class="ms-dropdown" id={listboxId} role="listbox">
 				{#each filteredOptions as option (option.value)}
 					{@const isSelected = selected.includes(option.value)}
 					<button

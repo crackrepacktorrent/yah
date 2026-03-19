@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { Popover } from 'bits-ui';
 	import Button from './Button.svelte';
 	import Input from './Input.svelte';
@@ -119,6 +119,10 @@
 		ready = true;
 	});
 
+	onDestroy(() => {
+		editorInstance?.setRootElement(null);
+	});
+
 	function formatText(format: 'bold' | 'italic' | 'underline' | 'strikethrough') {
 		editorInstance.dispatchCommand(FORMAT_TEXT, format);
 	}
@@ -223,11 +227,12 @@
 
 		<div class="rte-toolbar-divider"></div>
 
-		<div class="rte-toolbar-group">
+		<div class="rte-toolbar-group rte-link-group">
+			<button type="button" class="rte-btn" class:active={linkActive} onclick={() => toggleLink()} title="Link" disabled={!ready}>&#128279;</button>
 			<Popover.Root bind:open={linkPopoverOpen}>
 				<Popover.Trigger>
 					{#snippet child({ props })}
-						<button {...props} type="button" class="rte-btn" class:active={linkActive} onclick={() => toggleLink()} title="Link" disabled={!ready}>&#128279;</button>
+						<span {...props} class="rte-link-anchor"></span>
 					{/snippet}
 				</Popover.Trigger>
 				<Popover.Content class="rte-link-popover" sideOffset={6} onOpenAutoFocus={(e) => { e.preventDefault(); requestAnimationFrame(() => linkInputEl?.focus()); }}>
@@ -304,6 +309,18 @@
 	}
 
 	/* ─── Link popover ────────────────────────────────────────── */
+
+	.rte-link-group {
+		position: relative;
+	}
+
+	.rte-link-anchor {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 0;
+		height: 0;
+	}
 
 	:global(.rte-link-popover) {
 		background: var(--color-surface);
