@@ -21,6 +21,7 @@
           { href: "/admin", label: "Dashboard", icon: "dashboard" },
           { href: "/admin/shortlinks", label: "Shortlinks", icon: "link" },
           { href: "/admin/analytics", label: "Analytics", icon: "chart" },
+          { href: "/admin/media", label: "Media", icon: "image" },
         ],
       },
       {
@@ -33,7 +34,6 @@
             children: [
               { href: "/admin/emails/campaigns", label: "All Campaigns", icon: "megaphone" },
               { href: "/admin/emails", label: "Templates", icon: "mail" },
-              { href: "/admin/emails/media", label: "Media", icon: "image" },
               { href: "/admin/emails/analytics", label: "Analytics", icon: "pie-chart" },
             ],
           },
@@ -43,6 +43,7 @@
             icon: "contact",
             children: [
               { href: "/admin/emails/subscribers", label: "All Subscribers", icon: "contact" },
+              { href: "/admin/emails/subscribers/import", label: "Import", icon: "upload" },
               { href: "/admin/emails/bounces", label: "Bounces", icon: "alert-circle" },
             ],
           },
@@ -65,6 +66,15 @@
         items: [
           { href: "/admin/members", label: "Members", icon: "users" },
           { href: "/admin/roles", label: "Roles", icon: "shield" },
+        ],
+      });
+    }
+
+    if (can(session.current, 'settings', 'view')) {
+      sections.push({
+        label: "Settings",
+        items: [
+          { href: "/admin/settings/email", label: "Email", icon: "settings" },
         ],
       });
     }

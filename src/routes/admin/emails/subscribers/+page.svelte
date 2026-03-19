@@ -1,10 +1,13 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, DataTable, DialogShell } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, Input, DataTable } from '$lib/components/admin';
+	import SubscriberEditor from './components/SubscriberEditor.svelte';
 	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
 	import { toastError } from '$lib/utils/toast-error';
-	import { listSubscribers, createSubscriber, updateSubscriber, deleteSubscriber, blocklistSubscriber, sendOptinConfirmation } from '../subscribers.remote';
+	import { listSubscribers, deleteSubscribers, blocklistSubscribers } from '../subscribers.remote';
+	import { subscriberStatusVariant } from '$lib/utils/admin';
+	import type { ListmonkSubscriber } from '$lib/server/listmonk';
 	import { listLists } from '../lists.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
@@ -29,87 +32,32 @@
 		rowSelection = {};
 	}
 
-	// Create dialog
-	let createOpen = $state(false);
-	let createPending = $state(false);
-	let createEmail = $state('');
-	let createName = $state('');
-	let createStatus = $state('enabled');
-	let createListIds = $state<number[]>([]);
-
-	// Edit dialog
-	let editOpen = $state(false);
-	let editPending = $state(false);
-	let editId = $state(0);
-	let editEmail = $state('');
-	let editName = $state('');
-	let editStatus = $state('enabled');
-	let editListIds = $state<number[]>([]);
+	// Subscriber editor (create + edit)
+	let editorOpen = $state(false);
+	let editorSubscriber = $state<ListmonkSubscriber | null>(null);
 
 	// Confirm dialogs
 	let confirmDelete = $state(false);
 	let confirmBlocklist = $state(false);
 
 	function openCreate() {
-		createEmail = '';
-		createName = '';
-		createStatus = 'enabled';
-		createListIds = [];
-		createOpen = true;
+		editorSubscriber = null;
+		editorOpen = true;
 	}
 
-	async function handleCreate() {
-		createPending = true;
-		try {
-			await createSubscriber({
-				email: createEmail,
-				name: createName || undefined,
-				status: createStatus,
-				listIds: createListIds.length ? createListIds : undefined,
-			});
-			createOpen = false;
-			toast.success('Subscriber created.');
-			refreshList();
-		} catch (err) {
-			toastError(err, 'Failed to create subscriber.');
-		} finally {
-			createPending = false;
-		}
+	function openEdit(sub: ListmonkSubscriber) {
+		editorSubscriber = sub;
+		editorOpen = true;
 	}
 
-	function openEdit(sub: Subscriber) {
-		editId = sub.id;
-		editEmail = sub.email;
-		editName = sub.name;
-		editStatus = sub.status;
-		editListIds = sub.lists.map((l) => l.id);
-		editOpen = true;
-	}
-
-	async function handleEdit() {
-		editPending = true;
-		try {
-			await updateSubscriber({
-				id: editId,
-				email: editEmail,
-				name: editName,
-				status: editStatus,
-				listIds: editListIds,
-			});
-			editOpen = false;
-			toast.success('Subscriber updated.');
-			clearSelection();
-			refreshList();
-		} catch (err) {
-			toastError(err, 'Failed to update subscriber.');
-		} finally {
-			editPending = false;
-		}
+	function handleEditorSaved() {
+		clearSelection();
+		refreshList();
 	}
 
 	async function handleDelete() {
 		try {
-			await Promise.all(selectedRows.map((sub) => deleteSubscriber(sub.id)));
+			await deleteSubscribers(selectedRows.map((sub) => sub.id));
 			toast.success(`${selectedCount} subscriber${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			refreshList();
@@ -120,7 +68,7 @@
 
 	async function handleBlocklist() {
 		try {
-			await Promise.all(selectedRows.map((sub) => blocklistSubscriber(sub.id)));
+			await blocklistSubscribers(selectedRows.map((sub) => sub.id));
 			toast.success(`${selectedCount} subscriber${selectedCount > 1 ? 's' : ''} blocklisted.`);
 			clearSelection();
 			refreshList();
@@ -133,47 +81,14 @@
 		listSubscribers().refresh();
 	}
 
-	function statusVariant(status: string): 'success' | 'error' | 'default' {
-		if (status === 'enabled') return 'success';
-		if (status === 'blocklisted') return 'error';
-		return 'default';
-	}
-
-	function toggleListId(id: number, list: number[]) {
-		return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
-	}
-
 	let canBlocklist = $derived(
 		can(session, 'subscriber', 'blocklist') && selectedRows.some((s) => s.status !== 'blocklisted'),
 	);
 
-	type Subscriber = {
-		id: number;
-		email: string;
-		name: string;
-		status: string;
-		lists: { id: number; name: string; subscription_status: string }[];
-		created_at: string;
-		updated_at: string;
-	};
-
-	function hasUnconfirmed(sub: Subscriber): boolean {
-		return sub.status === 'enabled' && sub.lists.some((l) => l.subscription_status === 'unconfirmed');
-	}
-
-	async function handleResendOptin(sub: Subscriber) {
-		try {
-			await sendOptinConfirmation(sub.id);
-			toast.success(`Opt-in confirmation sent to ${sub.email}.`);
-		} catch (err) {
-			toastError(err, 'Failed to send opt-in confirmation.');
-		}
-	}
-
-	const columnHelper = createColumnHelper<Subscriber>();
+	const columnHelper = createColumnHelper<ListmonkSubscriber>();
 
 	const columns = [
-		createSelectColumn<Subscriber>(),
+		createSelectColumn<ListmonkSubscriber>(),
 		columnHelper.accessor('email', {
 			header: 'Email',
 			cell: (info) => renderSnippet(emailCell, info.row.original),
@@ -190,12 +105,23 @@
 			enableColumnFilter: true,
 			filterFn: multiSelectFilter,
 		}),
-		columnHelper.accessor('lists', {
-			header: 'Lists',
-			cell: (info) => renderSnippet(listsCell, info.getValue()),
-			enableSorting: false,
-			enableColumnFilter: false,
-		}),
+		columnHelper.accessor(
+			(row) => row.lists.map((l) => l.subscription_status === 'unconfirmed' ? `${l.name} (unconfirmed)` : l.name),
+			{
+				id: 'lists',
+				header: 'Lists',
+				cell: (info) => renderSnippet(listsCell, info.row.original.lists),
+				enableSorting: false,
+				enableColumnFilter: true,
+				filterFn: (row, columnId, filterValue: unknown[]) => {
+					if (!filterValue || filterValue.length === 0) return true;
+					const values: string[] = row.getValue(columnId);
+					return values.some((v) => filterValue.includes(v));
+				},
+				getUniqueValues: (row) =>
+					row.lists.map((l) => l.subscription_status === 'unconfirmed' ? `${l.name} (unconfirmed)` : l.name),
+			},
+		),
 		columnHelper.accessor('created_at', {
 			header: 'Created',
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
@@ -206,28 +132,23 @@
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
 			enableColumnFilter: false,
 		}),
-		columnHelper.display({
-			id: 'actions',
-			header: '',
-			cell: (info) => renderSnippet(actionsCell, info.row.original),
-			enableSorting: false,
-			enableColumnFilter: false,
-		}),
 	];
 </script>
 
-{#snippet emailCell(sub: Subscriber)}
+{#snippet emailCell(sub: ListmonkSubscriber)}
 	<button class="cell-link" onclick={() => openEdit(sub)}>{sub.email}</button>
 {/snippet}
 
 {#snippet statusCell(status: string)}
-	<Badge variant={statusVariant(status)}>{status}</Badge>
+	<Badge variant={subscriberStatusVariant(status)}>{status}</Badge>
 {/snippet}
 
-{#snippet listsCell(lists: { id: number; name: string }[])}
+{#snippet listsCell(lists: { id: number; name: string; subscription_status: string }[])}
 	<div class="cell-badges">
 		{#each lists as list}
-			<Badge>{list.name}</Badge>
+			<Badge variant={list.subscription_status === 'unconfirmed' ? 'warning' : 'default'}>
+				{list.name}{#if list.subscription_status === 'unconfirmed'} (unconfirmed){/if}
+			</Badge>
 		{/each}
 		{#if lists.length === 0}
 			<span class="cell-muted">—</span>
@@ -237,32 +158,6 @@
 
 {#snippet dateCell(date: string)}
 	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
-{/snippet}
-
-{#snippet actionsCell(sub: Subscriber)}
-	{#if hasUnconfirmed(sub) && can(session, 'subscriber', 'edit')}
-		<button class="action-btn" onclick={() => handleResendOptin(sub)} title="Resend opt-in confirmation">Resend opt-in</button>
-	{/if}
-{/snippet}
-
-{#snippet listCheckboxes(selectedIds: number[], onToggle: (id: number) => void)}
-	{@const allLists = listsData?.lists ?? []}
-	<div class="list-checkboxes">
-		{#each allLists as list}
-			<label class="list-checkbox">
-				<input
-					type="checkbox"
-					checked={selectedIds.includes(list.id)}
-					onchange={() => onToggle(list.id)}
-				/>
-				<span>{list.name}</span>
-				<Badge variant={list.type === 'public' ? 'info' : 'default'}>{list.type}</Badge>
-			</label>
-		{/each}
-		{#if allLists.length === 0}
-			<span class="cell-muted">No lists available</span>
-		{/if}
-	</div>
 {/snippet}
 
 <h1>Subscribers</h1>
@@ -329,76 +224,10 @@
 	onconfirm={handleBlocklist}
 />
 
-<!-- Create Subscriber Dialog -->
-<DialogShell bind:open={createOpen} title="New Subscriber">
-	<div class="form-fields">
-		<FormField label="Email" required>
-			<Input type="email" bind:value={createEmail} required placeholder="subscriber@example.com" />
-		</FormField>
-
-		<FormField label="Name">
-			<Input bind:value={createName} placeholder="Full name" />
-		</FormField>
-
-		<FormField label="Status" hint="Blocklisted subscribers will never receive any emails.">
-			<Select bind:value={createStatus} options={[{ value: 'enabled', label: 'Enabled' }, { value: 'blocklisted', label: 'Blocklisted' }]} />
-		</FormField>
-
-		<FormField label="Lists">
-			{@render listCheckboxes(createListIds, (id) => (createListIds = toggleListId(id, createListIds)))}
-		</FormField>
-
-		<div class="dialog-actions">
-			<Button variant="ghost" onclick={() => (createOpen = false)}>Cancel</Button>
-			<Button variant="primary" onclick={handleCreate} disabled={createPending}>
-				{createPending ? 'Creating...' : 'Create'}
-			</Button>
-		</div>
-	</div>
-</DialogShell>
-
-<!-- Edit Subscriber Dialog -->
-<DialogShell bind:open={editOpen} title="Edit Subscriber">
-	<div class="form-fields">
-		<FormField label="Email" required>
-			<Input type="email" bind:value={editEmail} required />
-		</FormField>
-
-		<FormField label="Name">
-			<Input bind:value={editName} placeholder="Full name" />
-		</FormField>
-
-		<FormField label="Status" hint="Blocklisted subscribers will never receive any emails.">
-			<Select bind:value={editStatus} options={[{ value: 'enabled', label: 'Enabled' }, { value: 'blocklisted', label: 'Blocklisted' }]} />
-		</FormField>
-
-		<FormField label="Lists">
-			{@render listCheckboxes(editListIds, (id) => (editListIds = toggleListId(id, editListIds)))}
-		</FormField>
-
-		<div class="dialog-actions">
-			<Button variant="ghost" onclick={() => (editOpen = false)}>Cancel</Button>
-			<Button variant="primary" onclick={handleEdit} disabled={editPending}>
-				{editPending ? 'Saving...' : 'Save'}
-			</Button>
-		</div>
-	</div>
-</DialogShell>
-
-<style>
-	.action-btn {
-		background: none;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		color: var(--color-primary);
-		border-color: var(--color-primary);
-		font-size: 0.75rem;
-		padding: 0.2rem 0.5rem;
-		white-space: nowrap;
-	}
-
-	.action-btn:hover {
-		background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-	}
-</style>
+<SubscriberEditor
+	bind:open={editorOpen}
+	subscriber={editorSubscriber}
+	allLists={listsData?.lists ?? []}
+	canEdit={can(session, 'subscriber', 'edit')}
+	onSaved={handleEditorSaved}
+/>

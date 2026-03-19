@@ -6,6 +6,13 @@ export function formatDuration(seconds: number): string {
 	return `${m}m ${s}s`;
 }
 
+/** Map subscriber status to Badge variant. */
+export function subscriberStatusVariant(status: string): 'success' | 'error' | 'default' {
+	if (status === 'enabled') return 'success';
+	if (status === 'blocklisted') return 'error';
+	return 'default';
+}
+
 /** Map campaign status to Badge variant. */
 export function campaignStatusVariant(status: string): 'default' | 'success' | 'error' | 'warning' | 'info' {
 	switch (status) {

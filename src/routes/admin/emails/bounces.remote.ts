@@ -15,11 +15,11 @@ export const listBounces = protectedQuery(
 	},
 );
 
-export const deleteBounce = protectedCommand(
+export const deleteBounces = protectedCommand(
 	{ bounce: ['delete'] },
-	v.number(),
-	async (id) => {
-		await getListmonk().deleteBounce(id);
+	v.array(v.number()),
+	async (ids) => {
+		await getListmonk().deleteBounces(ids);
 	},
 );
 

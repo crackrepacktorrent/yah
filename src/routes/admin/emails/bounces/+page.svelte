@@ -4,7 +4,7 @@
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
 	import { toastError } from '$lib/utils/toast-error';
-	import { listBounces, deleteBounce, deleteAllBounces } from '../bounces.remote';
+	import { listBounces, deleteBounces, deleteAllBounces } from '../bounces.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
@@ -38,7 +38,7 @@
 
 	async function handleDeleteSelected() {
 		try {
-			await Promise.all(selectedRows.map((bounce) => deleteBounce(bounce.id)));
+			await deleteBounces(selectedRows.map((bounce) => bounce.id));
 			toast.success(`${selectedCount} bounce${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			refreshList();

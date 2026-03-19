@@ -58,6 +58,25 @@
 	margin-top: 0.25rem;
 }
 
+/* ─── Settings Page Utilities ──────────────────────────────────────────────── */
+
+.settings-sections {
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+}
+
+.tab-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.settings-hint {
+	font-size: 0.85rem;
+	color: var(--color-muted);
+	margin: 0;
+}
+
 .textarea {
 	width: 100%;
 	padding: 0.5rem 0.75rem;

@@ -13,7 +13,7 @@
 	import { toast } from 'svelte-sonner';
 	import { toastError } from '$lib/utils/toast-error';
 	import { useForm } from '$lib/utils/use-form.svelte';
-	import { createCampaign, updateCampaign, deleteCampaign, updateCampaignStatus, previewCampaign, testCampaign } from '../campaigns.remote';
+	import { createCampaign, updateCampaign, deleteCampaigns, updateCampaignStatus, previewCampaign, testCampaign } from '../campaigns.remote';
 	import { listLists } from '../lists.remote';
 	import { listTemplates } from '../../emails.remote';
 	import { getSession } from '../../session.remote';
@@ -173,7 +173,7 @@
 	async function handleDelete() {
 		if (!campaign) return;
 		try {
-			await deleteCampaign(campaign.id);
+			await deleteCampaigns([campaign.id]);
 			toast.success('Campaign deleted.');
 			goto('/admin/emails/campaigns');
 		} catch (err) {

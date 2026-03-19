@@ -26,13 +26,15 @@ export const createSubscriber = protectedCommand(
     name: v.optional(v.string()),
     status: v.optional(v.string()),
     listIds: v.optional(v.array(v.number())),
+    preconfirm: v.optional(v.boolean()),
   }),
-  async ({ email, name, status, listIds }) => {
+  async ({ email, name, status, listIds, preconfirm }) => {
     return getListmonk().createSubscriber({
       email,
       name,
       status,
       lists: listIds,
+      preconfirm,
     });
   },
 );
@@ -51,30 +53,56 @@ export const updateSubscriber = protectedCommand(
     name: v.optional(v.string()),
     status: v.optional(v.string()),
     listIds: v.optional(v.array(v.number())),
+    preconfirm: v.optional(v.boolean()),
   }),
-  async ({ id, email, name, status, listIds }) => {
+  async ({ id, email, name, status, listIds, preconfirm }) => {
     return getListmonk().updateSubscriber(id, {
       email,
       name,
       status,
       lists: listIds,
+      preconfirm,
     });
   },
 );
 
-export const deleteSubscriber = protectedCommand(
+export const deleteSubscribers = protectedCommand(
   { subscriber: ["delete"] },
-  v.number(),
-  async (id) => {
-    await getListmonk().deleteSubscriber(id);
+  v.array(v.number()),
+  async (ids) => {
+    await getListmonk().deleteSubscribers(ids);
   },
 );
 
-export const blocklistSubscriber = protectedCommand(
+export const blocklistSubscribers = protectedCommand(
   { subscriber: ["blocklist"] },
+  v.array(v.number()),
+  async (ids) => {
+    await getListmonk().blocklistSubscribers(ids);
+  },
+);
+
+export const getSubscriberExport = protectedQuery(
+  { subscriber: ["view"] },
   v.number(),
   async (id) => {
-    await getListmonk().blocklistSubscriber(id);
+    return getListmonk().getSubscriberExport(id);
+  },
+);
+
+export const getSubscriberBounces = protectedQuery(
+  { subscriber: ["view"] },
+  v.number(),
+  async (id) => {
+    return getListmonk().getSubscriberBounces(id);
+  },
+);
+
+export const deleteSubscriberBounces = protectedCommand(
+  { bounce: ["delete"] },
+  v.number(),
+  async (id) => {
+    await getListmonk().deleteSubscriberBounces(id);
   },
 );
 

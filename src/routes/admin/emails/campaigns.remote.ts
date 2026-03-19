@@ -90,11 +90,11 @@ export const updateCampaign = protectedCommand(
 	},
 );
 
-export const deleteCampaign = protectedCommand(
+export const deleteCampaigns = protectedCommand(
 	{ campaign: ['delete'] },
-	v.number(),
-	async (id) => {
-		await getListmonk().deleteCampaign(id);
+	v.array(v.number()),
+	async (ids) => {
+		await getListmonk().deleteCampaigns(ids);
 	},
 );
 

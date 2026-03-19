@@ -5,27 +5,40 @@
 		checked = $bindable(false),
 		name,
 		label,
+		hint,
 		disabled = false,
 	}: {
 		checked?: boolean;
 		name?: string;
 		label: string;
+		hint?: string;
 		disabled?: boolean;
 	} = $props();
 </script>
 
-<label class="switch-field" class:switch-disabled={disabled}>
-	<BitsSwitch.Root bind:checked {name} {disabled}>
-		{#snippet child({ props, checked: isChecked })}
-			<button {...props} class="switch-track" class:switch-on={isChecked}>
-				<span class="switch-thumb" class:switch-thumb-on={isChecked}></span>
-			</button>
-		{/snippet}
-	</BitsSwitch.Root>
-	<span class="switch-label">{label}</span>
-</label>
+<div class="switch-wrapper">
+	<label class="switch-field" class:switch-disabled={disabled}>
+		<BitsSwitch.Root bind:checked {name} {disabled}>
+			{#snippet child({ props, checked: isChecked })}
+				<button {...props} class="switch-track" class:switch-on={isChecked}>
+					<span class="switch-thumb" class:switch-thumb-on={isChecked}></span>
+				</button>
+			{/snippet}
+		</BitsSwitch.Root>
+		<span class="switch-label">{label}</span>
+	</label>
+	{#if hint}
+		<span class="switch-hint">{hint}</span>
+	{/if}
+</div>
 
 <style>
+	.switch-wrapper {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
 	.switch-field {
 		display: flex;
 		align-items: center;
@@ -33,6 +46,13 @@
 		cursor: pointer;
 		font-size: 0.9rem;
 		color: var(--color-foreground);
+	}
+
+	.switch-hint {
+		font-size: 0.8rem;
+		font-weight: 400;
+		color: var(--color-muted);
+		padding-left: calc(40px + 0.75rem);
 	}
 
 	.switch-track {

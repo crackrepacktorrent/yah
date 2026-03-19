@@ -183,7 +183,9 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
 		box-shadow: var(--shadow-lg);
-		width: 240px;
+		min-width: 200px;
+		max-width: 320px;
+		width: max-content;
 		z-index: var(--z-dropdown);
 		display: flex;
 		flex-direction: column;

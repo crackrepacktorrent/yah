@@ -94,12 +94,16 @@ class ListmonkClient {
 		return this.request(`/subscribers${query ? `?${query}` : ''}`);
 	}
 
+	async getSubscriberExport(id: number): Promise<ListmonkSubscriberExport> {
+		return this.request(`/subscribers/${id}/export`);
+	}
+
 	async getSubscriber(id: number): Promise<ListmonkSubscriber> {
 		const res = await this.request<{ data: ListmonkSubscriber }>(`/subscribers/${id}`);
 		return res.data;
 	}
 
-	async createSubscriber(params: { email: string; name?: string; status?: string; lists?: number[] }): Promise<ListmonkSubscriber> {
+	async createSubscriber(params: { email: string; name?: string; status?: string; lists?: number[]; preconfirm?: boolean }): Promise<ListmonkSubscriber> {
 		const res = await this.request<{ data: ListmonkSubscriber }>('/subscribers', {
 			method: 'POST',
 			body: JSON.stringify({
@@ -107,27 +111,41 @@ class ListmonkClient {
 				name: params.name ?? '',
 				status: params.status ?? 'enabled',
 				lists: params.lists,
+				preconfirm_subscriptions: params.preconfirm ?? false,
 			}),
 		});
 		return res.data;
 	}
 
-	async updateSubscriber(id: number, params: { email?: string; name?: string; status?: string; lists?: number[] }): Promise<ListmonkSubscriber> {
+	async updateSubscriber(id: number, params: { email?: string; name?: string; status?: string; lists?: number[]; preconfirm?: boolean }): Promise<ListmonkSubscriber> {
 		const res = await this.request<{ data: ListmonkSubscriber }>(`/subscribers/${id}`, {
 			method: 'PUT',
-			body: JSON.stringify(params),
+			body: JSON.stringify({
+				...params,
+				preconfirm_subscriptions: params.preconfirm ?? false,
+			}),
 		});
 		return res.data;
 	}
 
-	async deleteSubscriber(id: number): Promise<void> {
-		await this.request(`/subscribers/${id}`, { method: 'DELETE' });
+	async deleteSubscribers(ids: number[]): Promise<void> {
+		const qs = ids.map((id) => `id=${id}`).join('&');
+		await this.request(`/subscribers?${qs}`, { method: 'DELETE' });
 	}
 
-	async blocklistSubscriber(id: number): Promise<void> {
+	async getSubscriberBounces(id: number): Promise<ListmonkBounce[]> {
+		const res = await this.request<{ data: ListmonkBounce[] }>(`/subscribers/${id}/bounces`);
+		return res.data;
+	}
+
+	async deleteSubscriberBounces(id: number): Promise<void> {
+		await this.request(`/subscribers/${id}/bounces`, { method: 'DELETE' });
+	}
+
+	async blocklistSubscribers(ids: number[]): Promise<void> {
 		await this.request('/subscribers/blocklist', {
 			method: 'PUT',
-			body: JSON.stringify({ ids: [id] }),
+			body: JSON.stringify({ ids }),
 		});
 	}
 
@@ -159,8 +177,9 @@ class ListmonkClient {
 		return res.data;
 	}
 
-	async deleteList(id: number): Promise<void> {
-		await this.request(`/lists/${id}`, { method: 'DELETE' });
+	async deleteLists(ids: number[]): Promise<void> {
+		const qs = ids.map((id) => `id=${id}`).join('&');
+		await this.request(`/lists?${qs}`, { method: 'DELETE' });
 	}
 
 	// ─── Bounces ──────────────────────────────────────────────────────────────
@@ -173,12 +192,13 @@ class ListmonkClient {
 		return this.request(`/bounces${query ? `?${query}` : ''}`);
 	}
 
-	async deleteBounce(id: number): Promise<void> {
-		await this.request(`/bounces/${id}`, { method: 'DELETE' });
+	async deleteBounces(ids: number[]): Promise<void> {
+		const qs = ids.map((id) => `id=${id}`).join('&');
+		await this.request(`/bounces?${qs}`, { method: 'DELETE' });
 	}
 
 	async deleteAllBounces(): Promise<void> {
-		await this.request('/bounces', { method: 'DELETE' });
+		await this.request('/bounces?all=true', { method: 'DELETE' });
 	}
 
 	// ─── Campaigns ───────────────────────────────────────────────────────────
@@ -245,8 +265,9 @@ class ListmonkClient {
 		return res.data;
 	}
 
-	async deleteCampaign(id: number): Promise<void> {
-		await this.request(`/campaigns/${id}`, { method: 'DELETE' });
+	async deleteCampaigns(ids: number[]): Promise<void> {
+		const qs = ids.map((id) => `id=${id}`).join('&');
+		await this.request(`/campaigns?${qs}`, { method: 'DELETE' });
 	}
 
 	async updateCampaignStatus(id: number, status: 'running' | 'paused' | 'cancelled' | 'scheduled'): Promise<ListmonkCampaign> {
@@ -322,6 +343,91 @@ class ListmonkClient {
 			}),
 		});
 	}
+
+	// ─── Settings ──────────────────────────────────────────────────────────
+
+	async getSettings(): Promise<ListmonkSettings> {
+		const res = await this.request<{ data: ListmonkSettings }>('/settings');
+		return res.data;
+	}
+
+	async updateSettings(settings: Record<string, unknown>): Promise<void> {
+		await this.request('/settings', {
+			method: 'PUT',
+			body: JSON.stringify(settings),
+		});
+	}
+}
+
+// ─── Settings Types ──────────────────────────────────────────────────────────
+
+export interface ListmonkSmtpConfig {
+	uuid: string;
+	enabled: boolean;
+	host: string;
+	port: number;
+	auth_protocol: 'login' | 'cram' | 'plain' | 'none';
+	username: string;
+	password: string;
+	email_headers: { key: string; value: string }[];
+	hello_hostname: string;
+	max_conns: number;
+	max_msg_retries: number;
+	idle_timeout: string;
+	wait_timeout: string;
+	tls_type: 'TLS' | 'STARTTLS' | 'none';
+	tls_skip_verify: boolean;
+}
+
+export interface ListmonkBounceAction {
+	count: number;
+	action: 'blocklist' | 'delete' | 'none';
+}
+
+export interface ListmonkSettings {
+	smtp: ListmonkSmtpConfig[];
+	'app.site_name': string;
+	'app.root_url': string;
+	'app.logo_url': string;
+	'app.favicon_url': string;
+	'app.from_email': string;
+	'app.notify_emails': string[];
+	'app.enable_public_subscription_page': boolean;
+	'app.enable_public_archive': boolean;
+	'app.enable_public_archive_rss_content': boolean;
+	'app.send_optin_confirmation': boolean;
+	'app.check_updates': boolean;
+	'app.lang': string;
+	'app.batch_size': number;
+	'app.concurrency': number;
+	'app.max_send_errors': number;
+	'app.message_rate': number;
+	'app.message_sliding_window': boolean;
+	'app.message_sliding_window_duration': string;
+	'app.message_sliding_window_rate': number;
+	'privacy.individual_tracking': boolean;
+	'privacy.unsubscribe_header': boolean;
+	'privacy.allow_blocklist': boolean;
+	'privacy.allow_preferences': boolean;
+	'privacy.allow_export': boolean;
+	'privacy.allow_wipe': boolean;
+	'privacy.exportable': string[];
+	'privacy.record_optin_ip': boolean;
+	'privacy.domain_blocklist': string[];
+	'privacy.domain_allowlist': string[];
+	'bounce.enabled': boolean;
+	'bounce.webhooks_enabled': boolean;
+	'bounce.actions': {
+		complaint: ListmonkBounceAction;
+		hard: ListmonkBounceAction;
+		soft: ListmonkBounceAction;
+	};
+	'bounce.ses_enabled': boolean;
+	'bounce.sendgrid_enabled': boolean;
+	'bounce.sendgrid_key': string;
+	'bounce.postmark': { enabled: boolean; username: string; password: string };
+	'bounce.forwardemail': { enabled: boolean; key: string };
+	[key: string]: unknown;
 }
 
 export interface ListmonkTemplate {
@@ -344,8 +450,23 @@ export interface ListmonkSubscriber {
 	email: string;
 	name: string;
 	status: 'enabled' | 'disabled' | 'blocklisted';
-	lists: { id: number; name: string; subscription_status: string }[];
+	lists: {
+		id: number;
+		name: string;
+		subscription_status: string;
+		subscription_created_at?: string;
+		subscription_updated_at?: string;
+		optin?: string;
+		type?: string;
+	}[];
 	attribs: Record<string, unknown>;
+}
+
+export interface ListmonkSubscriberExport {
+	profile: ListmonkSubscriber[];
+	subscriptions: { subscription_status: string; name: string; type: string; created_at: string }[];
+	campaign_views: { campaign_id: number; name: string; subject: string; count: number }[];
+	link_clicks: { campaign_id: number; url: string; count: number }[];
 }
 
 export interface ListmonkList {

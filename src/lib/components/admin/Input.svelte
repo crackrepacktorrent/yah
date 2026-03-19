@@ -3,10 +3,10 @@
 
 	let {
 		class: className = '',
-		value = $bindable(''),
+		value = $bindable<string | number>(''),
 		ref = $bindable<HTMLInputElement | null>(null),
 		...rest
-	}: HTMLInputAttributes & { class?: string; value?: string; ref?: HTMLInputElement | null } = $props();
+	}: HTMLInputAttributes & { class?: string; value?: string | number; ref?: HTMLInputElement | null } = $props();
 </script>
 
 <input class="admin-input {className}" bind:value bind:this={ref} {...rest} />

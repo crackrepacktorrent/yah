@@ -4,7 +4,7 @@
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
 	import { toastError } from '$lib/utils/toast-error';
-	import { listCampaigns, deleteCampaign, updateCampaignStatus } from '../campaigns.remote';
+	import { listCampaigns, deleteCampaigns, updateCampaignStatus } from '../campaigns.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 	import { campaignStatusVariant } from '$lib/utils/admin';
@@ -40,7 +40,7 @@
 
 	async function handleDelete() {
 		try {
-			await Promise.all(selectedRows.map((c) => deleteCampaign(c.id)));
+			await deleteCampaigns(selectedRows.map((c) => c.id));
 			toast.success(`${selectedCount} campaign${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listCampaigns().refresh();

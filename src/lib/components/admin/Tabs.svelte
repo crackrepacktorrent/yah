@@ -48,6 +48,7 @@
 		font-weight: 500;
 		padding: 0.5rem 1rem;
 		transition: all 0.15s ease;
+		white-space: nowrap;
 	}
 
 	.tab-trigger:hover {

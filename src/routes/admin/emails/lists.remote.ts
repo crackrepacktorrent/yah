@@ -33,11 +33,11 @@ export const updateList = protectedCommand(
 	},
 );
 
-export const deleteList = protectedCommand(
+export const deleteLists = protectedCommand(
 	{ list: ['delete'] },
-	v.number(),
-	async (id) => {
-		await getListmonk().deleteList(id);
+	v.array(v.number()),
+	async (ids) => {
+		await getListmonk().deleteLists(ids);
 	},
 );
 

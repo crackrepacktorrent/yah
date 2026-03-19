@@ -10,6 +10,7 @@ export const statements = {
 	bounce: ['view', 'delete', 'clear-all'],
 	campaign: ['view', 'create', 'edit', 'delete', 'send'],
 	analytics: ['view'],
+	settings: ['view', 'edit'],
 } as const;
 
 export const ac = createAccessControl(statements);
@@ -30,6 +31,7 @@ export const defaultRolePermissions: Record<string, Record<string, string[]>> = 
 		bounce: ['view', 'delete', 'clear-all'],
 		campaign: ['view', 'create', 'edit', 'delete', 'send'],
 		analytics: ['view'],
+		settings: ['view', 'edit'],
 	},
 	admin: {
 		member: ['create', 'update', 'delete'],
@@ -41,6 +43,7 @@ export const defaultRolePermissions: Record<string, Record<string, string[]>> = 
 		bounce: ['view'],
 		campaign: ['view', 'create', 'edit'],
 		analytics: ['view'],
+		settings: ['view'],
 	},
 	member: {
 		analytics: ['view'],

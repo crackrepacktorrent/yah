@@ -5,7 +5,7 @@
   import {
     AlertCircle, BarChart3, ChevronRight, ClipboardList, Contact,
     Image, LayoutDashboard, Link, ListChecks, LogOut, Mail,
-    Megaphone, Menu, PieChart, Shield, Users, X,
+    Megaphone, Menu, PieChart, Settings, Shield, Upload, Users, X,
   } from "lucide-svelte";
 
   const icons: Record<string, any> = {
@@ -22,6 +22,8 @@
     image: Image,
     'pie-chart': PieChart,
     'clipboard-list': ClipboardList,
+    settings: Settings,
+    upload: Upload,
   };
 
   export type NavItem = {
