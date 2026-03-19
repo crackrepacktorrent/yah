@@ -105,9 +105,7 @@
       <svelte:boundary onerror={(e) => console.error('[admin]', e)}>
         {@render children()}
         {#snippet pending()}
-          <div class="loading-state">
-            <Spinner size={48} centered />
-          </div>
+          <Spinner size={48} centered />
         {/snippet}
         {#snippet failed(error: unknown, reset: () => void)}
           <div class="error-boundary">

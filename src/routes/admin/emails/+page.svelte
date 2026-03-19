@@ -360,11 +360,6 @@
 </DialogShell>
 
 <style>
-	h1 {
-		margin: 0 0 1.5rem;
-		color: var(--color-foreground);
-	}
-
 	/* ─── Edit Form ────────────────────────────────────────────────────── */
 
 	.edit-form {

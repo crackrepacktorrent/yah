@@ -167,6 +167,3 @@
 	confirmLabel="Yes, clear all"
 	onconfirm={handleClearAll}
 />
-
-<style>
-</style>
