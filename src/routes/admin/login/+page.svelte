@@ -59,6 +59,8 @@
       <Button type="submit" disabled={loading} aria-busy={loading} class="login-btn">
         {loading ? "Signing in..." : "Sign in"}
       </Button>
+
+      <a href="/admin/forgot-password" class="forgot-link">Forgot password?</a>
     </form>
   </div>
 </div>
@@ -100,5 +102,16 @@
     color: var(--color-destructive);
     margin: 0;
     font-size: 0.9rem;
+  }
+
+  .forgot-link {
+    text-align: center;
+    color: var(--color-primary);
+    font-size: 0.85rem;
+    text-decoration: none;
+  }
+
+  .forgot-link:hover {
+    text-decoration: underline;
   }
 </style>

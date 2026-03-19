@@ -16,6 +16,20 @@ export const auth = betterAuth({
 	database: pool,
 	emailAndPassword: {
 		enabled: true,
+		async sendResetPassword({ user, url }) {
+			try {
+				await getListmonk().sendTransactionalEmail({
+					subscriberEmail: user.email,
+					templateId: Number(env.LISTMONK_PASSWORD_RESET_TEMPLATE_ID),
+					data: {
+						reset_link: url,
+						user_name: user.name,
+					},
+				});
+			} catch (err) {
+				console.error('Failed to send password reset email:', err);
+			}
+		},
 	},
 	plugins: [
 		organization({

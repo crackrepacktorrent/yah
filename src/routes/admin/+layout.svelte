@@ -101,7 +101,7 @@
   }}
 />
 
-{#if page.url.pathname === "/admin/login" || page.url.pathname.startsWith("/admin/members/accept")}
+{#if page.url.pathname === "/admin/login" || page.url.pathname === "/admin/forgot-password" || page.url.pathname === "/admin/reset-password" || page.url.pathname.startsWith("/admin/members/accept")}
   {@render children()}
 {:else}
   <div class="admin-layout">
