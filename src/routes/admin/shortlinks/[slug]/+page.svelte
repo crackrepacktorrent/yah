@@ -35,10 +35,12 @@
     </div>
 
     <div class="bottom-row">
-      <ShortlinkEditor
-        {shortUrl}
-        slug={slug!}
-      />
+      {#key slug}
+        <ShortlinkEditor
+          {shortUrl}
+          slug={slug!}
+        />
+      {/key}
       {#if visitsQuery?.current}
         <ShortlinkVisits
           visits={visitsQuery.current.visits}

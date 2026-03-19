@@ -1,6 +1,6 @@
 import * as v from 'valibot';
 import { getShlink, ShlinkApiError } from '$lib/server/shlink';
-import { error, invalid, redirect } from '@sveltejs/kit';
+import { error, invalid } from '@sveltejs/kit';
 import { protectedQuery, protectedCommand, protectedForm } from '$lib/server/auth-helpers';
 
 // ─── Queries ──────────────────────────────────────────────────────────────────

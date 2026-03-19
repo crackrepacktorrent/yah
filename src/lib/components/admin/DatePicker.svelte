@@ -91,7 +91,7 @@
 		</DatePicker.Input>
 		<DatePicker.Trigger>
 			{#snippet child({ props })}
-				<button {...props} class="cal-icon-btn" aria-label="Open calendar">
+				<button {...props} type="button" class="cal-icon-btn" aria-label="Open calendar">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
 						<line x1="16" y1="2" x2="16" y2="6"></line>
@@ -112,7 +112,7 @@
 							<div {...props} class="cal-header">
 								<DatePicker.PrevButton>
 									{#snippet child({ props: btnProps })}
-										<button {...btnProps} class="cal-nav-btn">
+										<button {...btnProps} type="button" class="cal-nav-btn">
 											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
 										</button>
 									{/snippet}
@@ -124,7 +124,7 @@
 								</DatePicker.Heading>
 								<DatePicker.NextButton>
 									{#snippet child({ props: btnProps })}
-										<button {...btnProps} class="cal-nav-btn">
+										<button {...btnProps} type="button" class="cal-nav-btn">
 											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
 										</button>
 									{/snippet}
@@ -156,7 +156,7 @@
 															<td {...cellProps} class="cal-cell">
 																<DatePicker.Day>
 																	{#snippet child({ props: dayProps })}
-																		<button {...dayProps} class="cal-day">
+																		<button {...dayProps} type="button" class="cal-day">
 																			{date.day}
 																		</button>
 																	{/snippet}
@@ -181,19 +181,5 @@
 <style>
 	.dp-full-width {
 		width: 100%;
-	}
-
-	:global(.cal-content) {
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-lg);
-		box-shadow: var(--shadow-lg);
-		padding: 1rem;
-		z-index: var(--z-dropdown);
-	}
-
-	:global(.cal-grid) {
-		border-collapse: collapse;
-		border-spacing: 0;
 	}
 </style>

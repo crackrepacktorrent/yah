@@ -10,7 +10,6 @@ export function can(
 	if (!session?.permissions) return false;
 	return session.permissions[resource]?.includes(action) ?? false;
 }
-
 /**
  * Check if the current session has ANY of the specified permissions.
  * Usage: canAny(session, { shortlink: ['create', 'edit'] })

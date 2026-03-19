@@ -105,9 +105,7 @@
 
 	async function handleDelete() {
 		try {
-			for (const list of selectedRows) {
-				await deleteList(list.id);
-			}
+			await Promise.all(selectedRows.map((list) => deleteList(list.id)));
 			toast.success(`${selectedCount} list${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listLists().refresh();

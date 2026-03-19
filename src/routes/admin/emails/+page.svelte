@@ -118,9 +118,7 @@
 
 	async function handleDelete() {
 		try {
-			for (const tpl of selectedRows) {
-				await deleteTemplate(tpl.id);
-			}
+			await Promise.all(selectedRows.map((tpl) => deleteTemplate(tpl.id)));
 			toast.success(`${selectedCount} template${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listTemplates().refresh();

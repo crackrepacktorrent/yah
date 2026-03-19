@@ -22,22 +22,11 @@
   } = $props();
 
   let unlocked = $state(false);
-  let dirty = $state(false);
   let editTags = $state<string[]>([...untrack(() => shortUrl.tags)]);
   let confirmUnlock = $state(false);
   let confirmDelete = $state(false);
   let confirmReset = $state(false);
 
-  function markDirty() {
-    dirty = true;
-  }
-
-  $effect(() => {
-    slug;
-    unlocked = false;
-    dirty = false;
-    editTags = [...shortUrl.tags];
-  });
 
   async function handleReset() {
     try {
@@ -91,22 +80,18 @@
         {...editShortUrl.enhance(async ({ submit }) => {
           try {
             await submit();
-            if ((editShortUrl.result as { success?: boolean })?.success) {
-              unlocked = false;
-              dirty = false;
-              toast.success("Shortlink updated.");
-              getShortUrl(slug).refresh();
-            } else {
-              const issues = editShortUrl.fields?.longUrl?.issues() ?? [];
-              if (issues.length > 0) toast.error(issues[0]?.message ?? "Validation error");
-            }
+            unlocked = false;
+            toast.success("Shortlink updated.");
           } catch (err) {
-            toast.error("Failed to save changes.");
+            const issues = editShortUrl.fields?.longUrl?.issues() ?? [];
+            if (issues.length > 0) {
+              toast.error(issues[0]?.message ?? "Validation error");
+            } else {
+              toast.error("Failed to save changes.");
+            }
           }
         })}
         class="edit-form"
-        oninput={markDirty}
-        onchange={markDirty}
       >
         <input {...editShortUrl.fields.shortCode.as("text")} type="hidden" value={shortUrl.shortCode} />
 
@@ -145,7 +130,7 @@
         </fieldset>
 
         <div class="edit-actions">
-          <Button variant="primary" type="submit" disabled={!unlocked || !dirty || !!editShortUrl.pending}>
+          <Button variant="primary" type="submit" disabled={!unlocked || !!editShortUrl.pending}>
             {editShortUrl.pending ? "Saving..." : "Save Changes"}
           </Button>
           <Button variant="danger-outline" type="button" disabled={!unlocked} onclick={() => (confirmReset = true)}>Reset Visits</Button>

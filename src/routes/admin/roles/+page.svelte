@@ -193,10 +193,6 @@
 	<span class="perm-summary">{permissionSummary(role.permission)}</span>
 {/snippet}
 
-{#snippet dateCell(date: Date)}
-	<span class="cell-date">{date.toLocaleDateString()}</span>
-{/snippet}
-
 <h1>Roles & Permissions</h1>
 
 {#if data}
@@ -318,7 +314,6 @@
 </DialogShell>
 
 <style>
-
 	.role-name {
 		text-transform: capitalize;
 	}
@@ -327,8 +322,6 @@
 		color: var(--color-muted);
 		font-size: 0.85rem;
 	}
-
-
 
 	/* ─── Permission grid (in dialog) ──────────────────────────────────── */
 
@@ -397,14 +390,6 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		background: var(--color-hover);
-	}
-
-	:global(.row-checkbox) {
-		width: 1rem;
-		height: 1rem;
-		accent-color: var(--color-primary);
-		cursor: pointer;
 	}
 
 	@media (max-width: 640px) {

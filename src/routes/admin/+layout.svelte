@@ -7,8 +7,9 @@
   import { Toaster } from "svelte-sonner";
   import { getSession } from "./session.remote";
   import { can } from "./can";
+  import type { Snippet } from "svelte";
 
-  let { children }: { children: any } = $props();
+  let { children }: { children: Snippet } = $props();
 
   let session = $derived(getSession());
 

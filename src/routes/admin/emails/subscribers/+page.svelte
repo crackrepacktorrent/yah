@@ -4,7 +4,7 @@
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
 	import { toastError } from '$lib/utils/toast-error';
-	import { listSubscribers, createSubscriber, updateSubscriber, deleteSubscriber, blocklistSubscriber } from '../subscribers.remote';
+	import { listSubscribers, createSubscriber, updateSubscriber, deleteSubscriber, blocklistSubscriber, sendOptinConfirmation } from '../subscribers.remote';
 	import { listLists } from '../lists.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
@@ -152,10 +152,23 @@
 		email: string;
 		name: string;
 		status: string;
-		lists: { id: number; name: string }[];
+		lists: { id: number; name: string; subscription_status: string }[];
 		created_at: string;
 		updated_at: string;
 	};
+
+	function hasUnconfirmed(sub: Subscriber): boolean {
+		return sub.status === 'enabled' && sub.lists.some((l) => l.subscription_status === 'unconfirmed');
+	}
+
+	async function handleResendOptin(sub: Subscriber) {
+		try {
+			await sendOptinConfirmation(sub.id);
+			toast.success(`Opt-in confirmation sent to ${sub.email}.`);
+		} catch (err) {
+			toastError(err, 'Failed to send opt-in confirmation.');
+		}
+	}
 
 	const columnHelper = createColumnHelper<Subscriber>();
 
@@ -193,6 +206,13 @@
 			cell: (info) => renderSnippet(dateCell, info.getValue()),
 			enableColumnFilter: false,
 		}),
+		columnHelper.display({
+			id: 'actions',
+			header: '',
+			cell: (info) => renderSnippet(actionsCell, info.row.original),
+			enableSorting: false,
+			enableColumnFilter: false,
+		}),
 	];
 </script>
 
@@ -217,6 +237,12 @@
 
 {#snippet dateCell(date: string)}
 	<span class="cell-date">{new Date(date).toLocaleDateString()}</span>
+{/snippet}
+
+{#snippet actionsCell(sub: Subscriber)}
+	{#if hasUnconfirmed(sub) && can(session, 'subscriber', 'edit')}
+		<button class="action-btn" onclick={() => handleResendOptin(sub)} title="Resend opt-in confirmation">Resend opt-in</button>
+	{/if}
 {/snippet}
 
 {#snippet listCheckboxes(selectedIds: number[], onToggle: (id: number) => void)}
@@ -360,4 +386,19 @@
 </DialogShell>
 
 <style>
+	.action-btn {
+		background: none;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		color: var(--color-primary);
+		border-color: var(--color-primary);
+		font-size: 0.75rem;
+		padding: 0.2rem 0.5rem;
+		white-space: nowrap;
+	}
+
+	.action-btn:hover {
+		background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+	}
 </style>
