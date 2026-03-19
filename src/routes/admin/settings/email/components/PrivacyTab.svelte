@@ -65,7 +65,7 @@
 	</Section>
 
 	<Section title="Domain lists">
-		<div class="domain-lists">
+		<div class="form-row">
 			<div class="domain-col">
 				<span class="domain-label">Blocklist</span>
 				<p class="settings-hint">Subscribers with these email domains are blocked from subscribing.</p>
@@ -89,12 +89,6 @@
 </div>
 
 <style>
-	.domain-lists {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1.5rem;
-	}
-
 	.domain-col {
 		display: flex;
 		flex-direction: column;
@@ -105,11 +99,5 @@
 		font-weight: 600;
 		font-size: 0.9rem;
 		color: var(--color-foreground);
-	}
-
-	@media (max-width: 640px) {
-		.domain-lists {
-			grid-template-columns: 1fr;
-		}
 	}
 </style>
