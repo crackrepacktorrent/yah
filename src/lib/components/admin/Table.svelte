@@ -28,6 +28,7 @@
 		border-radius: var(--radius-lg);
 		box-shadow: var(--shadow-sm);
 		background: var(--color-surface);
+		overflow: hidden;
 	}
 
 	.admin-table-wrapper {
