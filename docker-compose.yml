@@ -46,7 +46,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:3000/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -84,7 +84,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:3001/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -120,7 +120,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/rest/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://0.0.0.0:8080/rest/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -148,7 +148,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/heartbeat || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://0.0.0.0:3000/api/heartbeat || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -181,7 +181,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:9000/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
