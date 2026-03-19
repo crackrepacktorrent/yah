@@ -55,15 +55,10 @@ export const sendOptinCampaign = protectedCommand(
 		if (unconfirmed.length === 0) {
 			throw new Error('No unconfirmed subscribers on this list.');
 		}
-		let sent = 0;
-		for (const sub of unconfirmed) {
-			try {
-				await lm.sendOptinConfirmation(sub.id);
-				sent++;
-			} catch {
-				// Some may fail (e.g. email config), continue with others
-			}
-		}
+		const results = await Promise.allSettled(
+			unconfirmed.map((sub) => lm.sendOptinConfirmation(sub.id)),
+		);
+		const sent = results.filter((r) => r.status === 'fulfilled').length;
 		return { sent, total: unconfirmed.length };
 	},
 );

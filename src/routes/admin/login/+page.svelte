@@ -2,6 +2,7 @@
   import { authClient } from "$lib/auth-client";
   import { goto } from "$app/navigation";
   import { FormField, Input, Button, Logo } from "$lib/components/admin";
+  import { ORG_SLUG } from "$lib/constants";
 
   let email = $state("");
   let password = $state("");
@@ -24,9 +25,15 @@
       return;
     }
 
-    await authClient.organization.setActive({
-      organizationSlug: 'yah',
+    const orgResult = await authClient.organization.setActive({
+      organizationSlug: ORG_SLUG,
     });
+
+    if (orgResult.error) {
+      error = 'Signed in, but failed to load organization. Contact an admin.';
+      loading = false;
+      return;
+    }
 
     goto("/admin");
   }

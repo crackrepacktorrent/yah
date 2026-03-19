@@ -8,22 +8,7 @@
   } = $props();
 </script>
 
-{#if centered}
-  <div class="spinner-container">
-    <svg
-      class="spinner"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      role="status"
-      aria-label="Loading"
-    >
-      <circle class="track" cx="12" cy="12" r="10" stroke-width="3" />
-      <path class="arc" d="M12 2a10 10 0 0 1 10 10" stroke-width="3" stroke-linecap="round" />
-    </svg>
-  </div>
-{:else}
+{#snippet spinner()}
   <svg
     class="spinner"
     width={size}
@@ -36,6 +21,14 @@
     <circle class="track" cx="12" cy="12" r="10" stroke-width="3" />
     <path class="arc" d="M12 2a10 10 0 0 1 10 10" stroke-width="3" stroke-linecap="round" />
   </svg>
+{/snippet}
+
+{#if centered}
+  <div class="spinner-container">
+    {@render spinner()}
+  </div>
+{:else}
+  {@render spinner()}
 {/if}
 
 <style>

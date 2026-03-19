@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button, Card, EmptyState, FormField, MultiSelect, Section, DateRangePicker } from '$lib/components/admin';
+	import BarChart from '$lib/components/admin/BarChart.svelte';
 	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 	import { listCampaigns, getCampaignAnalytics } from '../campaigns.remote';
 
@@ -78,10 +79,6 @@
 	let viewsTotal = $derived(viewsBars.reduce((s, p) => s + p.count, 0));
 	let clicksTotal = $derived(clicksBars.reduce((s, p) => s + p.count, 0));
 
-	function chartMax(bars: { count: number }[]): number {
-		return Math.max(...bars.map((b) => b.count), 1);
-	}
-
 	function formatDate(timestamp: string) {
 		const d = new Date(timestamp);
 		return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -122,17 +119,12 @@
 					{#if viewsBars.length === 0}
 						<EmptyState message="No view data for this period." />
 					{:else}
-						<div class="chart">
-							<div class="chart-bars">
-								{#each viewsBars as point}
-									<div class="chart-col">
-										<div class="chart-tooltip">{point.count}</div>
-										<div class="chart-bar views" style="height: {(point.count / chartMax(viewsBars)) * 100}%"></div>
-										<span class="chart-label">{formatDate(point.timestamp)}</span>
-									</div>
-								{/each}
-							</div>
-						</div>
+						<BarChart
+							bars={viewsBars.map((p) => ({ x: p.timestamp, y: p.count }))}
+							color="var(--brand-olive)"
+							hoverColor="var(--brand-olive-light)"
+							formatLabel={formatDate}
+						/>
 					{/if}
 				</Card>
 			</Section>
@@ -142,17 +134,12 @@
 					{#if clicksBars.length === 0}
 						<EmptyState message="No click data for this period." />
 					{:else}
-						<div class="chart">
-							<div class="chart-bars">
-								{#each clicksBars as point}
-									<div class="chart-col">
-										<div class="chart-tooltip">{point.count}</div>
-										<div class="chart-bar clicks" style="height: {(point.count / chartMax(clicksBars)) * 100}%"></div>
-										<span class="chart-label">{formatDate(point.timestamp)}</span>
-									</div>
-								{/each}
-							</div>
-						</div>
+						<BarChart
+							bars={clicksBars.map((p) => ({ x: p.timestamp, y: p.count }))}
+							color="var(--brand-amber)"
+							hoverColor="var(--brand-amber-light)"
+							formatLabel={formatDate}
+						/>
 					{/if}
 				</Card>
 			</Section>
@@ -182,76 +169,6 @@
 
 	.filter-apply {
 		padding-bottom: 0.125rem;
-	}
-
-	/* ─── Charts ──────────────────────────────────────────────── */
-
-	.chart {
-		padding: 0.5rem 0;
-	}
-
-	.chart-bars {
-		display: flex;
-		align-items: flex-end;
-		gap: 2px;
-		height: 180px;
-	}
-
-	.chart-col {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		height: 100%;
-		justify-content: flex-end;
-		position: relative;
-	}
-
-	.chart-bar {
-		width: 100%;
-		min-height: 2px;
-		border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-		transition: height 0.3s ease;
-	}
-
-	.chart-bar.views {
-		background: var(--brand-olive);
-	}
-
-	.chart-col:hover .chart-bar.views {
-		background: var(--brand-olive-light);
-	}
-
-	.chart-bar.clicks {
-		background: var(--brand-amber);
-	}
-
-	.chart-col:hover .chart-bar.clicks {
-		background: var(--brand-amber-light, var(--brand-amber));
-	}
-
-	.chart-tooltip {
-		position: absolute;
-		top: -1.5rem;
-		font-size: 0.7rem;
-		color: var(--color-muted);
-		opacity: 0;
-		transition: opacity 0.15s;
-		pointer-events: none;
-	}
-
-	.chart-col:hover .chart-tooltip {
-		opacity: 1;
-	}
-
-	.chart-label {
-		font-size: 0.6rem;
-		color: var(--color-muted);
-		margin-top: 0.35rem;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 100%;
 	}
 
 	@media (max-width: 640px) {

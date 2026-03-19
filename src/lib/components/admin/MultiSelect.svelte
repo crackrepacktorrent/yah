@@ -14,7 +14,7 @@
 	let open = $state(false);
 	let search = $state('');
 	let inputEl = $state<HTMLInputElement | null>(null);
-	let wrapEl = $state<HTMLElement | null>(null);
+	let rootEl = $state<HTMLElement | null>(null);
 
 	let filteredOptions = $derived(
 		search
@@ -45,18 +45,10 @@
 		}
 	}
 
-	function handleClickOutside(e: MouseEvent) {
-		if (wrapEl && !wrapEl.contains(e.target as Node)) {
-			open = false;
-		}
+	function handleFocusOut(e: FocusEvent) {
+		if (rootEl?.contains(e.relatedTarget as Node)) return;
+		open = false;
 	}
-
-	$effect(() => {
-		if (open) {
-			document.addEventListener('click', handleClickOutside, true);
-			return () => document.removeEventListener('click', handleClickOutside, true);
-		}
-	});
 </script>
 
 {#if disabled}
@@ -70,9 +62,9 @@
 		{/if}
 	</div>
 {:else}
-	<div class="ms-root" bind:this={wrapEl}>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div class="chip-input-wrap" role="combobox" tabindex="-1" aria-expanded={open} aria-controls="ms-listbox" onclick={() => inputEl?.focus()}>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<div class="ms-root" bind:this={rootEl} onfocusout={handleFocusOut}>
+		<div class="chip-input-wrap" role="combobox" tabindex="-1" aria-expanded={open} onclick={() => inputEl?.focus()}>
 			{#each selected as value (value)}
 				{@const label = options.find((o) => o.value === value)?.label ?? value}
 				<span class="chip">

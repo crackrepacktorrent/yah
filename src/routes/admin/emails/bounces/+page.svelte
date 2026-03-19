@@ -38,9 +38,7 @@
 
 	async function handleDeleteSelected() {
 		try {
-			for (const bounce of selectedRows) {
-				await deleteBounce(bounce.id);
-			}
+			await Promise.all(selectedRows.map((bounce) => deleteBounce(bounce.id)));
 			toast.success(`${selectedCount} bounce${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			refreshList();

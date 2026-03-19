@@ -297,7 +297,7 @@
 		</div>
 
 		<div class="actions">
-			<button class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (createOpen = false)}>Cancel</Button>
 			<Button variant="primary" onclick={handleCreateTemplate} disabled={createPending}>
 				{createPending ? 'Creating...' : 'Create'}
 			</Button>
@@ -350,7 +350,7 @@
 						<Button variant="ghost" onclick={handleSetDefault}>Set as Default</Button>
 					{/if}
 					<div class="actions-right">
-						<button class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
+						<Button variant="ghost" onclick={() => (editOpen = false)}>Cancel</Button>
 						<Button variant="primary" onclick={handleSave} disabled={savePending}>
 							{savePending ? 'Saving...' : 'Save'}
 						</Button>

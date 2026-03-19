@@ -118,9 +118,7 @@
 
 	async function handleDeleteSelected() {
 		try {
-			for (const role of selectedRows) {
-				await deleteRole(role.id);
-			}
+			await Promise.all(selectedRows.map((role) => deleteRole(role.id)));
 			toast.success(`${selectedCount} role${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listRoles().refresh();
@@ -256,7 +254,7 @@
 			<Input bind:value={createName} placeholder="e.g. Editor" />
 		</FormField>
 		<div class="dialog-actions">
-			<button class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (createOpen = false)}>Cancel</Button>
 			<Button variant="primary" onclick={handleCreate} disabled={createPending || !createName.trim()}>
 				{createPending ? 'Creating...' : 'Create'}
 			</Button>
@@ -309,7 +307,7 @@
 			<Button variant="ghost" onclick={() => { editOpen = false; openClone({ id: editRoleId, role: editName, permission: structuredClone(editPermissions), createdAt: new Date(), builtIn: false }); }}>Clone</Button>
 			{#if !editReadOnly}
 				<div class="dialog-actions-right">
-					<button class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
+					<Button variant="ghost" onclick={() => (editOpen = false)}>Cancel</Button>
 					<Button variant="primary" onclick={handleSave} disabled={savePending}>
 						{savePending ? 'Saving...' : 'Save'}
 					</Button>

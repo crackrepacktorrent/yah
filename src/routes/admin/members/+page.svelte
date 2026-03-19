@@ -247,7 +247,7 @@
 		</FormField>
 
 		<div class="dialog-actions">
-			<button type="button" class="cancel-btn" onclick={() => (inviteOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (inviteOpen = false)}>Cancel</Button>
 			<Button variant="primary" type="submit" disabled={invitePending}>
 				{invitePending ? 'Sending...' : 'Send Invitation'}
 			</Button>

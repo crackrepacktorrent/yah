@@ -1,12 +1,10 @@
-import { query } from '$app/server';
-import { protectedCommand, getSessionOrThrow } from '$lib/server/auth-helpers';
+import { protectedQuery, protectedCommand } from '$lib/server/auth-helpers';
 import { auth } from '$lib/server/auth';
 import { getRequestEvent } from '$app/server';
 import * as v from 'valibot';
 import { statements, defaultRolePermissions } from '$lib/permissions';
 
-export const listRoles = query(async () => {
-	await getSessionOrThrow();
+export const listRoles = protectedQuery({ ac: ['read'] }, async () => {
 	const event = getRequestEvent();
 
 	const dynamicRoles = await auth.api.listOrgRoles({

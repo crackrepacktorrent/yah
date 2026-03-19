@@ -35,9 +35,7 @@
 
 	async function handleDelete() {
 		try {
-			for (const url of selectedRows) {
-				await deleteShortUrl(url.shortCode);
-			}
+			await Promise.all(selectedRows.map((url) => deleteShortUrl(url.shortCode)));
 			toast.success(`${selectedCount} shortlink${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listShortUrls().refresh();
@@ -234,7 +232,7 @@
 		</div>
 
 		<div class="dialog-actions">
-			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (createOpen = false)}>Cancel</Button>
 			<Button variant="primary" type="submit" disabled={createPending}>
 				{createPending ? 'Creating...' : 'Create Shortlink'}
 			</Button>

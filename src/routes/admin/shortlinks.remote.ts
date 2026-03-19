@@ -1,4 +1,3 @@
-import { query } from '$app/server';
 import * as v from 'valibot';
 import { getShlink, ShlinkApiError } from '$lib/server/shlink';
 import { error, invalid, redirect } from '@sveltejs/kit';
@@ -6,7 +5,7 @@ import { protectedQuery, protectedCommand, protectedForm } from '$lib/server/aut
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export const getDashboard = query(async () => {
+export const getDashboard = protectedQuery({ shortlink: ['view'] }, async () => {
 	const shlink = getShlink();
 
 	const [shortUrlsRes, overallVisitsRes] = await Promise.all([
@@ -32,7 +31,8 @@ export const listShortUrls = protectedQuery({ shortlink: ['view'] }, async () =>
 	return { shortUrls: res.shortUrls.data };
 });
 
-export const getShortUrl = query(
+export const getShortUrl = protectedQuery(
+	{ shortlink: ['view'] },
 	v.string(),
 	async (shortCode) => {
 		const shlink = getShlink();
@@ -48,7 +48,8 @@ export const getShortUrl = query(
 	},
 );
 
-export const getShortUrlVisits = query(
+export const getShortUrlVisits = protectedQuery(
+	{ shortlink: ['view'] },
 	v.string(),
 	async (shortCode) => {
 		const shlink = getShlink();

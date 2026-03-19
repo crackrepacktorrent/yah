@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { Collapsible, Dialog, Tooltip } from "bits-ui";
   import { Logo } from "$lib/components/admin";
   import {
@@ -56,14 +56,14 @@
   }
 
   function isActive(href: string) {
-    const path = $page.url.pathname;
+    const path = page.url.pathname;
     if (href === "/admin") return path === "/admin";
     return path === href;
   }
 
   function hasActiveChild(item: NavItem) {
     if (!item.children?.length) return false;
-    const path = $page.url.pathname;
+    const path = page.url.pathname;
     return item.children.some((child) => path === child.href);
   }
 

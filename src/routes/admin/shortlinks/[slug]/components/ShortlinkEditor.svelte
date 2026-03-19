@@ -2,6 +2,7 @@
   import { untrack } from "svelte";
   import { goto } from "$app/navigation";
   import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section, DatePicker, TagInput } from "$lib/components/admin";
+  import { Lock, Unlock } from "lucide-svelte";
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
   import { getSession } from "../../../session.remote";
   import { can } from "../../../can";
@@ -70,15 +71,9 @@
           aria-label={unlocked ? "Lock editing" : "Unlock editing"}
         >
           {#if unlocked}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-            </svg>
+            <Unlock size={18} />
           {:else}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
+            <Lock size={18} />
           {/if}
         </button>
       </div>

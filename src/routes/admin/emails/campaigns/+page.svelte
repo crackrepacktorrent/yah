@@ -7,6 +7,7 @@
 	import { listCampaigns, deleteCampaign, updateCampaignStatus } from '../campaigns.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
+	import { campaignStatusVariant } from '$lib/utils/admin';
 
 	let session = $derived(getSession().current);
 
@@ -39,9 +40,7 @@
 
 	async function handleDelete() {
 		try {
-			for (const c of selectedRows) {
-				await deleteCampaign(c.id);
-			}
+			await Promise.all(selectedRows.map((c) => deleteCampaign(c.id)));
 			toast.success(`${selectedCount} campaign${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			listCampaigns().refresh();
@@ -73,18 +72,6 @@
 			listCampaigns().refresh();
 		} catch (err) {
 			toastError(err, 'Failed to update status.');
-		}
-	}
-
-	function statusVariant(status: string): 'default' | 'success' | 'error' | 'warning' | 'info' {
-		switch (status) {
-			case 'draft': return 'default';
-			case 'running': return 'success';
-			case 'paused': return 'warning';
-			case 'finished': return 'info';
-			case 'cancelled': return 'error';
-			case 'scheduled': return 'warning';
-			default: return 'default';
 		}
 	}
 
@@ -174,7 +161,7 @@
 {/snippet}
 
 {#snippet statusCell(campaign: Campaign)}
-	<Badge variant={statusVariant(campaign.status)}>{campaign.status}</Badge>
+	<Badge variant={campaignStatusVariant(campaign.status)}>{campaign.status}</Badge>
 {/snippet}
 
 {#snippet listsCell(lists: { id: number; name: string }[])}

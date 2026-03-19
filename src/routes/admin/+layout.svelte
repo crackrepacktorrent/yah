@@ -1,7 +1,7 @@
 <script lang="ts">
   import "$lib/components/admin/admin.css";
   import { Sidebar, Spinner } from "$lib/components/admin";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { authClient } from "$lib/auth-client";
   import { goto } from "$app/navigation";
   import { Toaster } from "svelte-sonner";
@@ -90,7 +90,7 @@
   }}
 />
 
-{#if $page.url.pathname === "/admin/login" || $page.url.pathname.startsWith("/admin/members/accept")}
+{#if page.url.pathname === "/admin/login" || page.url.pathname.startsWith("/admin/members/accept")}
   {@render children()}
 {:else}
   <div class="admin-layout">

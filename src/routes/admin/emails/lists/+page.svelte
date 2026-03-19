@@ -303,7 +303,7 @@
 		</FormField>
 
 		<div class="dialog-actions">
-			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (createOpen = false)}>Cancel</Button>
 			<Button variant="primary" onclick={handleCreate} disabled={createPending}>
 				{createPending ? 'Creating...' : 'Create'}
 			</Button>
@@ -333,7 +333,7 @@
 		</FormField>
 
 		<div class="dialog-actions">
-			<button type="button" class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (editOpen = false)}>Cancel</Button>
 			<Button variant="primary" onclick={handleEdit} disabled={editPending}>
 				{editPending ? 'Saving...' : 'Save'}
 			</Button>

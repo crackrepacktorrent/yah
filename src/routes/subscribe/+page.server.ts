@@ -38,14 +38,14 @@ export const actions: Actions = {
 		}
 
 		// Validate that submitted list IDs are actually public lists
-		try {
-			const allLists = await getListmonk().listLists();
-			const publicIds = new Set(allLists.filter((l) => l.type === 'public').map((l) => l.id));
-			const validListIds = listIds.filter((id) => publicIds.has(id));
-			if (validListIds.length === 0) {
-				return fail(400, { error: 'Invalid list selection.', email, name });
-			}
+		const allLists = await getListmonk().listLists();
+		const publicIds = new Set(allLists.filter((l) => l.type === 'public').map((l) => l.id));
+		const validListIds = listIds.filter((id) => publicIds.has(id));
+		if (validListIds.length === 0) {
+			return fail(400, { error: 'Invalid list selection.', email, name });
+		}
 
+		try {
 			await getListmonk().createSubscriber({
 				email,
 				name: name || undefined,
@@ -53,16 +53,24 @@ export const actions: Actions = {
 				lists: validListIds,
 			});
 		} catch (err: any) {
-			// Listmonk returns 409 if subscriber already exists — that's fine,
-			// the subscriber just gets added to the new lists
-			if (err?.status !== 409) {
-				const message = err?.message?.includes('409')
-					? undefined // treat as success
-					: 'Something went wrong. Please try again.';
-				if (message) {
-					return fail(500, { error: message, email, name });
+			if (err?.status === 409 || err?.message?.includes('409')) {
+				// Subscriber already exists — add them to the requested lists
+				try {
+					const lm = getListmonk();
+					const escaped = email!.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
+					const res = await lm.listSubscribers({ query: `subscribers.email ILIKE '${escaped}'` });
+					const existing = res.data.results[0];
+					if (existing) {
+						const currentListIds = existing.lists.map((l: { id: number }) => l.id);
+						const newListIds = [...new Set([...currentListIds, ...validListIds])];
+						await lm.updateSubscriber(existing.id, { lists: newListIds });
+					}
+				} catch {
+					// Best effort — if update fails, the subscriber still exists
 				}
+				return { success: true };
 			}
+			return fail(500, { error: 'Something went wrong. Please try again.', email, name });
 		}
 
 		return { success: true };

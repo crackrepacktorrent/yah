@@ -19,9 +19,9 @@
 				invitationId: id,
 			});
 			status = 'success';
-		} catch (err: any) {
+		} catch (err) {
 			status = 'error';
-			errorMessage = err?.message || 'Failed to accept invitation.';
+			errorMessage = err instanceof Error ? err.message : 'Failed to accept invitation.';
 		}
 	}
 </script>

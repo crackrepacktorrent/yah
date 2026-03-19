@@ -4,15 +4,9 @@
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { getDashboard } from './shortlinks.remote';
 	import { getSiteStats } from './analytics.remote';
+	import { formatDuration } from '$lib/utils/admin';
 
 	let [dashboardData, siteStats] = $derived(await Promise.all([getDashboard(), getSiteStats()]));
-
-	function formatDuration(seconds: number) {
-		if (seconds < 60) return `${seconds}s`;
-		const m = Math.floor(seconds / 60);
-		const s = seconds % 60;
-		return `${m}m ${s}s`;
-	}
 
 	type RecentShortUrl = {
 		shortCode: string;

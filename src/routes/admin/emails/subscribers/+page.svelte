@@ -9,7 +9,6 @@
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
-	// Test: Promise.all for parallel fetching
 	let [session, data, listsData] = $derived(await Promise.all([getSession(), listSubscribers(), listLists()]));
 
 	let globalFilter = $state('');
@@ -110,9 +109,7 @@
 
 	async function handleDelete() {
 		try {
-			for (const sub of selectedRows) {
-				await deleteSubscriber(sub.id);
-			}
+			await Promise.all(selectedRows.map((sub) => deleteSubscriber(sub.id)));
 			toast.success(`${selectedCount} subscriber${selectedCount > 1 ? 's' : ''} deleted.`);
 			clearSelection();
 			refreshList();
@@ -123,9 +120,7 @@
 
 	async function handleBlocklist() {
 		try {
-			for (const sub of selectedRows) {
-				await blocklistSubscriber(sub.id);
-			}
+			await Promise.all(selectedRows.map((sub) => blocklistSubscriber(sub.id)));
 			toast.success(`${selectedCount} subscriber${selectedCount > 1 ? 's' : ''} blocklisted.`);
 			clearSelection();
 			refreshList();
@@ -328,7 +323,7 @@
 		</FormField>
 
 		<div class="dialog-actions">
-			<button type="button" class="cancel-btn" onclick={() => (createOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (createOpen = false)}>Cancel</Button>
 			<Button variant="primary" onclick={handleCreate} disabled={createPending}>
 				{createPending ? 'Creating...' : 'Create'}
 			</Button>
@@ -356,7 +351,7 @@
 		</FormField>
 
 		<div class="dialog-actions">
-			<button type="button" class="cancel-btn" onclick={() => (editOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (editOpen = false)}>Cancel</Button>
 			<Button variant="primary" onclick={handleEdit} disabled={editPending}>
 				{editPending ? 'Saving...' : 'Save'}
 			</Button>

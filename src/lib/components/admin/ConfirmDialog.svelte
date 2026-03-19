@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { AlertDialog } from 'bits-ui';
+	import Button from './Button.svelte';
 
 	let {
 		open = $bindable(false),
@@ -54,16 +55,16 @@
 					<div class="confirm-actions">
 						<AlertDialog.Cancel>
 							{#snippet child({ props: cancelProps })}
-								<button {...cancelProps} class="confirm-cancel" disabled={pending}>Cancel</button>
+								<Button variant="ghost" {...cancelProps} disabled={pending}>Cancel</Button>
 							{/snippet}
 						</AlertDialog.Cancel>
-						<button
-							class="confirm-action confirm-action-{variant}"
+						<Button
+							variant={variant === 'danger' ? 'danger' : 'primary'}
 							onclick={handleConfirm}
 							disabled={pending}
 						>
 							{pending ? "..." : confirmLabel}
-						</button>
+						</Button>
 					</div>
 				</div>
 			{/snippet}
@@ -111,47 +112,5 @@
 		display: flex;
 		gap: 0.75rem;
 		justify-content: flex-end;
-	}
-
-	.confirm-cancel {
-		padding: 0.5rem 1rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-md);
-		background: var(--color-surface);
-		color: var(--color-muted);
-		font-size: 0.9rem;
-		cursor: pointer;
-	}
-
-	.confirm-cancel:hover {
-		background: var(--color-hover);
-	}
-
-	.confirm-cancel:disabled {
-		opacity: 0.5;
-		pointer-events: none;
-	}
-
-	.confirm-action {
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: var(--radius-md);
-		font-size: 0.9rem;
-		font-weight: 600;
-		cursor: pointer;
-		color: var(--color-surface);
-	}
-
-	.confirm-action:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
-	}
-
-	.confirm-action-danger {
-		background-color: var(--color-destructive);
-	}
-
-	.confirm-action-primary {
-		background-color: var(--color-primary);
 	}
 </style>

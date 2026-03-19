@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { Card, QRCode, Breadcrumb, Section, Spinner } from "$lib/components/admin";
   import { getShortUrl, getShortUrlVisits } from "../../shortlinks.remote";
 
@@ -8,7 +8,7 @@
   import ShortlinkEditor from "./components/ShortlinkEditor.svelte";
   import ShortlinkVisits from "./components/ShortlinkVisits.svelte";
 
-  let slug = $derived($page.params.slug);
+  let slug = $derived(page.params.slug);
   let shortUrlQuery = $derived(slug ? getShortUrl(slug) : null);
   let visitsQuery = $derived(slug ? getShortUrlVisits(slug) : null);
 </script>

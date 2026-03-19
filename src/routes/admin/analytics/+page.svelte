@@ -1,19 +1,14 @@
 <script lang="ts">
 	import { StatCard, EmptyState, Card, DataTable, Section, ToggleGroup } from '$lib/components/admin';
+	import BarChart from '$lib/components/admin/BarChart.svelte';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { getAnalytics } from '../analytics.remote';
-	import type { UmamiPageview } from '$lib/server/umami';
+	import { formatDuration } from '$lib/utils/admin';
+
 	let period = $state<'24h' | '7d' | '30d'>('7d');
 	let data = $derived(await getAnalytics({ period }));
-	let chartMax = $derived(data ? Math.max(...data.pageviews.map((p: UmamiPageview) => p.y), 1) : 1);
 
-	function formatDuration(seconds: number) {
-		if (seconds < 60) return `${seconds}s`;
-		const m = Math.floor(seconds / 60);
-		const s = seconds % 60;
-		return `${m}m ${s}s`;
-	}
 
 	function formatDate(timestamp: string, p: string) {
 		const d = new Date(timestamp);
@@ -96,17 +91,12 @@
 		<section class="chart-section">
 			<h2>Pageviews</h2>
 			<Card>
-				<div class="chart">
-					<div class="chart-bars">
-						{#each data.pageviews as point}
-							<div class="chart-col">
-								<div class="chart-tooltip">{point.y}</div>
-								<div class="chart-bar" style="height: {(point.y / chartMax) * 100}%"></div>
-								<span class="chart-label">{formatDate(point.x, period)}</span>
-							</div>
-						{/each}
-					</div>
-				</div>
+				<BarChart
+					bars={data.pageviews.map((p) => ({ x: p.x, y: p.y }))}
+					color="var(--brand-olive)"
+					hoverColor="var(--brand-olive-light)"
+					formatLabel={(x) => formatDate(x, period)}
+				/>
 			</Card>
 		</section>
 	{/if}
@@ -133,71 +123,6 @@
 
 	.chart-section {
 		margin-bottom: 1.5rem;
-	}
-
-	.stats-grid {
-		margin-bottom: 1.5rem;
-	}
-
-	.chart-section {
-		margin-bottom: 1.5rem;
-	}
-
-	.chart {
-		padding: 0.5rem 0;
-	}
-
-	.chart-bars {
-		display: flex;
-		align-items: flex-end;
-		gap: 2px;
-		height: 180px;
-	}
-
-	.chart-col {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		height: 100%;
-		justify-content: flex-end;
-		position: relative;
-	}
-
-	.chart-bar {
-		width: 100%;
-		min-height: 2px;
-		background: var(--brand-olive);
-		border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-		transition: height 0.3s ease;
-	}
-
-	.chart-col:hover .chart-bar {
-		background: var(--brand-olive-light);
-	}
-
-	.chart-tooltip {
-		position: absolute;
-		top: -1.5rem;
-		font-size: 0.7rem;
-		color: var(--color-muted);
-		opacity: 0;
-		transition: opacity 0.15s;
-		pointer-events: none;
-	}
-
-	.chart-col:hover .chart-tooltip {
-		opacity: 1;
-	}
-
-	.chart-label {
-		font-size: 0.6rem;
-		color: var(--color-muted);
-		margin-top: 0.35rem;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		max-width: 100%;
 	}
 
 	/* ─── Metrics Grid ─────────────────────────────────────────────────── */

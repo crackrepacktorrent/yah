@@ -14,10 +14,12 @@
 		error?: string;
 		children: Snippet;
 	} = $props();
+
+	const labelId = `ff-${Math.random().toString(36).slice(2, 8)}`;
 </script>
 
-<div class="form-field" class:has-error={!!error}>
-	<span class="form-field-label">
+<div class="form-field" class:has-error={!!error} role="group" aria-labelledby={labelId}>
+	<span class="form-field-label" id={labelId}>
 		{label}{#if required}<span class="required-mark"> *</span>{/if}
 	</span>
 	{@render children()}

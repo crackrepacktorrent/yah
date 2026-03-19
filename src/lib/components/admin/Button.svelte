@@ -22,7 +22,7 @@
 	} = $props();
 </script>
 
-{#if href}
+{#if href && !disabled}
 	<a {href} class="btn btn-{variant} {className}" {...rest}>
 		{@render children()}
 	</a>

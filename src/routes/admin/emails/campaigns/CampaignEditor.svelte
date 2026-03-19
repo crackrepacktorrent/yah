@@ -18,6 +18,7 @@
 	import { listTemplates } from '../../emails.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
+	import { campaignStatusVariant } from '$lib/utils/admin';
 
 	import { untrack } from 'svelte';
 	import type { ListmonkCampaign } from '$lib/server/listmonk';
@@ -180,17 +181,7 @@
 		}
 	}
 
-	function statusVariant(status: string): 'default' | 'success' | 'error' | 'warning' | 'info' {
-		switch (status) {
-			case 'draft': return 'default';
-			case 'running': return 'success';
-			case 'paused': return 'warning';
-			case 'finished': return 'info';
-			case 'cancelled': return 'error';
-			case 'scheduled': return 'warning';
-			default: return 'default';
-		}
-	}
+
 </script>
 
 <Breadcrumb items={[
@@ -202,7 +193,7 @@
 	<div class="campaign-title">
 		<h1>{mode === 'create' ? 'New Campaign' : form.values.name}</h1>
 		{#if campaign}
-			<Badge variant={statusVariant(campaign.status)}>{campaign.status}</Badge>
+			<Badge variant={campaignStatusVariant(campaign.status)}>{campaign.status}</Badge>
 		{/if}
 	</div>
 	<div class="campaign-actions">
@@ -361,7 +352,7 @@
 			<TagInput bind:tags={testEmails} placeholder="Add email..." />
 		</FormField>
 		<div class="dialog-actions">
-			<button type="button" class="cancel-btn" onclick={() => (testOpen = false)}>Cancel</button>
+			<Button variant="ghost" onclick={() => (testOpen = false)}>Cancel</Button>
 			<Button variant="primary" onclick={handleTestSend} disabled={testPending}>
 				{testPending ? 'Sending...' : 'Send Test'}
 			</Button>

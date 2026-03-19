@@ -26,4 +26,6 @@ export { default as Select } from './Select.svelte';
 export { default as DatePicker } from './DatePicker.svelte';
 export { default as TagInput } from './TagInput.svelte';
 export { default as MultiSelect } from './MultiSelect.svelte';
+export { default as BarChart } from './BarChart.svelte';
+export { default as RichTextEditor } from './RichTextEditor.svelte';
 export { createSvelteTable, FlexRender, renderComponent, renderSnippet, multiSelectFilter, createSelectColumn } from './data-table';
