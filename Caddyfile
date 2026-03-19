@@ -61,5 +61,11 @@ mail.y4h.org {
 preview.y4h.org {
 	import security_headers
 	encode gzip
+
+	# Allow Storyblok Visual Editor to embed this site in an iframe
+	# frame-ancestors supersedes X-Frame-Options in modern browsers
+	header -X-Frame-Options
+	header Content-Security-Policy "frame-ancestors https://app.storyblok.com"
+
 	reverse_proxy sveltekit-preview:3001
 }
