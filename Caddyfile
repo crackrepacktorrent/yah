@@ -16,14 +16,12 @@ y4h.org, www.y4h.org {
 	@www host www.y4h.org
 	redir @www https://y4h.org{uri} permanent
 
-	# Legacy shortlink redirects — preserves existing QR codes printed as y4h.org/<slug>
-	redir /signup          https://y4h.link/signup permanent
-	redir /training        https://y4h.link/training permanent
-	redir /campus-training https://y4h.link/campus-training permanent
-	redir /sign-in         https://y4h.link/sign-in permanent
-	redir /join            https://y4h.link/join permanent
-	redir /whatsapp        https://y4h.link/whatsapp permanent
-	redir /donate          https://y4h.link/donate permanent
+	# Legacy shortlinks — proxy to Shlink so y4h.org/<slug> resolves in one hop
+	# Shlink handles the redirect to the destination URL and tracks the click
+	@shortlink path /signup /training /campus-training /sign-in /join /whatsapp /donate
+	handle @shortlink {
+		reverse_proxy shlink:8080
+	}
 
 	# Umami analytics — proxied as first-party to avoid adblockers
 	# Script: /t, collection endpoint: /api/t (configured via Umami env vars)
