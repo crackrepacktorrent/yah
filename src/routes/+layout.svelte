@@ -9,7 +9,7 @@
 
 <svelte:head>
 	{#if umamiUrl && umamiId}
-		<script async defer data-website-id={umamiId} src="{umamiUrl}/t.js"></script>
+		<script async defer data-website-id={umamiId} src="{umamiUrl}/t"></script>
 	{/if}
 </svelte:head>
 

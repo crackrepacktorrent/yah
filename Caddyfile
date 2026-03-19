@@ -26,8 +26,8 @@ y4h.org, www.y4h.org {
 	redir /donate          https://y4h.link/donate permanent
 
 	# Umami analytics — proxied as first-party to avoid adblockers
-	# Script: /t.js, collection endpoint: /api/t (configured via Umami env vars)
-	handle /t.js {
+	# Script: /t, collection endpoint: /api/t (configured via Umami env vars)
+	handle /t {
 		reverse_proxy umami:3000
 	}
 	handle /api/t {
