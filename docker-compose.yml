@@ -1,6 +1,6 @@
 services:
   caddy:
-    image: caddy:2.9-alpine
+    image: caddy:2-alpine
     restart: unless-stopped
     ports:
       - "80:80"
@@ -101,7 +101,7 @@ services:
           memory: 256M
 
   shlink:
-    image: shlinkio/shlink:4.3
+    image: shlinkio/shlink:latest
     restart: unless-stopped
     environment:
       DEFAULT_DOMAIN: y4h.link
@@ -114,6 +114,7 @@ services:
       DB_PASSWORD: ${SHLINK_DB_PASSWORD}
       INITIAL_API_KEY: ${SHLINK_API_KEY}
       GEOLITE_LICENSE_KEY: ${GEOLITE_LICENSE_KEY:-}
+      TRUSTED_PROXIES: caddy
     expose:
       - "8080"
     depends_on:
@@ -137,7 +138,7 @@ services:
           memory: 256M
 
   umami:
-    image: ghcr.io/umami-software/umami:postgresql-v2.15.0
+    image: ghcr.io/umami-software/umami:postgresql-latest
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@postgres:5432/umami
@@ -200,7 +201,7 @@ services:
           memory: 128M
 
   uptime-kuma:
-    image: louislam/uptime-kuma:1
+    image: louislam/uptime-kuma:2
     restart: unless-stopped
     volumes:
       - uptime_kuma_data:/app/data
@@ -218,7 +219,7 @@ services:
           memory: 128M
 
   postgres:
-    image: postgres:16.6-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
