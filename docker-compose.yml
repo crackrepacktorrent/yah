@@ -155,9 +155,12 @@ services:
     image: listmonk/listmonk:v4.1.0
     restart: unless-stopped
     environment:
-      - TZ=America/Los_Angeles
+      TZ: America/Los_Angeles
+      LISTMONK_db__password: ${LISTMONK_DB_PASSWORD}
     expose:
       - "9000"
+    ports:
+      - "127.0.0.1:9000:9000"
     volumes:
       - ./config/listmonk-prod.toml:/listmonk/config.toml:ro
     command: "./listmonk --config /listmonk/config.toml"
@@ -170,6 +173,24 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    volumes:
+      - uptime_kuma_data:/app/data
+    ports:
+      - "127.0.0.1:3001:3001"
     logging:
       driver: json-file
       options:
@@ -216,3 +237,4 @@ volumes:
   caddy_data:
   caddy_config:
   postgres_data:
+  uptime_kuma_data:

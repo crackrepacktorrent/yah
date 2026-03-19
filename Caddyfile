@@ -16,9 +16,14 @@ y4h.org, www.y4h.org {
 	@www host www.y4h.org
 	redir @www https://y4h.org{uri} permanent
 
-	# Legacy shortlink redirects — preserves existing QR codes
-	redir /donate https://y4h.link/donate permanent
-	redir /apply  https://y4h.link/apply permanent
+	# Legacy shortlink redirects — preserves existing QR codes printed as y4h.org/<slug>
+	redir /signup          https://y4h.link/signup permanent
+	redir /training        https://y4h.link/training permanent
+	redir /campus-training https://y4h.link/campus-training permanent
+	redir /sign-in         https://y4h.link/sign-in permanent
+	redir /join            https://y4h.link/join permanent
+	redir /whatsapp        https://y4h.link/whatsapp permanent
+	redir /donate          https://y4h.link/donate permanent
 
 	reverse_proxy sveltekit:3000
 }
@@ -34,6 +39,23 @@ analytics.y4h.org {
 	encode gzip
 	header X-Frame-Options "SAMEORIGIN"
 	reverse_proxy umami:3000
+}
+
+mail.y4h.org {
+	import security_headers
+	encode gzip
+
+	# Only expose Listmonk's public pages (subscription, unsubscribe, archive)
+	# Admin UI is accessed via SSH tunnel: ssh -L 9000:localhost:9000 deploy@vps
+	@public {
+		path /subscription/*
+		path /public/*
+		path /api/public/*
+	}
+	reverse_proxy @public listmonk:9000
+
+	# Block everything else
+	respond 404
 }
 
 preview.y4h.org {
