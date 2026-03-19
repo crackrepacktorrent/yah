@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Badge, Button, Card, FormField, Input, Select, Switch } from '$lib/components/admin';
 	import { useForm } from '$lib/utils/use-form.svelte';
 	import * as v from 'valibot';
@@ -38,24 +39,25 @@
 		return !pwd || pwd.split('').every((c) => c === '•');
 	}
 
-	const isNew = !initial.host;
+	const init = untrack(() => ({ ...initial }));
+	const isNew = !init.host;
 	let passwordChanged = $state(isNew);
-	const uuid = initial.uuid;
+	const uuid = init.uuid;
 
 	const form = useForm({
-		enabled: initial.enabled,
-		host: initial.host,
-		port: initial.port,
-		auth_protocol: initial.auth_protocol,
-		username: initial.username,
-		password: initial.password,
-		hello_hostname: initial.hello_hostname,
-		max_conns: initial.max_conns,
-		max_msg_retries: initial.max_msg_retries,
-		idle_timeout: initial.idle_timeout,
-		wait_timeout: initial.wait_timeout,
-		tls_type: initial.tls_type,
-		tls_skip_verify: initial.tls_skip_verify,
+		enabled: init.enabled,
+		host: init.host,
+		port: init.port,
+		auth_protocol: init.auth_protocol,
+		username: init.username,
+		password: init.password,
+		hello_hostname: init.hello_hostname,
+		max_conns: init.max_conns,
+		max_msg_retries: init.max_msg_retries,
+		idle_timeout: init.idle_timeout,
+		wait_timeout: init.wait_timeout,
+		tls_type: init.tls_type,
+		tls_skip_verify: init.tls_skip_verify,
 	}, schema);
 
 	// Expose a getter so the parent can collect values on save

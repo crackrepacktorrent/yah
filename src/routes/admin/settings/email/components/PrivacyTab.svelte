@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Button, Switch, Section, TagInput } from '$lib/components/admin';
 	import type { ListmonkSettings } from '$lib/server/listmonk';
 
@@ -12,15 +13,16 @@
 		onsave: (partial: Record<string, unknown>) => Promise<void>;
 	} = $props();
 
-	let individualTracking = $state(settings['privacy.individual_tracking']);
-	let unsubscribeHeader = $state(settings['privacy.unsubscribe_header']);
-	let allowBlocklist = $state(settings['privacy.allow_blocklist']);
-	let allowPreferences = $state(settings['privacy.allow_preferences']);
-	let allowExport = $state(settings['privacy.allow_export']);
-	let allowWipe = $state(settings['privacy.allow_wipe']);
-	let recordOptinIp = $state(settings['privacy.record_optin_ip']);
-	let domainBlocklist = $state<string[]>(settings['privacy.domain_blocklist'] ?? []);
-	let domainAllowlist = $state<string[]>(settings['privacy.domain_allowlist'] ?? []);
+	const s = untrack(() => settings);
+	let individualTracking = $state(s['privacy.individual_tracking']);
+	let unsubscribeHeader = $state(s['privacy.unsubscribe_header']);
+	let allowBlocklist = $state(s['privacy.allow_blocklist']);
+	let allowPreferences = $state(s['privacy.allow_preferences']);
+	let allowExport = $state(s['privacy.allow_export']);
+	let allowWipe = $state(s['privacy.allow_wipe']);
+	let recordOptinIp = $state(s['privacy.record_optin_ip']);
+	let domainBlocklist = $state<string[]>(s['privacy.domain_blocklist'] ?? []);
+	let domainAllowlist = $state<string[]>(s['privacy.domain_allowlist'] ?? []);
 
 	let saving = $state(false);
 

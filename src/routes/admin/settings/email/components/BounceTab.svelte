@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Button, FormField, Input, Switch, Select, Section } from '$lib/components/admin';
 	import { toast } from 'svelte-sonner';
 	import type { ListmonkSettings } from '$lib/server/listmonk';
@@ -13,23 +14,24 @@
 		onsave: (partial: Record<string, unknown>) => Promise<void>;
 	} = $props();
 
-	let enabled = $state(settings['bounce.enabled']);
-	let webhooksEnabled = $state(settings['bounce.webhooks_enabled']);
-	let softCount = $state(settings['bounce.actions'].soft.count);
-	let softAction = $state<string>(settings['bounce.actions'].soft.action);
-	let hardCount = $state(settings['bounce.actions'].hard.count);
-	let hardAction = $state<string>(settings['bounce.actions'].hard.action);
-	let complaintCount = $state(settings['bounce.actions'].complaint.count);
-	let complaintAction = $state<string>(settings['bounce.actions'].complaint.action);
+	const s = untrack(() => settings);
+	let enabled = $state(s['bounce.enabled']);
+	let webhooksEnabled = $state(s['bounce.webhooks_enabled']);
+	let softCount = $state(s['bounce.actions'].soft.count);
+	let softAction = $state<string>(s['bounce.actions'].soft.action);
+	let hardCount = $state(s['bounce.actions'].hard.count);
+	let hardAction = $state<string>(s['bounce.actions'].hard.action);
+	let complaintCount = $state(s['bounce.actions'].complaint.count);
+	let complaintAction = $state<string>(s['bounce.actions'].complaint.action);
 
-	let sesEnabled = $state(settings['bounce.ses_enabled']);
-	let sendgridEnabled = $state(settings['bounce.sendgrid_enabled']);
-	let sendgridKey = $state(settings['bounce.sendgrid_key'] ?? '');
-	let postmarkEnabled = $state(settings['bounce.postmark']?.enabled ?? false);
-	let postmarkUsername = $state(settings['bounce.postmark']?.username ?? '');
-	let postmarkPassword = $state(settings['bounce.postmark']?.password ?? '');
-	let forwardemailEnabled = $state(settings['bounce.forwardemail']?.enabled ?? false);
-	let forwardemailKey = $state(settings['bounce.forwardemail']?.key ?? '');
+	let sesEnabled = $state(s['bounce.ses_enabled']);
+	let sendgridEnabled = $state(s['bounce.sendgrid_enabled']);
+	let sendgridKey = $state(s['bounce.sendgrid_key'] ?? '');
+	let postmarkEnabled = $state(s['bounce.postmark']?.enabled ?? false);
+	let postmarkUsername = $state(s['bounce.postmark']?.username ?? '');
+	let postmarkPassword = $state(s['bounce.postmark']?.password ?? '');
+	let forwardemailEnabled = $state(s['bounce.forwardemail']?.enabled ?? false);
+	let forwardemailKey = $state(s['bounce.forwardemail']?.key ?? '');
 
 	const actionOptions = [
 		{ value: 'none', label: 'None' },

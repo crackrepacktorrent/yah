@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Button, FormField, Input, Switch, Section, TagInput } from '$lib/components/admin';
 	import { useForm } from '$lib/utils/use-form.svelte';
 	import * as v from 'valibot';
@@ -28,7 +29,7 @@
 		checkUpdates: v.boolean(),
 	});
 
-	const form = useForm({
+	const form = useForm(untrack(() => ({
 		siteName: settings['app.site_name'],
 		rootUrl: settings['app.root_url'],
 		logoUrl: settings['app.logo_url'] ?? '',
@@ -40,7 +41,7 @@
 		enablePublicArchive: settings['app.enable_public_archive'],
 		enablePublicArchiveRss: settings['app.enable_public_archive_rss_content'],
 		checkUpdates: settings['app.check_updates'],
-	}, schema);
+	})), schema);
 
 	let saving = $state(false);
 

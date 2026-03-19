@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Button, FormField, Input, Switch, Section } from '$lib/components/admin';
 	import { useForm } from '$lib/utils/use-form.svelte';
 	import * as v from 'valibot';
@@ -24,7 +25,7 @@
 		slidingWindowRate: v.pipe(v.number(), v.minValue(1)),
 	});
 
-	const form = useForm({
+	const form = useForm(untrack(() => ({
 		concurrency: settings['app.concurrency'],
 		messageRate: settings['app.message_rate'],
 		batchSize: settings['app.batch_size'],
@@ -32,7 +33,7 @@
 		slidingWindow: settings['app.message_sliding_window'],
 		slidingWindowDuration: settings['app.message_sliding_window_duration'],
 		slidingWindowRate: settings['app.message_sliding_window_rate'],
-	}, schema);
+	})), schema);
 
 	let saving = $state(false);
 

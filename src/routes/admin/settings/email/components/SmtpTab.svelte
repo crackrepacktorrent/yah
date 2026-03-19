@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Button, ConfirmDialog } from '$lib/components/admin';
 	import { toast } from 'svelte-sonner';
 	import type { ListmonkSmtpConfig, ListmonkSettings } from '$lib/server/listmonk';
@@ -15,7 +16,7 @@
 	} = $props();
 
 	// Ensure every SMTP entry has a unique UUID (Listmonk can return empty strings)
-	const smtpWithUuids = settings.smtp.map((s) => ({
+	const smtpWithUuids = untrack(() => settings.smtp).map((s) => ({
 		...structuredClone(s),
 		uuid: s.uuid || crypto.randomUUID(),
 	}));
