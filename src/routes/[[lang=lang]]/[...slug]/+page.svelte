@@ -1,5 +1,6 @@
 <script lang="ts">
   import { StoryblokComponent, useStoryblokBridge } from "@storyblok/svelte";
+  import { shouldEnableBridge } from "$lib/storyblok/helpers";
   import type { PageData } from "./$types";
   import { onMount } from "svelte";
 
@@ -16,7 +17,7 @@
 
   onMount(() => {
     loaded = true;
-    if (data.story) {
+    if (data.story && shouldEnableBridge()) {
       useStoryblokBridge(data.story.id, (newStory) => (bridgeOverride = newStory), {
         preventClicks: true,
         resolveLinks: "story",
