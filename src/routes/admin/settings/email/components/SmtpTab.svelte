@@ -14,9 +14,15 @@
 		onsave: (partial: Record<string, unknown>) => Promise<void>;
 	} = $props();
 
-	let serverUuids = $state<string[]>(settings.smtp.map((s) => s.uuid));
+	// Ensure every SMTP entry has a unique UUID (Listmonk can return empty strings)
+	const smtpWithUuids = settings.smtp.map((s) => ({
+		...structuredClone(s),
+		uuid: s.uuid || crypto.randomUUID(),
+	}));
+
+	let serverUuids = $state<string[]>(smtpWithUuids.map((s) => s.uuid));
 	let initialData = $state<Record<string, ListmonkSmtpConfig>>(
-		Object.fromEntries(settings.smtp.map((s) => [s.uuid, structuredClone(s)])),
+		Object.fromEntries(smtpWithUuids.map((s) => [s.uuid, s])),
 	);
 
 	// Each card binds its getValues function here
