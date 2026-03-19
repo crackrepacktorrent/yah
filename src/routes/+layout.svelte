@@ -9,7 +9,7 @@
 
 <svelte:head>
 	{#if umamiUrl && umamiId}
-		<script async defer data-website-id={umamiId} src="{umamiUrl}/t"></script>
+		<script async defer data-website-id={umamiId} data-exclude-path="/admin/**" src="{umamiUrl}/t"></script>
 	{/if}
 </svelte:head>
 
