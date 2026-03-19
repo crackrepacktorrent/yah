@@ -1,25 +1,11 @@
 <script lang="ts">
-	import { StatCard, EmptyState, Spinner, DataTable, Section } from '$lib/components/admin';
+	import { StatCard, EmptyState, DataTable, Section } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { getDashboard } from './shortlinks.remote';
 	import { getSiteStats } from './analytics.remote';
 
-	let dashboardQuery = $derived(getDashboard());
-	let _prevDashboard: typeof dashboardQuery.current;
-	let dashboardData = $derived.by(() => {
-		const val = dashboardQuery.current;
-		if (val !== undefined) _prevDashboard = val;
-		return val ?? _prevDashboard;
-	});
-
-	let siteStatsQuery = $derived(getSiteStats());
-	let _prevStats: typeof siteStatsQuery.current;
-	let siteStats = $derived.by(() => {
-		const val = siteStatsQuery.current;
-		if (val !== undefined) _prevStats = val;
-		return val ?? _prevStats;
-	});
+	let [dashboardData, siteStats] = $derived(await Promise.all([getDashboard(), getSiteStats()]));
 
 	function formatDuration(seconds: number) {
 		if (seconds < 60) return `${seconds}s`;
@@ -82,9 +68,7 @@
 
 <h1>Dashboard</h1>
 
-{#if !dashboardData && dashboardQuery.loading}
-	<Spinner size={48} centered />
-{:else if dashboardData}
+{#if dashboardData}
 	<div class="stats-grid stats-grid-bottom">
 		<StatCard value={dashboardData.totalShortUrls} label="Short URLs" accent="var(--brand-orange)" />
 		<StatCard value={dashboardData.visits.nonOrphanVisits.total.toLocaleString()} label="Total Clicks" accent="var(--brand-amber)" />
@@ -107,9 +91,7 @@
 	</section>
 {/if}
 
-{#if siteStatsQuery.error}
-	<!-- Analytics unavailable — Umami may not be configured -->
-{:else if siteStats}
+{#if siteStats}
 	<section class="dashboard-section">
 		<h2>Site Analytics</h2>
 		<div class="analytics-periods">

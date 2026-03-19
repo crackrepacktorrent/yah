@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, Spinner, DataTable, DialogShell } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, getFacetedRowModel, getFacetedUniqueValues, type SortingState, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -8,25 +8,17 @@
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
-	let session = $derived(getSession().current);
-	let listsQuery = $derived(listLists());
-	let _prevLists: typeof listsQuery.current;
-	let listsData = $derived.by(() => {
-		const val = listsQuery.current;
-		if (val !== undefined) _prevLists = val;
-		return val ?? _prevLists;
-	});
+	let [session, listsData] = $derived(await Promise.all([getSession(), listLists()]));
 	let globalFilter = $state('');
 	let columnFilters = $state<ColumnFiltersState>([]);
 
 	// Row selection
 	let rowSelection = $state<RowSelectionState>({});
 	let selectedRows = $derived.by(() => {
-		const data = listsQuery.current;
-		if (!data) return [];
+		if (!listsData) return [];
 		return Object.keys(rowSelection)
 			.filter((k) => rowSelection[k])
-			.map((k) => data.lists[Number(k)])
+			.map((k) => listsData.lists[Number(k)])
 			.filter(Boolean);
 	});
 	let selectedCount = $derived(selectedRows.length);
@@ -225,9 +217,7 @@
 
 <h1>Mailing Lists</h1>
 
-{#if !listsData && listsQuery.loading}
-	<Spinner size={48} centered />
-{:else if listsData}
+{#if listsData}
 	{#snippet toolbar()}
 		{#if selectedCount > 0 && can(session, 'list', 'delete')}
 			<span class="toolbar-count">{selectedCount} selected</span>

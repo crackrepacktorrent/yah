@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Input, FormField, Badge, EmptyState, Spinner, ConfirmDialog, DataTable, DialogShell, Select } from '$lib/components/admin';
+	import { Button, Input, FormField, Badge, EmptyState, ConfirmDialog, DataTable, DialogShell, Select } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -15,23 +15,7 @@
 	let confirmRemove = $state<{ open: boolean; memberId: string; name: string }>({ open: false, memberId: '', name: '' });
 	let confirmCancelInvite = $state<{ open: boolean; id: string; email: string }>({ open: false, id: '', email: '' });
 
-	let membersQuery = $derived(listMembers());
-	let _prevMembers: typeof membersQuery.current;
-	let membersData = $derived.by(() => {
-		const val = membersQuery.current;
-		if (val !== undefined) _prevMembers = val;
-		return val ?? _prevMembers;
-	});
-
-	let invitationsQuery = $derived(listInvitations());
-	let _prevInvitations: typeof invitationsQuery.current;
-	let invitationsData = $derived.by(() => {
-		const val = invitationsQuery.current;
-		if (val !== undefined) _prevInvitations = val;
-		return val ?? _prevInvitations;
-	});
-
-	let currentSession = $derived(getSession().current);
+	let [membersData, invitationsData, currentSession] = $derived(await Promise.all([listMembers(), listInvitations(), getSession()]));
 
 	async function handleInvite(e: SubmitEvent) {
 		e.preventDefault();
@@ -214,9 +198,7 @@
 
 <section class="members-section">
 	<h2>Team Members</h2>
-	{#if !membersData && membersQuery.loading}
-		<Spinner size={48} centered />
-	{:else if membersData}
+	{#if membersData}
 		{@const members = membersData.members.members}
 		{#if members.length === 0}
 			<EmptyState message="No members yet." />
@@ -233,9 +215,7 @@
 
 <section class="members-section">
 	<h2>Pending Invitations</h2>
-	{#if !invitationsData && invitationsQuery.loading}
-		<Spinner size={32} centered />
-	{:else if invitationsData}
+	{#if invitationsData}
 		{#if invitationsData.invitations.length === 0}
 			<EmptyState message="No pending invitations." />
 		{:else}

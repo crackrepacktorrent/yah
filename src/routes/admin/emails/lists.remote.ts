@@ -46,18 +46,17 @@ export const sendOptinCampaign = protectedCommand(
 	v.number(),
 	async (listId) => {
 		const lm = getListmonk();
-		// Get unconfirmed subscribers for this list
-		const res = await lm.listSubscribers({
-			per_page: 'all',
-			query: `subscribers.id IN (SELECT subscriber_id FROM subscriber_lists WHERE list_id = ${listId} AND status = 'unconfirmed')`,
-		});
-		const subscribers = res.data.results;
-		if (subscribers.length === 0) {
+		// Fetch all subscribers and filter to those with unconfirmed status on this list.
+		// Avoids raw SQL injection — Listmonk's query param accepts raw SQL which is unsafe.
+		const res = await lm.listSubscribers({ per_page: 'all' });
+		const unconfirmed = res.data.results.filter((sub) =>
+			sub.lists.some((l) => l.id === listId && l.subscription_status === 'unconfirmed'),
+		);
+		if (unconfirmed.length === 0) {
 			throw new Error('No unconfirmed subscribers on this list.');
 		}
-		// Send opt-in confirmation to each
 		let sent = 0;
-		for (const sub of subscribers) {
+		for (const sub of unconfirmed) {
 			try {
 				await lm.sendOptinConfirmation(sub.id);
 				sent++;
@@ -65,6 +64,6 @@ export const sendOptinCampaign = protectedCommand(
 				// Some may fail (e.g. email config), continue with others
 			}
 		}
-		return { sent, total: subscribers.length };
+		return { sent, total: unconfirmed.length };
 	},
 );

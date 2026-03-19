@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { authClient } from '$lib/auth-client';
 	import { Button, Logo } from '$lib/components/admin';
@@ -7,7 +7,7 @@
 	let status = $state<'loading' | 'success' | 'error'>('loading');
 	let errorMessage = $state('');
 
-	const invitationId = $derived($page.params.id!);
+	const invitationId = $derived(page.params.id!);
 
 	$effect(() => {
 		if (invitationId) acceptInvitation(invitationId);

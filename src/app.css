@@ -119,13 +119,13 @@
 
   /* Z-index scale */
   --z-base: 1;
-  --z-dropdown: 50;       /* select, combobox, popover, multiselect dropdowns */
-  --z-sidebar: 50;        /* mobile sidebar overlay */
-  --z-sidebar-backdrop: 45; /* behind mobile sidebar */
-  --z-dialog: 55;         /* dialog overlay + content */
-  --z-dialog-content: 56;
-  --z-confirm: 60;        /* confirm dialog (above regular dialogs) */
-  --z-confirm-content: 61;
+  --z-sidebar-backdrop: 40; /* behind mobile sidebar */
+  --z-sidebar: 45;        /* mobile sidebar overlay */
+  --z-dialog: 50;         /* dialog overlay */
+  --z-dialog-content: 51; /* dialog content */
+  --z-confirm: 55;        /* confirm dialog overlay (above regular dialogs) */
+  --z-confirm-content: 56; /* confirm dialog content */
+  --z-dropdown: 60;       /* select, combobox, popover, multiselect dropdowns (above dialogs) */
   --z-tooltip: 70;        /* tooltips float above everything */
   --z-loading: 10;        /* loading overlay */
 

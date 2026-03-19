@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, Spinner, DataTable, DialogShell } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, FormField, Input, Select, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -9,20 +9,11 @@
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
-	let session = $derived(getSession().current);
+	// Test: Promise.all for parallel fetching
+	let [session, data, listsData] = $derived(await Promise.all([getSession(), listSubscribers(), listLists()]));
 
 	let globalFilter = $state('');
 	let columnFilters = $state<ColumnFiltersState>([]);
-
-	let subscribersQuery = $derived(listSubscribers());
-	let _prev: typeof subscribersQuery.current;
-	let data = $derived.by(() => {
-		const val = subscribersQuery.current;
-		if (val !== undefined) _prev = val;
-		return val ?? _prev;
-	});
-
-	let listsQuery = $derived(listLists());
 
 	// Row selection
 	let rowSelection = $state<RowSelectionState>({});
@@ -234,7 +225,7 @@
 {/snippet}
 
 {#snippet listCheckboxes(selectedIds: number[], onToggle: (id: number) => void)}
-	{@const allLists = listsQuery.current?.lists ?? []}
+	{@const allLists = listsData?.lists ?? []}
 	<div class="list-checkboxes">
 		{#each allLists as list}
 			<label class="list-checkbox">
@@ -255,9 +246,7 @@
 
 <h1>Subscribers</h1>
 
-{#if !data && subscribersQuery.loading}
-	<Spinner size={48} centered />
-{:else if data}
+{#if data}
 	{#snippet toolbar()}
 		{#if selectedCount > 0 && can(session, 'subscriber', 'delete')}
 			<span class="toolbar-count">{selectedCount} selected</span>

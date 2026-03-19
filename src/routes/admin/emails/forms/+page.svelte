@@ -1,19 +1,12 @@
 <script lang="ts">
-	import { Badge, Button, EmptyState, Spinner, Section } from '$lib/components/admin';
+	import { Badge, Button, EmptyState, Section } from '$lib/components/admin';
 	import { toast } from 'svelte-sonner';
 	import { toastError } from '$lib/utils/toast-error';
 	import { listLists, updateList } from '../lists.remote';
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
-	let session = $derived(getSession().current);
-	let listsQuery = $derived(listLists());
-	let _prev: typeof listsQuery.current;
-	let listsData = $derived.by(() => {
-		const val = listsQuery.current;
-		if (val !== undefined) _prev = val;
-		return val ?? _prev;
-	});
+	let [session, listsData] = $derived(await Promise.all([getSession(), listLists()]));
 
 	let publicLists = $derived(listsData?.lists.filter((l) => l.type === 'public') ?? []);
 	let privateLists = $derived(listsData?.lists.filter((l) => l.type === 'private') ?? []);
@@ -62,9 +55,7 @@
 
 <h1>Subscription Forms</h1>
 
-{#if !listsData && listsQuery.loading}
-	<Spinner size={48} centered />
-{:else if listsData}
+{#if listsData}
 	<div class="public-url">
 		<span class="url-label">Public subscription page:</span>
 		<a href="/subscribe" target="_blank" rel="noopener" class="url-link">/subscribe</a>

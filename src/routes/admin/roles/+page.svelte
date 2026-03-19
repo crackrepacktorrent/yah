@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, ConfirmDialog, EmptyState, FormField, Input, Spinner, DataTable, DialogShell } from '$lib/components/admin';
+	import { Button, ConfirmDialog, EmptyState, FormField, Input, DataTable, DialogShell } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -7,13 +7,7 @@
 	import { listRoles, createRole, updateRole, deleteRole } from '../roles.remote';
 	import { statements } from '$lib/permissions';
 
-	let rolesQuery = $derived(listRoles());
-	let _prev: typeof rolesQuery.current;
-	let data = $derived.by(() => {
-		const val = rolesQuery.current;
-		if (val !== undefined) _prev = val;
-		return val ?? _prev;
-	});
+	let data = $derived(await listRoles());
 
 	let globalFilter = $state('');
 	let sorting = $state<SortingState>([]);
@@ -207,9 +201,7 @@
 
 <h1>Roles & Permissions</h1>
 
-{#if !data && rolesQuery.loading}
-	<Spinner size={48} centered />
-{:else if data}
+{#if data}
 	{#snippet toolbar()}
 		{#if selectedCount > 0}
 			<span class="toolbar-count">{selectedCount} selected</span>
@@ -338,10 +330,7 @@
 		font-size: 0.85rem;
 	}
 
-	.date {
-		color: var(--color-muted);
-		white-space: nowrap;
-	}
+
 
 	/* ─── Permission grid (in dialog) ──────────────────────────────────── */
 

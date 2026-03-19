@@ -1,6 +1,6 @@
 <script lang="ts">
   import "$lib/components/admin/admin.css";
-  import { Sidebar } from "$lib/components/admin";
+  import { Sidebar, Spinner } from "$lib/components/admin";
   import { page } from "$app/stores";
   import { authClient } from "$lib/auth-client";
   import { goto } from "$app/navigation";
@@ -103,6 +103,11 @@
     <main>
       <svelte:boundary onerror={(e) => console.error('[admin]', e)}>
         {@render children()}
+        {#snippet pending()}
+          <div class="loading-state">
+            <Spinner size={48} centered />
+          </div>
+        {/snippet}
         {#snippet failed(error: unknown, reset: () => void)}
           <div class="error-boundary">
             <h2>Something went wrong</h2>

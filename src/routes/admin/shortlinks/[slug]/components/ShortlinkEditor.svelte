@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { goto } from "$app/navigation";
   import { Card, Button, FormField, Input, Switch, ConfirmDialog, Section, DatePicker, TagInput } from "$lib/components/admin";
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
@@ -21,7 +22,7 @@
 
   let unlocked = $state(false);
   let dirty = $state(false);
-  let editTags = $state<string[]>([...shortUrl.tags]);
+  let editTags = $state<string[]>([...untrack(() => shortUrl.tags)]);
   let confirmUnlock = $state(false);
   let confirmDelete = $state(false);
   let confirmReset = $state(false);

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, Spinner, DataTable, ConfirmDialog, DialogShell, DatePicker, TagInput } from '$lib/components/admin';
+	import { Button, Input, Badge, Tooltip, FormField, Switch, EmptyState, DataTable, ConfirmDialog, DialogShell, DatePicker, TagInput } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getSortedRowModel, type SortingState, type RowSelectionState } from '@tanstack/table-core';
 	import { today, getLocalTimeZone } from '@internationalized/date';
@@ -9,15 +9,7 @@
 	import { listShortUrls, createShortUrl, deleteShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
 	import { can } from '../can';
-	let session = $derived(getSession().current);
-
-	let shortlinksQuery = $derived(listShortUrls());
-	let _prevShortlinks: typeof shortlinksQuery.current;
-	let shortlinksData = $derived.by(() => {
-		const val = shortlinksQuery.current;
-		if (val !== undefined) _prevShortlinks = val;
-		return val ?? _prevShortlinks;
-	});
+	let [session, shortlinksData] = $derived(await Promise.all([getSession(), listShortUrls()]));
 
 	let globalFilter = $state('');
 	let sorting = $state<SortingState>([{ id: 'dateCreated', desc: true }]);
@@ -29,11 +21,10 @@
 	let confirmDelete = $state(false);
 
 	let selectedRows = $derived.by(() => {
-		const data = shortlinksQuery.current;
-		if (!data) return [];
+		if (!shortlinksData) return [];
 		return Object.keys(rowSelection)
 			.filter((k) => rowSelection[k])
-			.map((k) => data.shortUrls[Number(k)])
+			.map((k) => shortlinksData.shortUrls[Number(k)])
 			.filter(Boolean);
 	});
 	let selectedCount = $derived(selectedRows.length);
@@ -156,9 +147,7 @@
 
 <h1>Shortlinks</h1>
 
-{#if !shortlinksData && shortlinksQuery.loading}
-	<Spinner size={48} centered />
-{:else if shortlinksData}
+{#if shortlinksData}
 	{#snippet toolbar()}
 		{#if selectedCount > 0 && can(session, 'shortlink', 'delete')}
 			<span class="toolbar-count">{selectedCount} selected</span>

@@ -1,17 +1,11 @@
 <script lang="ts">
-	import { StatCard, EmptyState, Spinner, Card, DataTable, Section, ToggleGroup } from '$lib/components/admin';
+	import { StatCard, EmptyState, Card, DataTable, Section, ToggleGroup } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel } from '@tanstack/table-core';
 	import { getAnalytics } from '../analytics.remote';
 	import type { UmamiPageview } from '$lib/server/umami';
 	let period = $state<'24h' | '7d' | '30d'>('7d');
-	let analyticsQuery = $derived(getAnalytics({ period }));
-	let _prev: typeof analyticsQuery.current;
-	let data = $derived.by(() => {
-		const val = analyticsQuery.current;
-		if (val !== undefined) _prev = val;
-		return val ?? _prev;
-	});
+	let data = $derived(await getAnalytics({ period }));
 	let chartMax = $derived(data ? Math.max(...data.pageviews.map((p: UmamiPageview) => p.y), 1) : 1);
 
 	function formatDuration(seconds: number) {
@@ -80,9 +74,6 @@
 <div class="page-header">
 	<h1>Analytics</h1>
 	<div class="header-controls">
-		{#if analyticsQuery.loading && data}
-			<Spinner size={20} />
-		{/if}
 		<ToggleGroup bind:value={period} options={[
 			{ value: '24h', label: '24h' },
 			{ value: '7d', label: '7d' },
@@ -91,11 +82,7 @@
 	</div>
 </div>
 
-{#if !data && analyticsQuery.loading}
-	<Spinner size={48} centered />
-{:else if analyticsQuery.error}
-	<EmptyState message="Analytics unavailable. Umami may not be configured." />
-{:else if data}
+{#if data}
 	<div class="stats-grid">
 		<StatCard value={data.stats.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
 		<StatCard value={data.stats.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />

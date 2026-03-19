@@ -8,14 +8,7 @@
 	import { getSession } from '../session.remote';
 	import { can } from '../can';
 
-	let session = $derived(getSession().current);
-	let templatesQuery = $derived(listTemplates());
-	let _prevTemplates: typeof templatesQuery.current;
-	let templatesData = $derived.by(() => {
-		const val = templatesQuery.current;
-		if (val !== undefined) _prevTemplates = val;
-		return val ?? _prevTemplates;
-	});
+	let [session, templatesData] = $derived(await Promise.all([getSession(), listTemplates()]));
 	let globalFilter = $state('');
 	let columnFilters = $state<ColumnFiltersState>([]);
 
@@ -35,11 +28,10 @@
 	// Row selection
 	let rowSelection = $state<RowSelectionState>({});
 	let selectedRows = $derived.by(() => {
-		const data = templatesQuery.current;
-		if (!data) return [];
+		if (!templatesData) return [];
 		return Object.keys(rowSelection)
 			.filter((k) => rowSelection[k])
-			.map((k) => data.templates[Number(k)])
+			.map((k) => templatesData.templates[Number(k)])
 			.filter(Boolean);
 	});
 	let selectedCount = $derived(selectedRows.length);
@@ -219,9 +211,7 @@
 
 <h1>Email Templates</h1>
 
-{#if !templatesData && templatesQuery.loading}
-	<Spinner size={48} centered />
-{:else if templatesData}
+{#if templatesData}
 	{#snippet toolbar()}
 		{#if selectedCount > 0 && canDelete}
 			<span class="toolbar-count">{selectedCount} selected</span>
@@ -337,9 +327,12 @@
 					</button>
 				</div>
 				{#if showPreview}
-					<div class="preview-frame">
-						{@html previewHtml(editBody)}
-					</div>
+					<iframe
+						class="preview-frame"
+						srcdoc={previewHtml(editBody)}
+						sandbox="allow-same-origin"
+						title="Template preview"
+					></iframe>
 				{:else}
 					<textarea
 						class="body-editor"
@@ -441,18 +434,9 @@
 	.preview-frame {
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
-		padding: 1rem;
-		min-height: 200px;
+		width: 100%;
+		min-height: 300px;
 		background: white;
-		color: #333;
-	}
-
-	.preview-frame :global(mark) {
-		background: var(--brand-amber-lighter);
-		padding: 0.1rem 0.3rem;
-		border-radius: 3px;
-		font-family: monospace;
-		font-size: 0.85em;
 	}
 
 	.actions {

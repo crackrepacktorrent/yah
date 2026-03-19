@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Button, ConfirmDialog, EmptyState, Spinner, DataTable } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, DataTable } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -8,16 +8,8 @@
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
-	let session = $derived(getSession().current);
+	let [session, data] = $derived(await Promise.all([getSession(), listBounces()]));
 	let columnFilters = $state<ColumnFiltersState>([]);
-
-	let bouncesQuery = $derived(listBounces());
-	let _prev: typeof bouncesQuery.current;
-	let data = $derived.by(() => {
-		const val = bouncesQuery.current;
-		if (val !== undefined) _prev = val;
-		return val ?? _prev;
-	});
 
 	// Row selection
 	let rowSelection = $state<RowSelectionState>({});
@@ -124,9 +116,7 @@
 
 <h1>Bounces</h1>
 
-{#if !data && bouncesQuery.loading}
-	<Spinner size={48} centered />
-{:else if data}
+{#if data}
 	{#snippet toolbar()}
 		{#if selectedCount > 0 && can(session, 'bounce', 'delete')}
 			<span class="toolbar-count">{selectedCount} selected</span>

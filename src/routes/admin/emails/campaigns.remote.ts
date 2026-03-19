@@ -107,12 +107,23 @@ export const getCampaignAnalytics = protectedQuery(
 		to: v.string(),
 	}),
 	async ({ campaignIds, type, from, to }) => {
-		const lm = getListmonk();
-		// Fetch analytics for each selected campaign and merge results
-		const results = await Promise.all(
-			campaignIds.map((id) => lm.getAnalytics({ id, type, from, to })),
-		);
-		return results.flat();
+		// TODO: Remove mock data once real campaigns have analytics
+		const fromDate = new Date(from);
+		const toDate = new Date(to);
+		const days = Math.max(1, Math.round((toDate.getTime() - fromDate.getTime()) / 86400000));
+		const mockData = [];
+		for (let i = 0; i < days; i++) {
+			const date = new Date(fromDate);
+			date.setDate(date.getDate() + i);
+			for (const id of campaignIds) {
+				mockData.push({
+					campaign_id: id,
+					count: Math.floor(Math.random() * (type === 'views' ? 50 : 15)) + (type === 'views' ? 5 : 1),
+					timestamp: date.toISOString().split('T')[0] + 'T00:00:00Z',
+				});
+			}
+		}
+		return mockData;
 	},
 );
 

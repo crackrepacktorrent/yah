@@ -1,19 +1,12 @@
 <script lang="ts">
-	import { Button, Card, EmptyState, FormField, MultiSelect, Section, Spinner, DateRangePicker } from '$lib/components/admin';
+	import { Button, Card, EmptyState, FormField, MultiSelect, Section, DateRangePicker } from '$lib/components/admin';
 	import { today, getLocalTimeZone, type DateValue } from '@internationalized/date';
 	import { listCampaigns, getCampaignAnalytics } from '../campaigns.remote';
 
 	// ─── Campaign multi-select ───────────────────────────────────
 	let selectedCampaignIds = $state<string[]>([]);
 
-	let campaignsQuery = $derived(listCampaigns());
-	let _prevCampaigns: typeof campaignsQuery.current;
-	let campaignsData = $derived.by(() => {
-		const val = campaignsQuery.current;
-		if (val !== undefined) _prevCampaigns = val;
-		return val ?? _prevCampaigns;
-	});
-
+	let campaignsData = $derived(await listCampaigns());
 	let campaigns = $derived(campaignsData?.campaigns ?? []);
 	let campaignOptions = $derived(
 		campaigns.map((c) => ({ value: String(c.id), label: `#${c.id}: ${c.name}`, detail: c.status })),
@@ -36,10 +29,8 @@
 	}
 
 	// ─── Analytics queries ───────────────────────────────────────
-	let initialFrom = formatDateValue(nowDate.subtract({ days: 7 }));
-	let initialTo = formatDateValue(nowDate);
-	let appliedFrom = $state(initialFrom);
-	let appliedTo = $state(initialTo);
+	let appliedFrom = $state(formatDateValue(nowDate.subtract({ days: 7 })));
+	let appliedTo = $state(formatDateValue(nowDate));
 	let appliedIds = $state<number[]>([]);
 
 	function applyFilters() {
@@ -58,43 +49,15 @@
 		}
 	});
 
-	let viewsQuery = $derived(
+	// Analytics data — fetched in parallel, re-resolves when appliedIds/dates change
+	let [viewsData, clicksData] = $derived(
 		appliedIds.length > 0
-			? getCampaignAnalytics({
-					campaignIds: appliedIds,
-					type: 'views',
-					from: appliedFrom,
-					to: appliedTo,
-				})
-			: null,
+			? await Promise.all([
+					getCampaignAnalytics({ campaignIds: appliedIds, type: 'views', from: appliedFrom, to: appliedTo }),
+					getCampaignAnalytics({ campaignIds: appliedIds, type: 'clicks', from: appliedFrom, to: appliedTo }),
+				])
+			: [null, null],
 	);
-	let _prevViews: typeof viewsQuery extends null ? undefined : NonNullable<typeof viewsQuery>['current'];
-	let viewsData = $derived.by(() => {
-		if (!viewsQuery) return _prevViews;
-		const val = viewsQuery.current;
-		if (val !== undefined) _prevViews = val;
-		return val ?? _prevViews;
-	});
-
-	let clicksQuery = $derived(
-		appliedIds.length > 0
-			? getCampaignAnalytics({
-					campaignIds: appliedIds,
-					type: 'clicks',
-					from: appliedFrom,
-					to: appliedTo,
-				})
-			: null,
-	);
-	let _prevClicks: typeof clicksQuery extends null ? undefined : NonNullable<typeof clicksQuery>['current'];
-	let clicksData = $derived.by(() => {
-		if (!clicksQuery) return _prevClicks;
-		const val = clicksQuery.current;
-		if (val !== undefined) _prevClicks = val;
-		return val ?? _prevClicks;
-	});
-
-	let loading = $derived((viewsQuery?.loading || clicksQuery?.loading) ?? false);
 
 	// ─── Chart helpers ───────────────────────────────────────────
 	type AnalyticsPoint = { campaign_id: number; count: number; timestamp: string };
@@ -127,9 +90,7 @@
 
 <h1>Email Analytics</h1>
 
-{#if !campaignsData && campaignsQuery.loading}
-	<Spinner size={48} centered />
-{:else}
+{#if campaignsData}
 	<div class="filter-bar">
 		<div class="filter-campaigns">
 			<FormField label="Campaigns">
@@ -152,18 +113,10 @@
 		</div>
 	</div>
 
-	{#if loading && !viewsData && !clicksData}
-		<Spinner size={48} centered />
+	{#if viewsBars.length === 0 && clicksBars.length === 0}
+		<EmptyState message="No analytics data for this date range." />
 	{:else}
-		{#if viewsBars.length === 0 && clicksBars.length === 0}
-			<EmptyState message="No analytics data for this date range." />
-		{:else}
-			{#if loading}
-				<div class="loading-overlay">
-					<Spinner size={32} />
-				</div>
-			{/if}
-
+		<div class="section-stack">
 			<Section title="Views ({viewsTotal.toLocaleString()})">
 				<Card>
 					{#if viewsBars.length === 0}
@@ -203,8 +156,8 @@
 					{/if}
 				</Card>
 			</Section>
+		</div>
 		{/if}
-	{/if}
 {/if}
 
 <style>
@@ -299,15 +252,6 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		max-width: 100%;
-	}
-
-	/* ─── Loading overlay ─────────────────────────────────────── */
-
-	.loading-overlay {
-		position: fixed;
-		top: 1rem;
-		right: 1rem;
-		z-index: var(--z-loading);
 	}
 
 	@media (max-width: 640px) {

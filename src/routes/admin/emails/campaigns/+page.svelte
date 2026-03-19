@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { Badge, Button, ConfirmDialog, EmptyState, Input, Spinner, DataTable } from '$lib/components/admin';
+	import { Badge, Button, ConfirmDialog, EmptyState, Input, DataTable } from '$lib/components/admin';
 	import { createSvelteTable, renderSnippet, multiSelectFilter, createSelectColumn } from '$lib/components/admin';
 	import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, type RowSelectionState, type ColumnFiltersState } from '@tanstack/table-core';
 	import { toast } from 'svelte-sonner';
@@ -15,13 +14,7 @@
 	let globalFilter = $state('');
 	let columnFilters = $state<ColumnFiltersState>([]);
 
-	let campaignsQuery = $derived(listCampaigns());
-	let _prev: typeof campaignsQuery.current;
-	let data = $derived.by(() => {
-		const val = campaignsQuery.current;
-		if (val !== undefined) _prev = val;
-		return val ?? _prev;
-	});
+	let data = $derived(await listCampaigns());
 
 	// ─── Row Selection ────────────────────────────────────────────────
 	let rowSelection = $state<RowSelectionState>({});
@@ -237,9 +230,7 @@
 
 <h1>Campaigns</h1>
 
-{#if !data && campaignsQuery.loading}
-	<Spinner size={48} centered />
-{:else if data}
+{#if data}
 	{#snippet toolbar()}
 		{#if selectedCount > 0 && can(session, 'campaign', 'delete') && allSelectedAreDraft}
 			<span class="toolbar-count">{selectedCount} selected</span>
@@ -281,7 +272,7 @@
 		getFacetedRowModel: getFacetedRowModel(),
 		getFacetedUniqueValues: getFacetedUniqueValues(),
 	})}
-	<DataTable {table} {toolbar} pageSize={20} onrowclick={(row) => goto(`/admin/emails/campaigns/${row.id}`)} />
+	<DataTable {table} {toolbar} pageSize={20} />
 	{#if data.campaigns.length === 0}
 		<EmptyState message="No campaigns found." />
 	{/if}

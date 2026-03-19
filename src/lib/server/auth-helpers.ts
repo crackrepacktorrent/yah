@@ -13,7 +13,12 @@ type Permissions = Record<string, string[]>;
  */
 function surfaceError(err: unknown): never {
 	if (isHttpError(err)) throw err; // already a SvelteKit error
-	if (err instanceof Error) error(400, err.message);
+	if (err instanceof Error) {
+		const status = 'status' in err && typeof (err as any).status === 'number'
+			? (err as any).status
+			: 500;
+		error(status, err.message);
+	}
 	error(500, 'An unexpected error occurred');
 }
 
@@ -104,6 +109,6 @@ export function protectedForm<S extends Parameters<typeof form>[0], F extends Pa
 ): ReturnType<typeof form> {
 	return form(schema as Parameters<typeof form>[0], async (data: Record<string, unknown>, issue: Record<string | number, unknown>) => {
 		await enforcePermissions(permissions);
-		return (fn as Function)(data, issue);
+		try { return await (fn as Function)(data, issue); } catch (err) { surfaceError(err); }
 	}) as ReturnType<typeof form>;
 }

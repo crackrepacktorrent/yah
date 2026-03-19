@@ -19,9 +19,10 @@
 	import { getSession } from '../../session.remote';
 	import { can } from '../../can';
 
+	import { untrack } from 'svelte';
 	import type { ListmonkCampaign } from '$lib/server/listmonk';
 
-	let {
+	const {
 		campaign = null,
 		mode,
 	}: {
@@ -46,21 +47,25 @@
 		tags: v.array(v.string()),
 		sendLater: v.boolean(),
 		sendAt: v.string(),
+		templateId: v.optional(v.number()),
 	});
 
-	const form = useForm({
-		name: campaign?.name ?? '',
-		subject: campaign?.subject ?? '',
-		fromEmail: campaign?.from_email ?? '',
-		listIds: campaign?.lists.map((l) => String(l.id)) ?? [] as string[],
-		body: campaign?.body ?? '',
-		contentType: (campaign?.content_type ?? 'richtext') as 'richtext' | 'html' | 'markdown' | 'plain',
-		tags: campaign ? [...campaign.tags] : [] as string[],
-		sendLater: !!campaign?.send_at,
-		sendAt: campaign?.send_at ? campaign.send_at.slice(0, 16) : '',
-	}, campaignSchema);
+	// Capture campaign prop once — we don't want reactive updates resetting form state.
+	const c = untrack(() => campaign);
+	const initial = {
+		name: c?.name ?? '',
+		subject: c?.subject ?? '',
+		fromEmail: c?.from_email ?? '',
+		listIds: c?.lists.map((l: { id: number }) => String(l.id)) ?? [] as string[],
+		body: c?.body ?? '',
+		contentType: (c?.content_type ?? 'richtext') as 'richtext' | 'html' | 'markdown' | 'plain',
+		tags: c ? [...c.tags] : [] as string[],
+		sendLater: !!c?.send_at,
+		sendAt: c?.send_at ? c.send_at.slice(0, 16) : '',
+		templateId: c?.template_id,
+	};
 
-	let templateId = $state<number | undefined>(campaign?.template_id);
+	const form = useForm(initial, campaignSchema);
 
 	let savePending = $state(false);
 
@@ -82,7 +87,7 @@
 	async function handleSave() {
 		if (!form.validate()) return;
 
-		const { name, subject, fromEmail, listIds, body, contentType, tags, sendLater, sendAt } = form.values;
+		const { name, subject, fromEmail, listIds, body, contentType, templateId, tags, sendLater, sendAt } = form.values;
 		savePending = true;
 		try {
 			if (mode === 'create') {
@@ -279,8 +284,8 @@
 								{@const templates = templatesQuery.current?.templates ?? []}
 								{@const campaignTemplates = templates.filter((t) => t.type === 'campaign' || t.type === 'campaign_visual')}
 								<Select
-									value={templateId?.toString() ?? ''}
-									onValueChange={(v) => { templateId = v ? Number(v) : undefined; }}
+									value={form.values.templateId?.toString() ?? ''}
+									onValueChange={(v) => { form.values.templateId = v ? Number(v) : undefined; }}
 									disabled={!canEdit}
 									options={[
 										{ value: '', label: 'Default' },
