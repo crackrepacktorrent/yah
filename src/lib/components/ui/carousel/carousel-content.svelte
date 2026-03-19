@@ -2,7 +2,7 @@
 	import emblaCarouselSvelte from "embla-carousel-svelte";
 	import type { HTMLAttributes } from "svelte/elements";
 	import { getEmblaContext } from "./context.js";
-	import { cn, type WithElementRef } from "$lib/utils.js";
+	import type { WithElementRef } from "$lib/utils.js";
 
 	let {
 		ref = $bindable(null),
@@ -16,7 +16,7 @@
 
 <div
 	data-slot="carousel-content"
-	class="overflow-hidden"
+	class="carousel-viewport"
 	use:emblaCarouselSvelte={{
 		options: {
 			container: "[data-embla-container]",
@@ -30,14 +30,27 @@
 >
 	<div
 		bind:this={ref}
-		class={cn(
-			"flex",
-			emblaCtx.orientation === "horizontal" ? "-ms-4" : "-mt-4 flex-col",
-			className
-		)}
+		class="carousel-container {emblaCtx.orientation === 'vertical' ? 'vertical' : ''} {className ?? ''}"
 		data-embla-container=""
 		{...restProps}
 	>
 		{@render children?.()}
 	</div>
 </div>
+
+<style>
+	.carousel-viewport {
+		overflow: hidden;
+	}
+
+	.carousel-container {
+		display: flex;
+		margin-inline-start: -1rem;
+	}
+
+	.carousel-container.vertical {
+		margin-inline-start: 0;
+		margin-top: -1rem;
+		flex-direction: column;
+	}
+</style>

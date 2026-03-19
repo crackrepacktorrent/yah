@@ -1,0 +1,242 @@
+/* ─── Admin Heading Overrides ─────────────────────────────────────────────── */
+
+.admin-layout :is(h1, h2, h3) {
+	font-weight: 600;
+	color: var(--color-foreground);
+}
+
+.admin-layout h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+.admin-layout h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+.admin-layout h3 { font-size: 0.95rem; margin-bottom: 0.75rem; }
+
+/* ─── Page Header (h1 + inline controls) ──────────────────────────────────── */
+
+.admin-layout .page-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 1.5rem;
+}
+
+.admin-layout .page-header h1 {
+	margin: 0;
+}
+
+/* ─── Stats Grid ──────────────────────────────────────────────────────────── */
+
+.admin-layout .stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: 1rem;
+}
+
+/* ─── Form Utilities (no .admin-layout prefix — must work inside portals) ─ */
+
+.form-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.form-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+}
+
+.form-row-3 {
+	display: grid;
+	grid-template-columns: auto 1fr 1fr;
+	gap: 1rem;
+}
+
+.form-row-4 {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr 1fr;
+	gap: 1rem;
+}
+
+@media (max-width: 640px) {
+	.form-row,
+	.form-row-3,
+	.form-row-4 {
+		grid-template-columns: 1fr;
+	}
+}
+
+.dialog-actions {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	justify-content: flex-end;
+	margin-top: 1.25rem;
+}
+
+/* ─── Settings Page Utilities ──────────────────────────────────────────────── */
+
+.settings-sections {
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+}
+
+.tab-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.settings-hint {
+	font-size: 0.85rem;
+	color: var(--color-muted);
+	margin: 0;
+}
+
+.textarea {
+	width: 100%;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+	color: var(--color-foreground);
+	font-size: 0.9rem;
+	resize: vertical;
+}
+
+.textarea:focus {
+	outline: none;
+	border-color: var(--color-primary);
+	box-shadow: var(--shadow-focus-ring);
+}
+
+/* ─── Common Table Cell Styles ─────────────────────────────────────────────── */
+
+.cell-date {
+	color: var(--color-muted);
+	white-space: nowrap;
+}
+
+.cell-muted {
+	color: var(--color-muted);
+}
+
+.cell-link {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--color-primary);
+	font-weight: 600;
+	font-size: inherit;
+	padding: 0;
+	text-decoration: none;
+}
+
+.cell-link:hover {
+	text-decoration: underline;
+}
+
+a.cell-link {
+	text-decoration: none;
+}
+
+.cell-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
+.row-checkbox {
+	width: 1rem;
+	height: 1rem;
+	accent-color: var(--color-primary);
+	cursor: pointer;
+}
+
+/* ─── Shared List Checkboxes (form field) ──────────────────────────────────── */
+
+.list-checkboxes {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.list-checkbox {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.9rem;
+	color: var(--color-foreground);
+	cursor: pointer;
+}
+
+.list-checkbox input[type='checkbox'] {
+	accent-color: var(--color-primary);
+}
+
+/* ─── Shared Chip Styles (TagInput, MultiSelect) ──────────────────────────── */
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.2rem;
+	background: var(--color-hover);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-sm);
+	padding: 0.125rem 0.4rem;
+	font-size: 0.8rem;
+	color: var(--color-foreground);
+	white-space: nowrap;
+}
+
+.chip-remove {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	color: var(--color-muted);
+	border-radius: 2px;
+}
+
+.chip-remove:hover {
+	color: var(--color-foreground);
+	background: var(--color-border);
+}
+
+.chip-input-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.3rem;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+	padding: 0.35rem 0.5rem;
+	min-height: 2.375rem;
+	cursor: text;
+}
+
+.chip-input-wrap:focus-within {
+	border-color: var(--color-primary);
+	box-shadow: var(--shadow-focus-ring);
+}
+
+.chip-input-wrap.disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.chip-text-input {
+	flex: 1;
+	min-width: 60px;
+	border: none;
+	background: none;
+	padding: 0.125rem 0;
+	font-size: 0.9rem;
+	color: var(--color-foreground);
+	outline: none;
+}
+
+.chip-text-input::placeholder {
+	color: var(--color-muted);
+}

@@ -4,17 +4,20 @@
   import { onMount } from "svelte";
 
   let { data }: { data: PageData } = $props();
-  let story = $state(data.story);
+  let bridgeOverride = $state<typeof data.story | null>(null);
+  let story = $derived(bridgeOverride ?? data.story);
   let loaded = $state(false);
 
+  // Reset bridge override on navigation (new data.story)
   $effect(() => {
-    story = data.story;
+    void data.story;
+    bridgeOverride = null;
   });
 
   onMount(() => {
     loaded = true;
     if (data.story) {
-      useStoryblokBridge(data.story.id, (newStory) => (story = newStory), {
+      useStoryblokBridge(data.story.id, (newStory) => (bridgeOverride = newStory), {
         preventClicks: true,
         resolveLinks: "url",
       });

@@ -20,6 +20,7 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
+!.env.production.example
 
 # SSL Certificates
 *.pem
@@ -31,3 +32,9 @@ vite.config.ts.timestamp-*
 # Documentation/Guides
 *.md
 !README.md
+
+# Playwright MCP
+.playwright-mcp
+
+# Docker overrides
+docker-compose.override.yml

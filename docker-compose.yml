@@ -1,0 +1,256 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - sveltekit
+      - shlink
+      - umami
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  sveltekit:
+    build:
+      context: .
+      args:
+        VITE_STORYBLOK_TOKEN: ${VITE_STORYBLOK_TOKEN}
+        VITE_SITE_URL: ${VITE_SITE_URL:-https://y4h.org}
+        VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
+        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      PORT: 3000
+      ORIGIN: https://y4h.org
+      PROTOCOL_HEADER: X-Forwarded-Proto
+      HOST_HEADER: X-Forwarded-Host
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:3000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  sveltekit-preview:
+    build:
+      context: .
+      args:
+        VITE_STORYBLOK_TOKEN: ${VITE_STORYBLOK_TOKEN}
+        VITE_STORYBLOK_IS_PREVIEW: "true"
+        VITE_SITE_URL: ${VITE_SITE_URL:-https://y4h.org}
+        VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
+        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
+    restart: unless-stopped
+    env_file: .env.preview
+    environment:
+      PORT: 3001
+      ORIGIN: https://preview.y4h.org
+      PROTOCOL_HEADER: X-Forwarded-Proto
+      HOST_HEADER: X-Forwarded-Host
+    expose:
+      - "3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:3001/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  shlink:
+    image: shlinkio/shlink:latest
+    restart: unless-stopped
+    environment:
+      DEFAULT_DOMAIN: y4h.link
+      IS_HTTPS_ENABLED: "true"
+      DB_DRIVER: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: shlink
+      DB_USER: shlink
+      DB_PASSWORD: ${SHLINK_DB_PASSWORD}
+      INITIAL_API_KEY: ${SHLINK_API_KEY}
+      GEOLITE_LICENSE_KEY: ${GEOLITE_LICENSE_KEY:-}
+      TRUSTED_PROXIES: caddy
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://0.0.0.0:8080/rest/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@postgres:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET}
+      TRACKER_SCRIPT_NAME: t
+      COLLECT_API_ENDPOINT: /api/t
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://0.0.0.0:3000/api/heartbeat || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  listmonk:
+    image: listmonk/listmonk:latest
+    restart: unless-stopped
+    environment:
+      TZ: America/Los_Angeles
+      LISTMONK_db__password: ${LISTMONK_DB_PASSWORD}
+    expose:
+      - "9000"
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - ./config/listmonk-prod.toml:/listmonk/config.toml:ro
+    command: "./listmonk --config /listmonk/config.toml"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:9000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    restart: unless-stopped
+    volumes:
+      - uptime_kuma_data:/app/data
+    ports:
+      - "127.0.0.1:3001:3001"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD}
+      SHLINK_DB_PASSWORD: ${SHLINK_DB_PASSWORD}
+      UMAMI_DB_PASSWORD: ${UMAMI_DB_PASSWORD}
+      YAH_DB_PASSWORD: ${YAH_DB_PASSWORD}
+      LISTMONK_DB_PASSWORD: ${LISTMONK_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-prod-db.sh:/docker-entrypoint-initdb.d/init-prod-db.sh:ro
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  uptime_kuma_data:

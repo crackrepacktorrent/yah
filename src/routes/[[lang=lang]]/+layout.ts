@@ -1,22 +1,22 @@
 import type { LayoutLoad } from "./$types";
 import { storyblokInit, apiPlugin, getStoryblokApi } from "@storyblok/svelte";
 import { getLanguage } from "$lib/lang";
-import { getStoryblokVersion, shouldEnableBridge } from "$lib/utils/storyblok-helpers";
-import type { HeaderButtonBlok, CardBlok, ShortlinkBlok } from "$lib/types/storyblok";
-import Page from "$lib/components/Page.svelte";
-import Separator from "$lib/components/Separator.svelte";
-import Image from "$lib/components/Image.svelte";
-import Video from "$lib/components/Video.svelte";
-import PDF from "$lib/components/PDF.svelte";
-import Carousel from "$lib/components/Carousel.svelte";
-import TextSection from "$lib/components/TextSection.svelte";
-import CardGrid from "$lib/components/CardGrid.svelte";
-import Card from "$lib/components/Card.svelte";
-import Section from "$lib/components/Section.svelte";
-import Grid from "$lib/components/Grid.svelte";
-import Button from "$lib/components/Button.svelte";
-import Footer from "$lib/components/Footer.svelte";
-import Shortlink from "$lib/components/Shortlink.svelte";
+import { getStoryblokVersion, shouldEnableBridge } from "$lib/storyblok/helpers";
+import type { HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
+import Page from "$lib/components/storyblok/Page.svelte";
+import Separator from "$lib/components/storyblok/Separator.svelte";
+import Image from "$lib/components/storyblok/Image.svelte";
+import Video from "$lib/components/storyblok/Video.svelte";
+import PDF from "$lib/components/storyblok/PDF.svelte";
+import Carousel from "$lib/components/storyblok/Carousel.svelte";
+import TextSection from "$lib/components/storyblok/TextSection.svelte";
+import CardGrid from "$lib/components/storyblok/CardGrid.svelte";
+import Card from "$lib/components/storyblok/Card.svelte";
+import Section from "$lib/components/storyblok/Section.svelte";
+import Grid from "$lib/components/storyblok/Grid.svelte";
+import Button from "$lib/components/storyblok/Button.svelte";
+import Footer from "$lib/components/storyblok/Footer.svelte";
+
 
 storyblokInit({
   accessToken: import.meta.env.VITE_STORYBLOK_TOKEN,
@@ -36,7 +36,6 @@ storyblokInit({
     grid: Grid as any,
     button: Button as any,
     footer: Footer as any,
-    shortlink: Shortlink as any,
   },
   apiOptions: {
     https: true,
@@ -79,8 +78,6 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
       buttons: []
     };
     const buttons = header.buttons ?? [];
-    const shortlinks: ShortlinkBlok[] = config?.shortlinks ?? [];
-
     // Helper to strip language prefix from slugs (for field-level translation)
     const stripLangPrefix = (slug: string) => {
       const withoutSlash = slug.startsWith("/") ? slug.slice(1) : slug;
@@ -147,7 +144,6 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
       footer: config?.footer ?? null,
       customCSS: config?.custom_global_css ?? '',
       dropdownCards,
-      shortlinks,
     };
   } catch (error) {
     console.error('Failed to load layout data:', error);
@@ -162,7 +158,6 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
       footer: null,
       customCSS: '',
       dropdownCards: {},
-      shortlinks: [] as ShortlinkBlok[],
     };
   }
 };

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
 	import { getEmblaContext } from "./context.js";
-	import { cn, type WithElementRef } from "$lib/utils.js";
+	import type { WithElementRef } from "$lib/utils.js";
 
 	let {
 		ref = $bindable(null),
@@ -18,13 +18,24 @@
 	data-slot="carousel-item"
 	role="group"
 	aria-roledescription="slide"
-	class={cn(
-		"min-w-0 shrink-0 grow-0 basis-full",
-		emblaCtx.orientation === "horizontal" ? "ps-4" : "pt-4",
-		className
-	)}
+	class="carousel-slide {emblaCtx.orientation === 'vertical' ? 'vertical' : ''} {className ?? ''}"
 	data-embla-slide=""
 	{...restProps}
 >
 	{@render children?.()}
 </div>
+
+<style>
+	.carousel-slide {
+		min-width: 0;
+		flex-shrink: 0;
+		flex-grow: 0;
+		flex-basis: 100%;
+		padding-inline-start: 1rem;
+	}
+
+	.carousel-slide.vertical {
+		padding-inline-start: 0;
+		padding-top: 1rem;
+	}
+</style>
