@@ -10,6 +10,10 @@ Claude's training data may be stale. Before recommending or pinning specific ver
 - Listmonk: **v6.x** (v6 uses token auth `Authorization: token username:token`)
 - Uptime Kuma: **2.x**
 
+## Git and PRs
+
+- Do not add `Co-Authored-By` trailers to commits or PRs.
+
 ## Approach to fixes and changes
 
 - Prefer the cleanest, most maintainable solution over the simplest or quickest fix.
