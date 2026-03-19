@@ -6,13 +6,14 @@ import { Pool } from 'pg';
 import { env } from '$env/dynamic/private';
 import { getListmonk } from '$lib/server/listmonk';
 import { ac, roles } from '$lib/permissions';
+import { getMigrations } from 'better-auth/db/migration';
+
+const pool = new Pool({ connectionString: env.DATABASE_URL! });
 
 export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET!,
 	baseURL: env.BETTER_AUTH_URL!,
-	database: new Pool({
-		connectionString: env.DATABASE_URL!,
-	}),
+	database: pool,
 	emailAndPassword: {
 		enabled: true,
 	},
@@ -40,4 +41,11 @@ export const auth = betterAuth({
 		}),
 		sveltekitCookies(getRequestEvent),
 	],
+});
+
+// Auto-migrate database tables on startup (idempotent — safe to run every time)
+getMigrations(auth.options).then(async ({ runMigrations }) => {
+	await runMigrations();
+}).catch((err) => {
+	console.error('[auth] Migration failed:', err);
 });
