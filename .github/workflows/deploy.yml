@@ -20,6 +20,8 @@ jobs:
             set -e
             cd /home/deploy/yah
             git pull origin main
-            docker compose build sveltekit sveltekit-preview
+            # Build sequentially — parallel builds OOM on 4GB VPS
+            docker compose build sveltekit
+            docker compose build sveltekit-preview
             docker compose up -d
             docker image prune -f
