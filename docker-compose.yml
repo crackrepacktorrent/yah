@@ -167,7 +167,7 @@ services:
           memory: 512M
 
   listmonk:
-    image: listmonk/listmonk:v4.1.0
+    image: listmonk/listmonk:latest
     restart: unless-stopped
     environment:
       TZ: America/Los_Angeles
