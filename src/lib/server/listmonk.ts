@@ -8,13 +8,12 @@ class ListmonkClient {
 
 	constructor() {
 		const url = env.LISTMONK_URL;
-		const username = env.LISTMONK_USERNAME;
-		const password = env.LISTMONK_PASSWORD;
-		if (!url || !username || !password) {
-			throw new Error('LISTMONK_URL, LISTMONK_USERNAME, and LISTMONK_PASSWORD must be set');
+		const token = env.LISTMONK_API_TOKEN;
+		if (!url || !token) {
+			throw new Error('LISTMONK_URL and LISTMONK_API_TOKEN must be set');
 		}
 		this.baseUrl = url.replace(/\/+$/, '');
-		this.authHeader = 'Basic ' + btoa(`${username}:${password}`);
+		this.authHeader = `token ${token}`;
 	}
 
 	private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
