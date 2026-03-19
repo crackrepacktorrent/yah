@@ -19,7 +19,7 @@
     if (data.story) {
       useStoryblokBridge(data.story.id, (newStory) => (bridgeOverride = newStory), {
         preventClicks: true,
-        resolveLinks: "url",
+        resolveLinks: "story",
       });
     }
   });
