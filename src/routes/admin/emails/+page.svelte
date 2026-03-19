@@ -453,20 +453,5 @@
 		align-items: center;
 	}
 
-	.cancel-btn {
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--color-muted);
-		font-size: 0.9rem;
-		padding: 0.4rem 0.75rem;
-		border-radius: var(--radius-sm);
-	}
-
-	.cancel-btn:hover {
-		color: var(--color-foreground);
-		background: var(--color-hover);
-	}
-
 
 </style>

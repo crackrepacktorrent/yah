@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Popover } from 'bits-ui';
+	import Button from './Button.svelte';
+	import Input from './Input.svelte';
 
 	let {
 		value = '',
@@ -17,6 +20,9 @@
 	let blockType = $state('paragraph');
 	let linkActive = $state(false);
 	let ready = $state(false);
+	let linkPopoverOpen = $state(false);
+	let linkUrl = $state('');
+	let linkInputEl = $state<HTMLInputElement | null>(null);
 
 	// Hold references populated in onMount
 	let editorInstance: any;
@@ -155,10 +161,29 @@
 		if (linkActive) {
 			editorInstance.dispatchCommand(TOGGLE_LINK, null);
 		} else {
-			const url = prompt('Enter URL:');
-			if (url) {
-				editorInstance.dispatchCommand(TOGGLE_LINK, url);
-			}
+			linkUrl = '';
+			linkPopoverOpen = true;
+			// Focus the input after it renders
+			requestAnimationFrame(() => linkInputEl?.focus());
+		}
+	}
+
+	function applyLink() {
+		const url = linkUrl.trim();
+		if (url) {
+			editorInstance.dispatchCommand(TOGGLE_LINK, url);
+		}
+		linkPopoverOpen = false;
+		editorRef?.focus();
+	}
+
+	function handleLinkKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			applyLink();
+		} else if (e.key === 'Escape') {
+			linkPopoverOpen = false;
+			editorRef?.focus();
 		}
 	}
 </script>
@@ -199,7 +224,19 @@
 		<div class="rte-toolbar-divider"></div>
 
 		<div class="rte-toolbar-group">
-			<button type="button" class="rte-btn" class:active={linkActive} onclick={() => toggleLink()} title="Link" disabled={!ready}>&#128279;</button>
+			<Popover.Root bind:open={linkPopoverOpen}>
+				<Popover.Trigger>
+					{#snippet child({ props })}
+						<button {...props} type="button" class="rte-btn" class:active={linkActive} onclick={() => toggleLink()} title="Link" disabled={!ready}>&#128279;</button>
+					{/snippet}
+				</Popover.Trigger>
+				<Popover.Content class="rte-link-popover" sideOffset={6} onOpenAutoFocus={(e) => { e.preventDefault(); requestAnimationFrame(() => linkInputEl?.focus()); }}>
+					<form class="rte-link-form" onsubmit={(e: SubmitEvent) => { e.preventDefault(); applyLink(); }}>
+						<Input bind:ref={linkInputEl} type="url" bind:value={linkUrl} placeholder="https://..." onkeydown={handleLinkKeydown} class="rte-link-input" />
+						<Button variant="primary" type="submit">Apply</Button>
+					</form>
+				</Popover.Content>
+			</Popover.Root>
 		</div>
 	</div>
 
@@ -264,6 +301,27 @@
 		color: var(--color-primary);
 		background: color-mix(in srgb, var(--color-primary) 10%, transparent);
 		border-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+	}
+
+	/* ─── Link popover ────────────────────────────────────────── */
+
+	:global(.rte-link-popover) {
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		box-shadow: var(--shadow-lg);
+		padding: 0.5rem;
+		z-index: var(--z-dropdown);
+	}
+
+	:global(.rte-link-form) {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	:global(.rte-link-input) {
+		width: 220px;
 	}
 
 	.rte-editor {

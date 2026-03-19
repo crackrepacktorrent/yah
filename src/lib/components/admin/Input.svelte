@@ -4,11 +4,12 @@
 	let {
 		class: className = '',
 		value = $bindable(''),
+		ref = $bindable<HTMLInputElement | null>(null),
 		...rest
-	}: HTMLInputAttributes & { class?: string; value?: string } = $props();
+	}: HTMLInputAttributes & { class?: string; value?: string; ref?: HTMLInputElement | null } = $props();
 </script>
 
-<input class="admin-input {className}" bind:value {...rest} />
+<input class="admin-input {className}" bind:value bind:this={ref} {...rest} />
 
 <style>
 	.admin-input {
