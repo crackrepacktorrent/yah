@@ -3,6 +3,10 @@
   import Header from "$lib/components/storyblok/Header.svelte";
   import type { LayoutData } from "./$types";
   import { parse } from 'css-tree';
+
+  const umamiUrl = import.meta.env.VITE_UMAMI_URL;
+  const umamiId = import.meta.env.VITE_UMAMI_WEBSITE_ID;
+
   let { data, children }: { data: LayoutData; children: any } = $props();
 
   let validatedCSS = $state('');
@@ -35,6 +39,9 @@
 </script>
 
 <svelte:head>
+  {#if umamiUrl && umamiId}
+    <script async defer data-website-id={umamiId} src="{umamiUrl}/t"></script>
+  {/if}
   {#if validatedCSS}
     {@html `<style>${validatedCSS}</style>`}
   {/if}
