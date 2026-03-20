@@ -41,36 +41,27 @@ storyblokInit({
     https: true,
     cache: {
       clear: "auto",
-      type: "none",
+      type: shouldEnableBridge() ? "none" : "memory",
     },
     region: "eu",
   },
 });
 
-export const load: LayoutLoad = async ({ params, fetch }) => {
+export const load: LayoutLoad = async ({ params }) => {
   const lang = getLanguage(params.lang);
   const storyblokApi = getStoryblokApi();
 
   try {
-    const token = import.meta.env.VITE_STORYBLOK_TOKEN;
     const version = getStoryblokVersion();
 
-    const buildUrl = (slug: string) => {
-      const url = new URL(`https://api.storyblok.com/v2/cdn/stories/${slug}`);
-      url.searchParams.set('version', version);
-      // No resolve_links — link fields already have cached_url from when content was saved
-      url.searchParams.set('language', lang);
-      url.searchParams.set('fallback_lang', 'en');
-      url.searchParams.set('token', token);
-      return url.toString();
-    };
+    const fetchStory = (slug: string) =>
+      storyblokApi.get(`cdn/stories/${slug}`, {
+        version,
+        language: lang,
+        fallback_lang: 'en',
+      });
 
-    const configRes = await fetch(buildUrl('config'));
-    if (!configRes.ok) {
-      throw new Error(`Failed to fetch config: ${configRes.status}`);
-    }
-
-    const dataConfig = await configRes.json();
+    const { data: dataConfig } = await fetchStory('config');
     const config = dataConfig.story?.content;
     const header = config?.header?.[0] ?? {
       _uid: 'header',
@@ -100,33 +91,28 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
     const dropdownCards: Record<string, CardBlok[]> = {};
 
     if (uniquePageSlugs.length > 0) {
-      const pageResponses = await Promise.all(
-        uniquePageSlugs.map((slug: string) => fetch(buildUrl(slug)))
+      const pageResults = await Promise.all(
+        uniquePageSlugs.map((slug: string) =>
+          fetchStory(slug).then(({ data }) => ({ slug, data })).catch(() => ({ slug, data: null }))
+        )
       );
 
-      for (let i = 0; i < uniquePageSlugs.length; i++) {
-        const slug = uniquePageSlugs[i] as string;
-        const response = pageResponses[i];
-
-        if (response.ok) {
-          const pageData = await response.json();
-          const pageContent = pageData.story?.content;
-
-          // Helper function to find card_grid recursively
-          function findCardGrid(blocks: any[]): any {
-            if (!blocks) return null;
-            for (const block of blocks) {
-              if (block.component === 'card_grid') return block;
-              // Search in nested blocks (section, grid, etc.)
-              if (block.blocks && Array.isArray(block.blocks)) {
-                const found = findCardGrid(block.blocks);
-                if (found) return found;
-              }
-            }
-            return null;
+      // Helper function to find card_grid recursively
+      function findCardGrid(blocks: any[]): any {
+        if (!blocks) return null;
+        for (const block of blocks) {
+          if (block.component === 'card_grid') return block;
+          if (block.blocks && Array.isArray(block.blocks)) {
+            const found = findCardGrid(block.blocks);
+            if (found) return found;
           }
+        }
+        return null;
+      }
 
-          const cardGrid = findCardGrid(pageContent?.body || []);
+      for (const { slug, data } of pageResults) {
+        if (data) {
+          const cardGrid = findCardGrid(data.story?.content?.body || []);
           dropdownCards[slug] = cardGrid?.cards ?? [];
         } else {
           dropdownCards[slug] = [];
