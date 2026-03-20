@@ -4,7 +4,12 @@ import { getLanguage } from "$lib/lang";
 import { getStoryblokVersion } from "$lib/storyblok/helpers";
 import type { HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
 
-export const load: LayoutServerLoad = async ({ params }) => {
+export const load: LayoutServerLoad = async ({ params, setHeaders }) => {
+  // 4hr edge cache, 60s browser cache — webhook purges on content publish
+  setHeaders({
+    'Cache-Control': 'public, s-maxage=14400, max-age=60, stale-while-revalidate=60',
+  });
+
   const lang = getLanguage(params.lang);
   const storyblokApi = getStoryblokApi();
 
