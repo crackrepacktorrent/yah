@@ -1,16 +1,27 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { getStoryblokApi } from '@storyblok/svelte';
 import { env } from '$env/dynamic/private';
+import { createHmac } from 'node:crypto';
 
 const CLOUDFLARE_ZONE_ID = env.CLOUDFLARE_ZONE_ID ?? '';
 const CLOUDFLARE_API_TOKEN = env.CLOUDFLARE_API_TOKEN ?? '';
 const STORYBLOK_WEBHOOK_SECRET = env.STORYBLOK_WEBHOOK_SECRET ?? '';
 
 export const POST: RequestHandler = async ({ request }) => {
-	// Verify webhook secret
-	const secret = request.headers.get('webhook-secret');
-	if (!STORYBLOK_WEBHOOK_SECRET || secret !== STORYBLOK_WEBHOOK_SECRET) {
+	// Verify HMAC-SHA1 signature from Storyblok
+	const signature = request.headers.get('webhook-signature');
+	const body = await request.text();
+
+	if (!STORYBLOK_WEBHOOK_SECRET || !signature) {
 		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
+	const expected = createHmac('sha1', STORYBLOK_WEBHOOK_SECRET)
+		.update(body)
+		.digest('hex');
+
+	if (signature !== expected) {
+		return json({ error: 'Invalid signature' }, { status: 401 });
 	}
 
 	// Flush Storyblok SDK memory cache
