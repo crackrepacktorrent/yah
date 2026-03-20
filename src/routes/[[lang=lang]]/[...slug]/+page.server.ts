@@ -1,9 +1,11 @@
-import type { PageLoad } from "./$types";
+import type { PageServerLoad } from "./$types";
 import { error } from "@sveltejs/kit";
+import { getStoryblokApi } from "@storyblok/svelte";
 import { getStoryblokVersion } from "$lib/storyblok/helpers";
 
-export const load: PageLoad = async ({ parent, params }) => {
-  const { storyblokApi, lang } = await parent();
+export const load: PageServerLoad = async ({ parent, params }) => {
+  const { lang } = await parent();
+  const storyblokApi = getStoryblokApi();
   const slug = params.slug && params.slug !== "" ? params.slug : "home";
 
   // Admin routes are handled by their own layouts, not Storyblok
