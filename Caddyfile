@@ -32,24 +32,17 @@ y4h.org, www.y4h.org {
 		reverse_proxy umami:3000
 	}
 
-	# Admin, API, and subscribe routes: never cache
-	handle /admin/* {
-		header Cache-Control "private, no-store"
-		reverse_proxy sveltekit:3000
-	}
-	handle /api/* {
-		header Cache-Control "private, no-store"
-		reverse_proxy sveltekit:3000
-	}
-	handle /subscribe* {
-		header Cache-Control "private, no-store"
-		reverse_proxy sveltekit:3000
-	}
-
-	# Public pages: cache at edge (s-maxage) for 4 hours, browser revalidates after 60s
+	# Cache-Control headers — Cloudflare respects these for edge + browser caching
 	# Storyblok webhook purges both caches on content publish
-	handle {
-		header Cache-Control "public, s-maxage=14400, max-age=60, stale-while-revalidate=60"
+	@nocache {
+		path /admin/* /api/* /subscribe*
+	}
+	@cacheable {
+		not path /admin/* /api/* /subscribe*
+	}
+	route {
+		header @nocache Cache-Control "private, no-store"
+		header @cacheable Cache-Control "public, s-maxage=14400, max-age=60, stale-while-revalidate=60"
 		reverse_proxy sveltekit:3000
 	}
 }
