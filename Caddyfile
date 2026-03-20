@@ -32,30 +32,16 @@ y4h.org, www.y4h.org {
 		reverse_proxy umami:3000
 	}
 
-	# Admin, API, subscribe: never cache
-	handle /admin/* {
-		reverse_proxy sveltekit:3000 {
-			header_down Cache-Control "private, no-store"
-		}
-	}
-	handle /api/* {
-		reverse_proxy sveltekit:3000 {
-			header_down Cache-Control "private, no-store"
-		}
-	}
-	handle /subscribe* {
-		reverse_proxy sveltekit:3000 {
-			header_down Cache-Control "private, no-store"
-		}
-	}
-
-	# Public pages: 4hr edge cache, 60s browser cache
+	# Default: public pages get 4hr edge cache, 60s browser cache
 	# Storyblok webhook purges both caches on content publish
-	handle {
-		reverse_proxy sveltekit:3000 {
-			header_down Cache-Control "public, s-maxage=14400, max-age=60, stale-while-revalidate=60"
-		}
-	}
+	header Cache-Control "public, s-maxage=14400, max-age=60, stale-while-revalidate=60"
+
+	# Override: admin, API, subscribe routes never cache
+	header /admin/* Cache-Control "private, no-store"
+	header /api/* Cache-Control "private, no-store"
+	header /subscribe* Cache-Control "private, no-store"
+
+	reverse_proxy sveltekit:3000
 }
 
 y4h.link {
