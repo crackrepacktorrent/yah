@@ -3,6 +3,7 @@
   import { storyblokEditable } from "@storyblok/svelte";
   import { languages, type Language } from "$lib/lang";
   import type { HeaderBlok, HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
+  import { getLinkUrl, isExternalLink } from "$lib/storyblok/client";
   import { Dialog } from "bits-ui";
   import Dropdown from "./Dropdown.svelte";
   import logo from "$lib/assets/logo.png";
@@ -50,34 +51,18 @@
     }
   }
 
-  function getButtonHref(button: HeaderButtonBlok): string {
-    const url = button.link?.cached_url || button.link?.url || "#";
-    // If external URL, return as-is
-    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("mailto:") || url.startsWith("tel:")) {
-      return url;
-    }
-    // Strip any existing language prefix, then add current language
-    const pathWithoutLang = getPathWithoutLang(url);
-
-    if (lang === "en") {
-      return pathWithoutLang;
-    }
-    return `/${lang}${pathWithoutLang}`;
+  function localizeHref(link?: CardBlok['link'] | HeaderButtonBlok['link']): string {
+    if (isExternalLink(link)) return getLinkUrl(link);
+    const path = getPathWithoutLang(getLinkUrl(link));
+    return lang === "en" ? path : `/${lang}${path}`;
   }
 
   function getCards(button: HeaderButtonBlok): CardBlok[] {
     if (!button.show_dropdown) return [];
-
-    const slug = button.link?.cached_url || button.link?.url || '';
-    if (!slug) return [];
-
-    // Strip language prefix - cards are stored with base slug
-    const baseSlug = getPathWithoutLang(slug).slice(1); // Remove leading /
+    const url = getLinkUrl(button.link);
+    if (url === '#') return [];
+    const baseSlug = getPathWithoutLang(url).slice(1);
     return dropdownCards[baseSlug] || [];
-  }
-
-  function shouldOpenInNewTab(button: HeaderButtonBlok): boolean {
-    return button.link?.target === '_blank';
   }
 </script>
 
@@ -93,37 +78,25 @@
         {#each buttons as button}
           {@const cards = getCards(button)}
           {@const hasDropdown = cards.length > 0}
-          {@const openInNewTab = shouldOpenInNewTab(button)}
+          {@const openInNewTab = button.link?.target === '_blank'}
 
           {#if hasDropdown}
             <!-- Dropdown button -->
             <Dropdown
               align="right"
               items={cards.map(card => {
-                const url = card.link?.cached_url || card.link?.url || "#";
-                // Skip language prefix handling for external links and anchors
-                if (url.startsWith('http') || url === '#') {
-                  return {
-                    label: card.title,
-                    href: url,
-                    target: card.link?.target === '_blank' ? "_blank" : undefined,
-                    rel: card.link?.target === '_blank' ? "noopener noreferrer" : undefined
-                  };
-                }
-                // Strip any existing language prefix, then add current language
-                const pathWithoutLang = getPathWithoutLang(url);
-                const cardOpenInNewTab = card.link?.target === '_blank';
+                const newTab = card.link?.target === '_blank';
                 return {
                   label: card.title,
-                  href: lang === "en" ? pathWithoutLang : `/${lang}${pathWithoutLang}`,
-                  target: cardOpenInNewTab ? "_blank" : undefined,
-                  rel: cardOpenInNewTab ? "noopener noreferrer" : undefined
+                  href: localizeHref(card.link),
+                  target: newTab ? "_blank" : undefined,
+                  rel: newTab ? "noopener noreferrer" : undefined
                 };
               })}
             >
               {#snippet trigger()}
                 <a
-                  href={getButtonHref(button)}
+                  href={localizeHref(button.link)}
                   class="nav-button"
                   style={button.custom_styles ?? ""}
                   target={openInNewTab ? "_blank" : undefined}
@@ -135,9 +108,8 @@
               {/snippet}
             </Dropdown>
           {:else}
-            <!-- Regular button (also clickable when has dropdown) -->
             <a
-              href={getButtonHref(button)}
+              href={localizeHref(button.link)}
               class="nav-button"
               style={button.custom_styles ?? ""}
               target={openInNewTab ? "_blank" : undefined}
@@ -224,14 +196,13 @@
                   {@const cards = getCards(button)}
                   {@const hasDropdown = cards.length > 0}
                   {@const isExpanded = expandedMobileItem === button._uid}
-                  {@const openInNewTab = shouldOpenInNewTab(button)}
+                  {@const openInNewTab = button.link?.target === '_blank'}
 
                   {#if hasDropdown}
-                    <!-- Expandable item with link + chevron -->
                     <div class="mobile-expandable-item">
                       <div class="mobile-expandable-header">
                         <a
-                          href={getButtonHref(button)}
+                          href={localizeHref(button.link)}
                           class="mobile-menu-link-expandable"
                           style={button.custom_styles ?? ""}
                           target={openInNewTab ? "_blank" : undefined}
@@ -251,16 +222,12 @@
                       {#if isExpanded}
                         <div class="mobile-dropdown-content">
                           {#each cards as card}
-                            {@const url = card.link?.cached_url || card.link?.url || "#"}
-                            {@const cardOpenInNewTab = card.link?.target === '_blank'}
-                            {@const href = (url.startsWith('http') || url === '#')
-                              ? url
-                              : (lang === "en" ? getPathWithoutLang(url) : `/${lang}${getPathWithoutLang(url)}`)}
+                            {@const newTab = card.link?.target === '_blank'}
                             <a
-                              href={href}
+                              href={localizeHref(card.link)}
                               class="mobile-dropdown-item"
-                              target={cardOpenInNewTab ? "_blank" : undefined}
-                              rel={cardOpenInNewTab ? "noopener noreferrer" : undefined}
+                              target={newTab ? "_blank" : undefined}
+                              rel={newTab ? "noopener noreferrer" : undefined}
                             >
                               {card.title}
                             </a>
@@ -269,9 +236,8 @@
                       {/if}
                     </div>
                   {:else}
-                    <!-- Regular link -->
                     <a
-                      href={getButtonHref(button)}
+                      href={localizeHref(button.link)}
                       class="mobile-menu-link"
                       style={button.custom_styles ?? ""}
                       target={openInNewTab ? "_blank" : undefined}

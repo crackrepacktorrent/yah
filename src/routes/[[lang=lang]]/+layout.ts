@@ -58,7 +58,7 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
     const buildUrl = (slug: string) => {
       const url = new URL(`https://api.storyblok.com/v2/cdn/stories/${slug}`);
       url.searchParams.set('version', version);
-      url.searchParams.set('resolve_links', 'story');
+      // No resolve_links — link fields already have cached_url from when content was saved
       url.searchParams.set('language', lang);
       url.searchParams.set('fallback_lang', 'en');
       url.searchParams.set('token', token);
@@ -90,11 +90,8 @@ export const load: LayoutLoad = async ({ params, fetch }) => {
     // Find which pages are referenced by buttons for dropdowns
     // Strip language prefixes - field-level translation uses single story with language parameter
     const dropdownPageSlugs = buttons
-      .filter((btn: HeaderButtonBlok) => btn.show_dropdown)
-      .map((btn: HeaderButtonBlok) => {
-        const slug = btn.link?.cached_url || btn.link?.url || '';
-        return stripLangPrefix(slug);
-      })
+      .filter((btn: HeaderButtonBlok) => btn.show_dropdown && btn.link?.linktype === 'story')
+      .map((btn: HeaderButtonBlok) => stripLangPrefix(btn.link?.cached_url || ''))
       .filter((slug: string) => slug);
 
     const uniquePageSlugs = [...new Set(dropdownPageSlugs)] as string[];
