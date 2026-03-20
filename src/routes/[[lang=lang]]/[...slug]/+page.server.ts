@@ -8,9 +8,15 @@ export const load: PageServerLoad = async ({ parent, params }) => {
   const storyblokApi = getStoryblokApi();
   const slug = params.slug && params.slug !== "" ? params.slug : "home";
 
-  // Admin routes are handled by their own layouts, not Storyblok
-  if (slug === 'admin' || slug.startsWith('admin/')) {
-    throw error(404, { message: 'Not a Storyblok page' });
+  // Reject paths that are obviously not Storyblok content pages
+  // Prevents vulnerability scanners from wasting API calls
+  if (
+    slug === 'admin' || slug.startsWith('admin/') ||
+    slug.includes('.') ||
+    slug.startsWith('_') ||
+    slug.startsWith('api/')
+  ) {
+    throw error(404, { message: 'Not found' });
   }
 
   try {
