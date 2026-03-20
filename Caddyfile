@@ -16,20 +16,6 @@ y4h.org, www.y4h.org {
 	@www host www.y4h.org
 	redir @www https://y4h.org{uri} permanent
 
-	# Cache-Control headers — Cloudflare respects these for edge + browser caching
-	# Public pages: cache at edge (s-maxage) for 4 hours, browser revalidates after 60s
-	# Storyblok webhook purges both caches on content publish
-	@public {
-		not path /admin/* /api/* /subscribe* /_app/*
-	}
-	header @public Cache-Control "public, s-maxage=14400, max-age=60, stale-while-revalidate=60"
-
-	# Admin, API, and subscribe routes: never cache
-	@private {
-		path /admin/* /api/* /subscribe*
-	}
-	header @private Cache-Control "private, no-store"
-
 	# Legacy shortlinks — proxy to Shlink so y4h.org/<slug> resolves in one hop
 	# Shlink handles the redirect to the destination URL and tracks the click
 	@shortlink path /signup /training /campus-training /sign-in /join /whatsapp /donate
@@ -46,7 +32,26 @@ y4h.org, www.y4h.org {
 		reverse_proxy umami:3000
 	}
 
-	reverse_proxy sveltekit:3000
+	# Admin, API, and subscribe routes: never cache
+	handle /admin/* {
+		header Cache-Control "private, no-store"
+		reverse_proxy sveltekit:3000
+	}
+	handle /api/* {
+		header Cache-Control "private, no-store"
+		reverse_proxy sveltekit:3000
+	}
+	handle /subscribe* {
+		header Cache-Control "private, no-store"
+		reverse_proxy sveltekit:3000
+	}
+
+	# Public pages: cache at edge (s-maxage) for 4 hours, browser revalidates after 60s
+	# Storyblok webhook purges both caches on content publish
+	handle {
+		header Cache-Control "public, s-maxage=14400, max-age=60, stale-while-revalidate=60"
+		reverse_proxy sveltekit:3000
+	}
 }
 
 y4h.link {
