@@ -29,7 +29,7 @@ services:
     build:
       context: .
       args:
-        VITE_STORYBLOK_TOKEN: ${VITE_STORYBLOK_TOKEN}
+        VITE_STORYBLOK_TOKEN: ${VITE_STORYBLOK_PUBLIC_TOKEN}
         VITE_SITE_URL: ${VITE_SITE_URL:-https://y4h.org}
         VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
         VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
@@ -66,7 +66,7 @@ services:
     build:
       context: .
       args:
-        VITE_STORYBLOK_TOKEN: ${VITE_STORYBLOK_TOKEN}
+        VITE_STORYBLOK_TOKEN: ${VITE_STORYBLOK_PREVIEW_TOKEN}
         VITE_STORYBLOK_IS_PREVIEW: "true"
         VITE_SITE_URL: ${VITE_SITE_URL:-https://y4h.org}
         VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
