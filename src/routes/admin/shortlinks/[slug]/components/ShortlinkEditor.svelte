@@ -82,6 +82,7 @@
             await submit();
             unlocked = false;
             toast.success("Shortlink updated.");
+            getShortUrl(slug).refresh();
           } catch (err) {
             const issues = editShortUrl.fields?.longUrl?.issues() ?? [];
             if (issues.length > 0) {
