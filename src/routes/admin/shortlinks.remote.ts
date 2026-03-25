@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import { getShlink, ShlinkApiError } from '$lib/server/shlink';
-import { error, invalid } from '@sveltejs/kit';
-import { protectedQuery, protectedCommand, protectedForm } from '$lib/server/auth-helpers';
+import { error } from '@sveltejs/kit';
+import { protectedQuery, protectedCommand } from '$lib/server/auth-helpers';
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
@@ -96,42 +96,29 @@ export const createShortUrl = protectedCommand(
 	},
 );
 
-export const editShortUrl = protectedForm(
+export const editShortUrl = protectedCommand(
 	{ shortlink: ['edit'] },
 	v.object({
 		shortCode: v.string(),
-		longUrl: v.optional(v.string(), ''),
+		longUrl: v.pipe(v.string(), v.nonEmpty('Destination URL is required'), v.url()),
 		title: v.optional(v.string(), ''),
-		tags: v.optional(v.string(), ''),
-		maxVisits: v.optional(v.pipe(v.string(), v.transform((s) => s.trim())), ''),
+		tags: v.array(v.string()),
+		maxVisits: v.nullable(v.number()),
 		validUntil: v.optional(v.string(), ''),
-		crawlable: v.optional(v.boolean(), false),
-		forwardQuery: v.optional(v.boolean(), false),
+		crawlable: v.boolean(),
+		forwardQuery: v.boolean(),
 	}),
-	async (data, issue) => {
-		const tags = data.tags
-			.split(',')
-			.map((t: string) => t.trim())
-			.filter(Boolean);
-
-		try {
-			const shlink = getShlink();
-			await shlink.editShortUrl(data.shortCode, {
-				longUrl: data.longUrl || undefined,
-				title: data.title || null,
-				tags,
-				crawlable: data.crawlable,
-				forwardQuery: data.forwardQuery,
-				maxVisits: data.maxVisits ? (parseInt(data.maxVisits, 10) || null) : null,
-				validUntil: data.validUntil || null,
-			});
-			return { success: true };
-		} catch (err) {
-			if (err instanceof ShlinkApiError) {
-				invalid(issue.longUrl(err.detail));
-			}
-			throw err;
-		}
+	async (data) => {
+		const shlink = getShlink();
+		await shlink.editShortUrl(data.shortCode, {
+			longUrl: data.longUrl,
+			title: data.title || null,
+			tags: data.tags,
+			crawlable: data.crawlable,
+			forwardQuery: data.forwardQuery,
+			maxVisits: data.maxVisits,
+			validUntil: data.validUntil || null,
+		});
 	},
 );
 

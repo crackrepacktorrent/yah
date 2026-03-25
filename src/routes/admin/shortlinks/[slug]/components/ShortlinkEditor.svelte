@@ -6,8 +6,11 @@
   import { editShortUrl, deleteShortUrl, resetShortUrlVisits, getShortUrl, getShortUrlVisits } from "../../../shortlinks.remote";
   import { getSession } from "../../../session.remote";
   import { can } from "../../../can";
+  import { useForm } from "$lib/utils/use-form.svelte";
+  import { toastError } from "$lib/utils/toast-error";
   import { today, getLocalTimeZone } from '@internationalized/date';
   import { toast } from "svelte-sonner";
+  import * as v from "valibot";
   import type { ShortUrl } from '$lib/server/shlink';
 
   let session = $derived(getSession().current);
@@ -22,11 +25,54 @@
   } = $props();
 
   let unlocked = $state(false);
-  let editTags = $state<string[]>([...untrack(() => shortUrl.tags)]);
+  let saving = $state(false);
   let confirmUnlock = $state(false);
   let confirmDelete = $state(false);
   let confirmReset = $state(false);
 
+  const schema = v.object({
+    longUrl: v.pipe(v.string(), v.nonEmpty('Destination URL is required'), v.url('Must be a valid URL')),
+    title: v.string(),
+    tags: v.array(v.string()),
+    maxVisits: v.string(),
+    validUntil: v.string(),
+    crawlable: v.boolean(),
+    forwardQuery: v.boolean(),
+  });
+
+  const form = useForm(untrack(() => ({
+    longUrl: shortUrl.longUrl,
+    title: shortUrl.title ?? '',
+    tags: [...shortUrl.tags],
+    maxVisits: shortUrl.meta.maxVisits?.toString() ?? '',
+    validUntil: shortUrl.meta.validUntil?.slice(0, 10) ?? '',
+    crawlable: shortUrl.crawlable,
+    forwardQuery: shortUrl.forwardQuery,
+  })), schema);
+
+  async function handleSave() {
+    if (!form.validate()) return;
+    saving = true;
+    try {
+      await editShortUrl({
+        shortCode: shortUrl.shortCode,
+        longUrl: form.values.longUrl,
+        title: form.values.title,
+        tags: form.values.tags,
+        maxVisits: form.values.maxVisits ? (parseInt(form.values.maxVisits, 10) || null) : null,
+        validUntil: form.values.validUntil,
+        crawlable: form.values.crawlable,
+        forwardQuery: form.values.forwardQuery,
+      });
+      unlocked = false;
+      toast.success("Shortlink updated.");
+      getShortUrl(slug).refresh();
+    } catch (err) {
+      toastError(err, "Failed to save changes.");
+    } finally {
+      saving = false;
+    }
+  }
 
   async function handleReset() {
     try {
@@ -76,68 +122,47 @@
         onconfirm={() => { unlocked = true; }}
       />
 
-      <form
-        {...editShortUrl.enhance(async ({ submit }) => {
-          try {
-            await submit();
-            unlocked = false;
-            toast.success("Shortlink updated.");
-            getShortUrl(slug).refresh();
-          } catch (err) {
-            const issues = editShortUrl.fields?.longUrl?.issues() ?? [];
-            if (issues.length > 0) {
-              toast.error(issues[0]?.message ?? "Validation error");
-            } else {
-              toast.error("Failed to save changes.");
-            }
-          }
-        })}
-        class="edit-form"
-      >
-        <input {...editShortUrl.fields.shortCode.as("text")} type="hidden" value={shortUrl.shortCode} />
-
+      <div class="edit-form">
         <fieldset disabled={!unlocked} class="edit-fieldset">
-          <FormField label="Destination URL">
-            <Input {...editShortUrl.fields.longUrl.as("url")} value={shortUrl.longUrl} required />
+          <FormField label="Destination URL" error={form.fieldError('longUrl')}>
+            <Input bind:value={form.values.longUrl} onblur={() => form.touch('longUrl')} required />
           </FormField>
 
           <FormField label="Title">
-            <Input {...editShortUrl.fields.title.as("text")} value={shortUrl.title ?? ""} />
+            <Input bind:value={form.values.title} />
           </FormField>
 
           <FormField label="Tags" hint="Press Enter to add">
-            <input type="hidden" name="tags" value={editTags.join(", ")} />
-            <TagInput bind:tags={editTags} placeholder="Add a tag..." disabled={!unlocked} />
+            <TagInput bind:tags={form.values.tags} placeholder="Add a tag..." disabled={!unlocked} />
           </FormField>
 
           <div class="form-row">
             <FormField label="Max Visits">
-              <Input {...editShortUrl.fields.maxVisits.as("text")} value={shortUrl.meta.maxVisits?.toString() ?? ""} placeholder="Unlimited" />
+              <Input bind:value={form.values.maxVisits} placeholder="Unlimited" />
             </FormField>
 
             <FormField label="Expires">
               <DatePicker
-                value={shortUrl.meta.validUntil?.slice(0, 10) ?? ''}
-                name="validUntil"
+                bind:value={form.values.validUntil}
                 minValue={today(getLocalTimeZone())}
               />
             </FormField>
           </div>
 
           <div class="switches">
-            <Switch label="Forward query parameters" checked={shortUrl.forwardQuery} name="forwardQuery" disabled={!unlocked} />
-            <Switch label="Allow search engine crawling" checked={shortUrl.crawlable} name="crawlable" disabled={!unlocked} />
+            <Switch label="Forward query parameters" bind:checked={form.values.forwardQuery} disabled={!unlocked} />
+            <Switch label="Allow search engine crawling" bind:checked={form.values.crawlable} disabled={!unlocked} />
           </div>
         </fieldset>
 
         <div class="edit-actions">
-          <Button variant="primary" type="submit" disabled={!unlocked || !!editShortUrl.pending}>
-            {editShortUrl.pending ? "Saving..." : "Save Changes"}
+          <Button variant="primary" onclick={handleSave} disabled={!unlocked || saving}>
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
           <Button variant="danger-outline" type="button" disabled={!unlocked} onclick={() => (confirmReset = true)}>Reset Visits</Button>
           <Button variant="danger-outline" type="button" disabled={!unlocked} onclick={() => (confirmDelete = true)}>Delete</Button>
         </div>
-      </form>
+      </div>
     </div>
   </Card>
 
