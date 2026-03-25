@@ -6,6 +6,8 @@
 	import { today, getLocalTimeZone } from '@internationalized/date';
 	import { toast } from 'svelte-sonner';
 	import { toastError } from '$lib/utils/toast-error';
+	import { useForm } from '$lib/utils/use-form.svelte';
+	import * as v from 'valibot';
 	import { listShortUrls, createShortUrl, deleteShortUrl } from '../shortlinks.remote';
 	import { getSession } from '../session.remote';
 	import { can } from '../can';
@@ -17,8 +19,29 @@
 
 	let createOpen = $state(false);
 	let createPending = $state(false);
-	let createTags = $state<string[]>([]);
 	let confirmDelete = $state(false);
+
+	const createSchema = v.object({
+		longUrl: v.pipe(v.string(), v.nonEmpty('Destination URL is required'), v.url('Must be a valid URL')),
+		customSlug: v.string(),
+		title: v.string(),
+		tags: v.array(v.string()),
+		maxVisits: v.string(),
+		validUntil: v.string(),
+		crawlable: v.boolean(),
+		forwardQuery: v.boolean(),
+	});
+
+	const createForm = useForm({
+		longUrl: '',
+		customSlug: '',
+		title: '',
+		tags: [] as string[],
+		maxVisits: '',
+		validUntil: '',
+		crawlable: false,
+		forwardQuery: true,
+	}, createSchema);
 
 	let selectedRows = $derived.by(() => {
 		if (!shortlinksData) return [];
@@ -44,24 +67,22 @@
 		}
 	}
 
-	async function handleCreate(e: SubmitEvent) {
-		e.preventDefault();
-		const form = e.target as HTMLFormElement;
-		const fd = new FormData(form);
-
+	async function handleCreate() {
+		if (!createForm.validate()) return;
 		createPending = true;
 		try {
 			const result = await createShortUrl({
-				longUrl: fd.get('longUrl') as string,
-				customSlug: fd.get('customSlug') as string,
-				title: fd.get('title') as string,
-				tags: createTags.join(', '),
-				maxVisits: fd.get('maxVisits') as string,
-				validUntil: fd.get('validUntil') as string,
-				crawlable: fd.has('crawlable'),
-				forwardQuery: fd.has('forwardQuery'),
+				longUrl: createForm.values.longUrl,
+				customSlug: createForm.values.customSlug,
+				title: createForm.values.title,
+				tags: createForm.values.tags,
+				maxVisits: createForm.values.maxVisits ? (parseInt(createForm.values.maxVisits, 10) || null) : null,
+				validUntil: createForm.values.validUntil,
+				crawlable: createForm.values.crawlable,
+				forwardQuery: createForm.values.forwardQuery,
 			});
 			createOpen = false;
+			createForm.reset();
 			toast.success('Shortlink created.');
 			goto(`/admin/shortlinks/${result.shortCode}`);
 		} catch (err) {
@@ -158,7 +179,7 @@
 				<Input type="text" placeholder="Filter shortlinks..." bind:value={globalFilter} />
 			</div>
 			{#if can(session, 'shortlink', 'create')}
-				<Button variant="primary" onclick={() => { createTags = []; createOpen = true; }}>+ New Shortlink</Button>
+				<Button variant="primary" onclick={() => { createForm.reset(); createOpen = true; }}>+ New Shortlink</Button>
 			{/if}
 		{/if}
 	{/snippet}
@@ -199,45 +220,45 @@
 {#if can(session, 'shortlink', 'create')}
 <!-- Create Shortlink Dialog -->
 <DialogShell bind:open={createOpen} title="New Shortlink" maxWidth="520px">
-	<form class="form-fields" onsubmit={handleCreate}>
-		<FormField label="Destination URL" required>
-			<Input name="longUrl" type="url" required placeholder="https://example.com/long/path" />
+	<div class="form-fields">
+		<FormField label="Destination URL" required error={createForm.fieldError('longUrl')}>
+			<Input bind:value={createForm.values.longUrl} onblur={() => createForm.touch('longUrl')} type="url" placeholder="https://example.com/long/path" />
 		</FormField>
 
 		<FormField label="Custom Slug" hint="(optional — leave blank for auto-generated)">
-			<Input name="customSlug" placeholder="my-link" />
+			<Input bind:value={createForm.values.customSlug} placeholder="my-link" />
 		</FormField>
 
 		<FormField label="Title" hint="(optional)">
-			<Input name="title" placeholder="Descriptive title" />
+			<Input bind:value={createForm.values.title} placeholder="Descriptive title" />
 		</FormField>
 
 		<FormField label="Tags" hint="Press Enter to add">
-			<TagInput bind:tags={createTags} placeholder="Add a tag..." />
+			<TagInput bind:tags={createForm.values.tags} placeholder="Add a tag..." />
 		</FormField>
 
 		<div class="form-row">
 			<FormField label="Max Visits" hint="(optional)">
-				<Input name="maxVisits" placeholder="Unlimited" />
+				<Input bind:value={createForm.values.maxVisits} placeholder="Unlimited" />
 			</FormField>
 
 			<FormField label="Expires" hint="(optional)">
-				<DatePicker name="validUntil" minValue={today(getLocalTimeZone())} />
+				<DatePicker bind:value={createForm.values.validUntil} minValue={today(getLocalTimeZone())} />
 			</FormField>
 		</div>
 
 		<div class="switches">
-			<Switch label="Forward query parameters" checked={true} name="forwardQuery" />
-			<Switch label="Allow search engine crawling" checked={false} name="crawlable" />
+			<Switch label="Forward query parameters" bind:checked={createForm.values.forwardQuery} />
+			<Switch label="Allow search engine crawling" bind:checked={createForm.values.crawlable} />
 		</div>
 
 		<div class="dialog-actions">
 			<Button variant="ghost" onclick={() => (createOpen = false)}>Cancel</Button>
-			<Button variant="primary" type="submit" disabled={createPending}>
+			<Button variant="primary" onclick={handleCreate} disabled={createPending}>
 				{createPending ? 'Creating...' : 'Create Shortlink'}
 			</Button>
 		</div>
-	</form>
+	</div>
 </DialogShell>
 {/if}
 

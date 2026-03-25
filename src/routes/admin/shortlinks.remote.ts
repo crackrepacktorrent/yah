@@ -61,7 +61,7 @@ export const getShortUrlVisits = protectedQuery(
 	},
 );
 
-// ─── Forms ────────────────────────────────────────────────────────────────────
+// ─── Commands ─────────────────────────────────────────────────────────────────
 
 export const createShortUrl = protectedCommand(
 	{ shortlink: ['create'] },
@@ -69,27 +69,22 @@ export const createShortUrl = protectedCommand(
 		longUrl: v.pipe(v.string(), v.nonEmpty('Destination URL is required'), v.url()),
 		customSlug: v.optional(v.string(), ''),
 		title: v.optional(v.string(), ''),
-		tags: v.optional(v.string(), ''),
-		maxVisits: v.optional(v.pipe(v.string(), v.transform((s) => s.trim())), ''),
+		tags: v.array(v.string()),
+		maxVisits: v.nullable(v.number()),
 		validUntil: v.optional(v.string(), ''),
-		crawlable: v.optional(v.boolean(), false),
-		forwardQuery: v.optional(v.boolean(), true),
+		crawlable: v.boolean(),
+		forwardQuery: v.boolean(),
 	}),
 	async (data) => {
-		const tags = data.tags
-			.split(',')
-			.map((t: string) => t.trim())
-			.filter(Boolean);
-
 		const shlink = getShlink();
 		const result = await shlink.createShortUrl({
 			longUrl: data.longUrl,
 			customSlug: data.customSlug || undefined,
 			title: data.title || undefined,
-			tags: tags.length > 0 ? tags : undefined,
+			tags: data.tags.length > 0 ? data.tags : undefined,
 			crawlable: data.crawlable,
 			forwardQuery: data.forwardQuery,
-			maxVisits: data.maxVisits ? (parseInt(data.maxVisits, 10) || undefined) : undefined,
+			maxVisits: data.maxVisits,
 			validUntil: data.validUntil || undefined,
 		});
 		return { shortCode: result.shortCode };
