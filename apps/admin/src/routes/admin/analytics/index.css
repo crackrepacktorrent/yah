@@ -1,0 +1,31 @@
+.chart-section {
+	margin-bottom: 1.5rem;
+}
+
+.metrics-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+	.metrics-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.metric-path {
+	display: block;
+	max-width: 250px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-family: monospace;
+	font-size: 0.8rem;
+}
+
+.metric-num {
+	font-weight: 600;
+	color: var(--brand-amber-dark);
+	white-space: nowrap;
+}

@@ -1,0 +1,212 @@
+@import "@fontsource-variable/rubik";
+
+:root {
+  /* ── Border Radius ────────────────────────────────────────────────────── */
+  --radius: 0.625rem;
+  --radius-xs: calc(var(--radius) - 6px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* ── Brand Colors (OKLCH) ─────────────────────────────────────────────── */
+
+  /* Orange (H: 46.5) - Primary */
+  --brand-orange: oklch(0.708 0.198 46.5);
+  --brand-orange-dark: oklch(0.552 0.188 46.5);
+  --brand-orange-light: oklch(0.839 0.128 46.5);
+  --brand-orange-lighter: oklch(0.912 0.079 46.5);
+  --brand-orange-muted: oklch(0.708 0.198 46.5 / 0.15);
+
+  /* Amber (H: 84.1) - Warning */
+  --brand-amber: oklch(0.84 0.172 84.1);
+  --brand-amber-dark: oklch(0.655 0.164 84.1);
+  --brand-amber-light: oklch(0.912 0.112 84.1);
+  --brand-amber-lighter: oklch(0.952 0.069 84.1);
+  --brand-amber-muted: oklch(0.84 0.172 84.1 / 0.15);
+
+  /* Olive (H: 116.5) - Success */
+  --brand-olive: oklch(0.54 0.124 116.5);
+  --brand-olive-dark: oklch(0.422 0.118 116.5);
+  --brand-olive-light: oklch(0.747 0.081 116.5);
+  --brand-olive-lighter: oklch(0.862 0.05 116.5);
+  --brand-olive-muted: oklch(0.54 0.124 116.5 / 0.15);
+
+  /* Magenta (H: 351.4) - Destructive */
+  --brand-magenta: oklch(0.427 0.177 351.4);
+  --brand-magenta-dark: oklch(0.333 0.169 351.4);
+  --brand-magenta-light: oklch(0.685 0.115 351.4);
+  --brand-magenta-lighter: oklch(0.828 0.071 351.4);
+  --brand-magenta-muted: oklch(0.427 0.177 351.4 / 0.15);
+
+  /* Brown (H: 44.2) - Neutral/Text */
+  --brand-brown: oklch(0.262 0.044 44.2);
+  --brand-brown-dark: oklch(0.204 0.042 44.2);
+  --brand-brown-hover: oklch(0.302 0.042 44.2);
+  --brand-brown-active: oklch(0.332 0.04 44.2);
+  --brand-brown-light: oklch(0.594 0.029 44.2);
+  --brand-brown-lighter: oklch(0.778 0.018 44.2);
+  --brand-brown-muted: oklch(0.262 0.044 44.2 / 0.5);
+
+  /* Warm Neutrals (H: 67.7) - Backgrounds */
+  --brand-white: oklch(1 0 0);
+  --brand-cream: oklch(0.98 0.014 67.7);
+  --brand-warm-50: oklch(0.99 0.007 67.7);
+  --brand-warm-100: oklch(0.98 0.014 67.7);
+  --brand-warm-200: oklch(0.948 0.016 67.7);
+  --brand-warm-300: oklch(0.879 0.018 67.7);
+  --brand-warm-400: oklch(0.743 0.027 67.7);
+  --brand-warm-500: oklch(0.546 0.023 67.7);
+  --brand-warm-hover: oklch(0.918 0.018 67.7);
+  --brand-warm-active: oklch(0.898 0.02 67.7);
+
+  /* ── Semantic Color Tokens ────────────────────────────────────────────── */
+  --color-primary: var(--brand-orange);
+  --color-primary-hover: var(--brand-orange-dark);
+  --color-primary-foreground: var(--brand-white);
+
+  --color-secondary: var(--brand-warm-200);
+  --color-secondary-foreground: var(--brand-orange);
+
+  --color-destructive: var(--brand-magenta);
+  --color-destructive-foreground: var(--brand-white);
+  --color-destructive-bg: var(--brand-magenta-muted);
+  --color-destructive-border: var(--brand-magenta-lighter);
+
+  --color-warning: var(--brand-amber);
+  --color-warning-foreground: var(--brand-brown);
+  --color-warning-bg: var(--brand-amber-muted);
+
+  --color-success: var(--brand-olive);
+  --color-success-foreground: var(--brand-white);
+  --color-success-bg: var(--brand-olive-muted);
+
+  --color-background: var(--brand-white);
+  --color-foreground: var(--brand-brown);
+  --color-muted: var(--brand-warm-500);
+  --color-surface: oklch(0.993 0.005 67.7);
+  --color-page-bg: var(--brand-warm-200);
+  --color-input-bg: var(--brand-warm-50);
+  --color-border: var(--brand-warm-400);
+  --color-border-light: var(--brand-warm-300);
+  --color-border-medium: var(--brand-warm-400);
+  --color-overlay: var(--brand-brown-muted);
+  --color-ring: var(--brand-orange);
+
+  /* Interaction states */
+  --color-hover: var(--brand-warm-hover);
+  --color-active: var(--brand-warm-active);
+
+  /* ── Shadows ──────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-focus-ring: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
+
+  /* ── Z-index Scale ────────────────────────────────────────────────────── */
+  --z-base:             1;
+  --z-sidebar-backdrop: 40;
+  --z-sidebar:          45;
+  --z-dialog:           50;
+  --z-dialog-content:   51;
+  --z-confirm:          55;
+  --z-confirm-content:  56;
+  --z-dropdown:         60;
+  --z-tooltip:          70;
+  --z-loading:          10;
+
+  /* ── Form Controls ───────────────────────────────────────────────────── */
+  --control-height: 2.5rem;
+
+  /* ── Spacing Scale ────────────────────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+}
+
+.dark {
+  --color-background:           oklch(0.180 0.030 44.2);
+  --color-foreground:           var(--brand-cream);
+  --color-surface:              oklch(0.220 0.035 44.2);
+  --color-page-bg:              oklch(0.155 0.025 44.2);
+  --color-input-bg:             oklch(0.262 0.040 44.2);
+  --color-border:               oklch(0.450 0.025 44.2);
+  --color-border-light:         oklch(0.380 0.022 44.2);
+  --color-border-medium:        oklch(0.410 0.023 44.2);
+  --color-muted:                oklch(0.700 0.015 44.2);
+  --color-secondary:            oklch(0.250 0.020 44.2);
+  --color-secondary-foreground: var(--brand-orange-light);
+  --color-accent:               var(--brand-amber-light);
+  --color-accent-foreground:    var(--brand-cream);
+  --color-primary-foreground:   var(--brand-white);
+  --color-destructive:          var(--brand-magenta-light);
+  --color-destructive-foreground: var(--brand-white);
+  --color-destructive-bg:       oklch(0.250 0.060 351.4);
+  --color-warning-bg:           oklch(0.250 0.050 84.1);
+  --color-success:              var(--brand-olive-light);
+  --color-success-bg:           oklch(0.250 0.040 116.5);
+  --color-ring:                 var(--brand-orange);
+  --color-overlay:              oklch(0.155 0.025 44.2 / 0.7);
+}
+
+/* ── Global Styles ──────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-color: var(--color-border);
+}
+
+input, button, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+body {
+  margin: 0;
+  font-family: "Rubik Variable", sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-foreground);
+  background: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

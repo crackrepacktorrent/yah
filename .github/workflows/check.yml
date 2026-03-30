@@ -8,37 +8,14 @@ on:
   workflow_call:
 
 jobs:
-  typecheck:
+  check:
     name: Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+      - uses: oven-sh/setup-bun@v2
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
 
-      - name: Sync SvelteKit
-        run: npx svelte-kit sync
-
-      - name: Run svelte-check
-        run: npx svelte-check --tsconfig ./tsconfig.json
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - run: npm ci
-
-      - name: Build
-        run: npm run build
+      - run: bunx turbo check

@@ -1,12 +1,16 @@
 node_modules
 
-# Output
-.output
-.vercel
-.netlify
-.wrangler
-/.svelte-kit
-/build
+# Build outputs
+apps/web/build/
+apps/web/.svelte-kit/
+apps/admin/.output/
+
+# Bun
+bun.lock
+
+# Legacy lockfiles
+package-lock.json
+pnpm-lock.yaml
 
 # Claude Code
 .claude

@@ -1,0 +1,40 @@
+.alert-dialog-overlay {
+	position: fixed;
+	inset: 0;
+	background: var(--color-overlay);
+	z-index: var(--z-confirm);
+}
+
+.alert-dialog-content {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: var(--color-surface);
+	border-radius: var(--radius-lg);
+	padding: 1.5rem;
+	max-width: 420px;
+	width: 90%;
+	z-index: var(--z-confirm-content);
+	box-shadow: var(--shadow-lg);
+}
+
+.alert-dialog-title {
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: var(--color-foreground);
+	margin: 0 0 0.5rem;
+}
+
+.alert-dialog-description {
+	font-size: 0.9rem;
+	color: var(--color-muted);
+	margin: 0 0 1.5rem;
+	line-height: 1.5;
+}
+
+.alert-dialog-actions {
+	display: flex;
+	gap: 0.75rem;
+	justify-content: flex-end;
+}

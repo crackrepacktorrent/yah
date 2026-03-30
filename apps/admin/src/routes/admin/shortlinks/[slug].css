@@ -1,0 +1,156 @@
+/* ─── Layout ──────────────────────────────────────────────────────────────── */
+
+.detail-top {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+	align-items: stretch;
+}
+
+.qr-card {
+	display: flex;
+	flex-direction: column;
+	container-type: inline-size;
+}
+
+.detail-bottom {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+	align-items: start;
+}
+
+@media (max-width: 1024px) {
+	.detail-top {
+		grid-template-columns: 1fr 1fr;
+	}
+	.detail-bottom {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 640px) {
+	.detail-top {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ─── Stats ───────────────────────────────────────────────────────────────── */
+
+.stats-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.stats-stack > * {
+	flex: 1;
+}
+
+/* ─── Details ─────────────────────────────────────────────────────────────── */
+
+.details-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.details-stack > * {
+	flex: 1;
+}
+
+.detail-label {
+	display: block;
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	color: var(--color-muted);
+	margin-bottom: 0.2rem;
+}
+
+.detail-long-url {
+	font-size: 0.9rem;
+	word-break: break-all;
+}
+
+/* ─── Editor ──────────────────────────────────────────────────────────────── */
+
+.editor-inner {
+	position: relative;
+}
+
+.lock-overlay {
+	position: absolute;
+	inset: -1.5rem;
+	border-radius: var(--radius-lg);
+	background: color-mix(in oklch, var(--color-surface) 80%, transparent);
+	backdrop-filter: blur(2px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	z-index: var(--z-base);
+}
+
+.lock-center {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	color: var(--color-muted);
+	font-size: 0.85rem;
+	font-weight: 500;
+	transition: color 0.15s;
+}
+
+.lock-overlay:hover .lock-center {
+	color: var(--color-foreground);
+}
+
+.edit-fieldset {
+	border: none;
+	padding: 0;
+	margin: 0;
+}
+
+.edit-fieldset:disabled {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
+.edit-actions {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	margin-top: 1.25rem;
+	flex-wrap: wrap;
+}
+
+/* ─── Visits ──────────────────────────────────────────────────────────────── */
+
+.visit-referer {
+	display: block;
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--color-muted);
+}
+
+.visit-ua {
+	display: block;
+	max-width: 250px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--color-muted);
+	font-size: 0.8rem;
+}
+
+.visits-more {
+	text-align: center;
+	color: var(--color-muted);
+	font-size: 0.85rem;
+	margin-top: 0.75rem;
+}

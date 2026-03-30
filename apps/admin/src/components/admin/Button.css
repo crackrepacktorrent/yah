@@ -1,0 +1,84 @@
+/* Button Component Styles */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-height: var(--control-height);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+  border: none;
+  padding: 0.5rem 1rem;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Primary Variant */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+/* Secondary Variant */
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-foreground);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-hover);
+}
+
+/* Danger Variant */
+.btn-danger {
+  background-color: var(--color-destructive);
+  color: var(--color-surface);
+}
+
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* Danger Outline Variant */
+.btn-danger-outline {
+  background: var(--color-surface);
+  color: var(--color-destructive);
+  border: 1px solid var(--color-destructive);
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background: var(--color-destructive-bg);
+}
+
+/* Ghost Variant */
+.btn-ghost {
+  background: none;
+  color: var(--color-muted);
+  padding: 0.5rem 1rem;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--color-foreground);
+}

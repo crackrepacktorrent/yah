@@ -1,0 +1,9 @@
+.tooltip-content {
+  background: var(--brand-brown);
+  color: var(--brand-cream);
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  z-index: var(--z-tooltip);
+}

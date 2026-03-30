@@ -1,0 +1,36 @@
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--color-foreground);
+}
+
+.form-field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.required-mark {
+  color: var(--color-destructive);
+}
+
+.form-field-hint {
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.form-field-error {
+  font-weight: 400;
+  color: var(--color-destructive);
+  font-size: 0.8rem;
+}
+
+.has-error textarea,
+.has-error .chip-input-wrap,
+.has-error .sel-trigger {
+  border-color: var(--color-destructive);
+}
