@@ -1,7 +1,7 @@
 import { createSignal, Show } from 'solid-js';
 import { authClient } from '~/lib/auth-client';
 import { LOGO_FILL_ORANGE } from '~/lib/constants';
-import { FormField, Input, Button, Logo } from '~/components/admin';
+import { FormField, Input, Button, Logo } from '~/components';
 import './auth.css';
 
 export default function ForgotPasswordPage() {

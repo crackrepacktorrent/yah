@@ -6,7 +6,7 @@ import { toast } from 'solid-sonner';
 import {
 	Badge, Breadcrumb, Button, Card, AlertDialog,
 	DataTable, FormField, Input, QRCode, Section, StatCard, Switch, TagInput, Tooltip,
-} from '~/components/admin';
+} from '~/components';
 import { requireSession } from '~/routes/admin/session';
 import { can } from '~/lib/can';
 import { toastError } from '~/lib/utils';

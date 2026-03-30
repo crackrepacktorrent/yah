@@ -2,7 +2,7 @@ import { createSignal, Show } from 'solid-js';
 import { revalidate, useNavigate } from '@solidjs/router';
 import { authClient } from '~/lib/auth-client';
 import { ORG_SLUG, LOGO_FILL_ORANGE } from '~/lib/constants';
-import { FormField, Input, Button, Logo } from '~/components/admin';
+import { FormField, Input, Button, Logo } from '~/components';
 import './auth.css';
 
 export default function LoginPage() {

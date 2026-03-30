@@ -2,7 +2,7 @@ import { createResource, Match, Switch } from 'solid-js';
 import { useNavigate, useParams } from '@solidjs/router';
 import { authClient } from '~/lib/auth-client';
 import { LOGO_FILL_ORANGE } from '~/lib/constants';
-import { Button, Logo } from '~/components/admin';
+import { Button, Logo } from '~/components';
 import '../../auth.css';
 
 export default function AcceptInvitationPage() {

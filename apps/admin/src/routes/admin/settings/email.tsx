@@ -1,7 +1,7 @@
 import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
 import { Show, createMemo, createSignal } from 'solid-js';
 import { toast } from 'solid-sonner';
-import { Card, PageHeader, Tabs, TabContent } from '~/components/admin';
+import { Card, PageHeader, Tabs, TabContent } from '~/components';
 import { getSession } from '~/routes/admin/session';
 import { can } from '~/lib/can';
 import { toastError } from '~/lib/utils';

@@ -1,6 +1,6 @@
 import { createAsync, useParams, type RouteDefinition } from '@solidjs/router';
 import { Show } from 'solid-js';
-import { Spinner } from '~/components/admin';
+import { Spinner } from '~/components';
 import { getCampaign } from '../campaigns.server';
 import { listLists } from '../lists.server';
 import { listTemplates } from '../emails.server';

@@ -3,7 +3,7 @@ import { For, Show, createMemo, createSignal } from 'solid-js';
 import { toast } from 'solid-sonner';
 import {
 	Badge, Button, EmptyState, PageHeader, Section,
-} from '~/components/admin';
+} from '~/components';
 import { requireSession } from '~/routes/admin/session';
 import { can } from '~/lib/can';
 import { toastError } from '~/lib/utils';

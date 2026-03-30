@@ -5,7 +5,7 @@ import { toast } from 'solid-sonner';
 import {
 	Badge, Button, AlertDialog, DataTable, Dialog, PageHeader,
 	FormField, Input, Select,
-} from '~/components/admin';
+} from '~/components';
 import { requireSession } from '~/routes/admin/session';
 import { toastError } from '~/lib/utils';
 import {

@@ -1,7 +1,7 @@
 import { createAsync, type RouteDefinition } from '@solidjs/router';
 import { Show } from 'solid-js';
 import { createSolidTable, getCoreRowModel, createColumnHelper } from '@tanstack/solid-table';
-import { PageHeader, StatCard, Section, DataTable } from '~/components/admin';
+import { PageHeader, StatCard, Section, DataTable } from '~/components';
 import { formatDuration } from '~/lib/utils';
 import { getDashboard, getSiteStats } from './dashboard.server';
 import type { ShortUrl } from '~/server/shlink';

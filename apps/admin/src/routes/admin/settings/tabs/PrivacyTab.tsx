@@ -1,5 +1,5 @@
 import { Show, createSignal, untrack } from 'solid-js';
-import { Button, Section, Switch } from '~/components/admin';
+import { Button, Section, Switch } from '~/components';
 import type { TabProps } from '../email';
 
 export function PrivacyTab(props: TabProps) {

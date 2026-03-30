@@ -2,8 +2,8 @@ import { type Component, For, Show, batch, createEffect, createMemo, createSigna
 import { toast } from 'solid-sonner';
 import {
 	Badge, Button, Dialog, EmptyState, FormField, Input, Select, Spinner, Switch, Tabs, TabContent,
-} from '~/components/admin';
-import { MultiSelect } from '~/components/admin';
+} from '~/components';
+import { MultiSelect } from '~/components';
 import { subscriberStatusVariant, toastError } from '~/lib/utils';
 import {
 	createSubscriber, updateSubscriber,

@@ -6,9 +6,9 @@ import * as v from 'valibot';
 import {
 	Badge, Breadcrumb, Button, Card, AlertDialog, Dialog,
 	FormField, Input, Select, Spinner, Tabs, TabContent, TagInput,
-} from '~/components/admin';
-import { MultiSelect } from '~/components/admin';
-import { DatePicker } from '~/components/admin';
+} from '~/components';
+import { MultiSelect } from '~/components';
+import { DatePicker } from '~/components';
 import { requireSession } from '~/routes/admin/session';
 import { can } from '~/lib/can';
 import { campaignStatusVariant, toastError } from '~/lib/utils';
@@ -22,7 +22,7 @@ import { listTemplates } from '../emails.server';
 
 // Lazy-load the RichTextEditor to keep the initial bundle small
 const RichTextEditor = lazy(() =>
-	import('~/components/admin/RichTextEditor').then((m) => ({ default: m.RichTextEditor })),
+	import('~/components/RichTextEditor').then((m) => ({ default: m.RichTextEditor })),
 );
 
 // ─── Types ───────────────────────────────────────────────────────────────────

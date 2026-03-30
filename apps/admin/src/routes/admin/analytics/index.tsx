@@ -3,7 +3,7 @@ import { For, Show, createSignal } from 'solid-js';
 import { createSolidTable, getCoreRowModel, createColumnHelper } from '@tanstack/solid-table';
 import {
 	BarChart, Card, DataTable, PageHeader, Section, StatCard, ToggleGroup,
-} from '~/components/admin';
+} from '~/components';
 import { formatDuration } from '~/lib/utils';
 import { getAnalytics } from '../analytics.server';
 import type { UmamiMetric } from '~/server/umami';

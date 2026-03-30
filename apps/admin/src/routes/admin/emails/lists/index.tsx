@@ -6,7 +6,7 @@ import {
 	Badge, Button, Input, AlertDialog, Dialog, DataTable, PageHeader,
 	FormField, Select,
 	createSelectColumn, multiSelectFilter, type RowSelectionState,
-} from '~/components/admin';
+} from '~/components';
 import { requireSession } from '~/routes/admin/session';
 import { can } from '~/lib/can';
 import { toastError } from '~/lib/utils';

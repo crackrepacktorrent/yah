@@ -1,4 +1,4 @@
-import { EmptyState, PageHeader } from '~/components/admin';
+import { EmptyState, PageHeader } from '~/components';
 
 export default function MediaPage() {
 	return (

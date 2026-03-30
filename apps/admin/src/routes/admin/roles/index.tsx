@@ -6,7 +6,7 @@ import {
 	Button, AlertDialog, DataTable, Dialog, PageHeader,
 	FormField, Input,
 	createSelectColumn, type RowSelectionState,
-} from '~/components/admin';
+} from '~/components';
 import { statements } from '~/lib/permissions';
 import { toastError } from '~/lib/utils';
 import { listRoles, createRole, updateRole, deleteRole } from '../roles.server';

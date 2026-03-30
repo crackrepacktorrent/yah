@@ -64,11 +64,3 @@ export const requireSession = query(async (): Promise<Session | null> => {
   "use server";
   return fetchSession(getWebRequest().headers);
 }, "require-session");
-
-// Returns true if the visitor is a guest (not logged in), false if authenticated.
-// Auth-page redirect is handled client-side for the same reason as above.
-export const checkGuest = query(async (): Promise<boolean> => {
-  "use server";
-  const session = await auth.api.getSession({ headers: getWebRequest().headers });
-  return session === null;
-}, "guest");

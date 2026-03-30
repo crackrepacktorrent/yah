@@ -1,6 +1,6 @@
 import { For, Show, createSignal, untrack } from 'solid-js';
 import * as v from 'valibot';
-import { Button, FormField, Input, Section, Select, Switch } from '~/components/admin';
+import { Button, FormField, Input, Section, Select, Switch } from '~/components';
 import { createForm } from '~/lib/use-form';
 import type { TabProps } from '../email';
 

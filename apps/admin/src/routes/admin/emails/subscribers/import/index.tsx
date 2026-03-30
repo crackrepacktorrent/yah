@@ -1,4 +1,4 @@
-import { EmptyState, PageHeader } from '~/components/admin';
+import { EmptyState, PageHeader } from '~/components';
 
 export default function ImportPage() {
 	return (

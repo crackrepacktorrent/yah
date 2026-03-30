@@ -2,7 +2,7 @@ import { createAsync, Navigate, revalidate, useNavigate, type RouteDefinition } 
 import { createMemo, ErrorBoundary, Show, Suspense, type JSX } from 'solid-js';
 import { useLocation } from '@solidjs/router';
 import { Toaster } from 'solid-sonner';
-import { Sidebar, Spinner } from '~/components/admin';
+import { Sidebar, Spinner } from '~/components';
 import { authClient } from '~/lib/auth-client';
 import { can } from '~/lib/can';
 import { requireSession, type Session } from '~/routes/admin/session';

@@ -1,5 +1,5 @@
 import { Show, createSignal, untrack } from 'solid-js';
-import { Button, FormField, Input, Section, Switch, TagInput } from '~/components/admin';
+import { Button, FormField, Input, Section, Switch, TagInput } from '~/components';
 import type { TabProps } from '../email';
 
 export function GeneralTab(props: TabProps) {

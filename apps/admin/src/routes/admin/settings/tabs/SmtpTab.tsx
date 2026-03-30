@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createSignal, untrack } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { toast } from 'solid-sonner';
-import { Badge, Button, Card, AlertDialog, FormField, Input, Select, Switch } from '~/components/admin';
+import { Badge, Button, Card, AlertDialog, FormField, Input, Select, Switch } from '~/components';
 import type { ListmonkSmtpConfig } from '~/server/listmonk';
 import type { TabProps } from '../email';
 
