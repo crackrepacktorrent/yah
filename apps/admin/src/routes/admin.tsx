@@ -166,7 +166,9 @@ export default function AdminLayout(props: { children: JSX.Element }) {
 					</Show>
 				</Show>
 			}>
-				{props.children}
+				<Show when={session() !== undefined && session() !== null} fallback={props.children}>
+					<Navigate href="/admin" />
+				</Show>
 			</Show>
 		</>
 	);
