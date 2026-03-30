@@ -32,6 +32,13 @@ export default function AnalyticsPage() {
 	const [period, setPeriod] = createSignal<Period>('7d');
 	const data = createAsync(() => getAnalytics(period()));
 
+	function geoItems(metrics: UmamiMetric[]) {
+		const known = metrics.filter((m) => m.x).map((m) => ({ label: m.x, value: m.y }));
+		const unknownTotal = metrics.filter((m) => !m.x).reduce((sum, m) => sum + m.y, 0);
+		if (unknownTotal > 0) known.push({ label: '(unknown)', value: unknownTotal });
+		return known;
+	}
+
 	function formatDate(timestamp: string) {
 		const d = new Date(timestamp);
 		return period() === '24h'
@@ -81,26 +88,13 @@ export default function AnalyticsPage() {
 
 						<section class="analytics-group">
 							<h2>Geographic Reach</h2>
-							<div class="metrics-grid">
-								<Section title="Top Cities" fill>
-									<Card>
-										<HorizontalBarList
-											items={d().cities.filter((m) => m.x).map((m) => ({ label: m.x, value: m.y }))}
-											color="var(--brand-olive)"
-											emptyMessage="No city data yet."
-										/>
-									</Card>
-								</Section>
-								<Section title="Countries" fill>
-									<Card>
-										<HorizontalBarList
-											items={d().countries.filter((m) => m.x).map((m) => ({ label: m.x, value: m.y }))}
-											color="var(--brand-amber)"
-											emptyMessage="No country data yet."
-										/>
-									</Card>
-								</Section>
-							</div>
+							<Card>
+								<HorizontalBarList
+									items={geoItems(d().cities)}
+									color="var(--brand-olive)"
+									emptyMessage="No city data yet."
+								/>
+							</Card>
 						</section>
 
 						<section class="analytics-group">
