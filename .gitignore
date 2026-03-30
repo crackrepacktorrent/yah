@@ -1,4 +1,5 @@
 node_modules
+.turbo
 
 # Build outputs
 apps/web/build/
