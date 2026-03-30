@@ -29,7 +29,7 @@ services:
           memory: 128M
 
   sveltekit:
-    image: ghcr.io/crackrepacktorrent/yah/web:latest
+    image: ghcr.io/crackrepacktorrent/yah/web:${WEB_TAG:-latest}
     restart: unless-stopped
     env_file: ../apps/web/.env.production
     environment:
@@ -60,7 +60,7 @@ services:
           memory: 512M
 
   sveltekit-preview:
-    image: ghcr.io/crackrepacktorrent/yah/web-preview:latest
+    image: ghcr.io/crackrepacktorrent/yah/web-preview:${WEB_TAG:-latest}
     restart: unless-stopped
     env_file: ../apps/web/.env.preview
     environment:
@@ -91,7 +91,7 @@ services:
           memory: 256M
 
   yah-admin:
-    image: ghcr.io/crackrepacktorrent/yah/admin:latest
+    image: ghcr.io/crackrepacktorrent/yah/admin:${ADMIN_TAG:-latest}
     restart: unless-stopped
     env_file: ../apps/admin/.env.production
     environment:
