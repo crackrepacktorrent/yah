@@ -91,7 +91,7 @@ export default function AnalyticsPage() {
 							<Card>
 								<HorizontalBarList
 									items={geoItems(d().cities)}
-									color="var(--brand-olive)"
+									color="var(--brand-amber)"
 									emptyMessage="No city data yet."
 								/>
 							</Card>
