@@ -29,14 +29,7 @@ services:
           memory: 128M
 
   sveltekit:
-    build:
-      context: ..
-      dockerfile: apps/web/Dockerfile
-      args:
-        VITE_STORYBLOK_TOKEN: ${VITE_STORYBLOK_PUBLIC_TOKEN}
-        VITE_SITE_URL: ${VITE_SITE_URL:-https://y4h.org}
-        VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
-        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
+    image: ghcr.io/crackrepacktorrent/yah/web:latest
     restart: unless-stopped
     env_file: ../apps/web/.env.production
     environment:
@@ -67,15 +60,7 @@ services:
           memory: 512M
 
   sveltekit-preview:
-    build:
-      context: ..
-      dockerfile: apps/web/Dockerfile
-      args:
-        VITE_STORYBLOK_TOKEN: ${VITE_STORYBLOK_PREVIEW_TOKEN}
-        VITE_STORYBLOK_IS_PREVIEW: "true"
-        VITE_SITE_URL: ${VITE_SITE_URL:-https://y4h.org}
-        VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
-        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
+    image: ghcr.io/crackrepacktorrent/yah/web-preview:latest
     restart: unless-stopped
     env_file: ../apps/web/.env.preview
     environment:
@@ -106,9 +91,7 @@ services:
           memory: 256M
 
   yah-admin:
-    build:
-      context: ..
-      dockerfile: apps/admin/Dockerfile
+    image: ghcr.io/crackrepacktorrent/yah/admin:latest
     restart: unless-stopped
     env_file: ../apps/admin/.env.production
     environment:

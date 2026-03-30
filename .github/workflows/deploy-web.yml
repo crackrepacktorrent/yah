@@ -5,15 +5,61 @@ on:
     branches: [main]
     paths:
       - 'apps/web/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'turbo.json'
       - 'infra/docker-compose.yml'
       - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  WEB_IMAGE: ghcr.io/crackrepacktorrent/yah/web
+  PREVIEW_IMAGE: ghcr.io/crackrepacktorrent/yah/web-preview
+
 jobs:
   check:
     uses: ./.github/workflows/check.yml
-  deploy:
+
+  build:
     needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - target: web
+            image_env: WEB_IMAGE
+            storyblok_secret: VITE_STORYBLOK_PUBLIC_TOKEN
+            extra_args: ""
+          - target: web-preview
+            image_env: PREVIEW_IMAGE
+            storyblok_secret: VITE_STORYBLOK_PREVIEW_TOKEN
+            extra_args: "VITE_STORYBLOK_IS_PREVIEW=true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: ${{ env[matrix.image_env] }}:latest,${{ env[matrix.image_env] }}:${{ github.sha }}
+          build-args: |
+            VITE_STORYBLOK_TOKEN=${{ secrets[matrix.storyblok_secret] }}
+            VITE_SITE_URL=https://y4h.org
+            ${{ matrix.extra_args }}
+
+  deploy:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to VPS
@@ -27,6 +73,6 @@ jobs:
             cd /home/deploy/yah
             git pull origin main
             cd infra
-            docker compose build sveltekit sveltekit-preview
+            docker compose pull sveltekit sveltekit-preview
             docker compose up -d sveltekit sveltekit-preview
             docker image prune -f
