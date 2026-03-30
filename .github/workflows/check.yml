@@ -42,9 +42,3 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          BETTER_AUTH_SECRET: ci-placeholder
-          BETTER_AUTH_URL: http://localhost:3000
-          DATABASE_URL: postgres://localhost/ci
-          SHLINK_API_KEY: ci-placeholder
-          SHLINK_URL: http://localhost:8080
