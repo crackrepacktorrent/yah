@@ -15,163 +15,70 @@ jobs:
     permissions:
       issues: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Check for outdated packages
+      - name: Check outdated packages
         id: outdated
         run: |
-          npm outdated --json > outdated.json || true
+          bun outdated --json > outdated.json 2>/dev/null || echo '{}' > outdated.json
           echo "outdated_json<<EOF" >> $GITHUB_OUTPUT
           cat outdated.json >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Check current versions
-        id: versions
-        run: |
-          echo "svelte=$(npm list svelte --depth=0 --json | jq -r '.dependencies.svelte.version')" >> $GITHUB_OUTPUT
-          echo "sveltekit=$(npm list @sveltejs/kit --depth=0 --json | jq -r '.dependencies["@sveltejs/kit"].version')" >> $GITHUB_OUTPUT
-          echo "storyblok=$(npm list @storyblok/svelte --depth=0 --json | jq -r '.dependencies["@storyblok/svelte"].version')" >> $GITHUB_OUTPUT
-          echo "tailwind=$(npm list tailwindcss --depth=0 --json | jq -r '.dependencies.tailwindcss.version')" >> $GITHUB_OUTPUT
 
       - name: Create Quarterly Maintenance Issue
         uses: actions/github-script@v7
         with:
           script: |
-            const quarter = Math.ceil(new Date().getMonth() / 3);
+            const quarter = Math.ceil((new Date().getMonth() + 1) / 3);
             const year = new Date().getFullYear();
-
-            const outdatedJson = `${{ steps.outdated.outputs.outdated_json }}`;
-            let majorUpdates = [];
-
-            try {
-              const outdated = JSON.parse(outdatedJson);
-              for (const [pkg, info] of Object.entries(outdated)) {
-                const current = info.current;
-                const latest = info.latest;
-                const currentMajor = parseInt(current.split('.')[0]);
-                const latestMajor = parseInt(latest.split('.')[0]);
-
-                if (latestMajor > currentMajor) {
-                  majorUpdates.push({
-                    name: pkg,
-                    current: current,
-                    latest: latest
-                  });
-                }
-              }
-            } catch (e) {
-              console.log('No outdated packages or error parsing:', e);
-            }
-
-            const currentVersions = {
-              svelte: '${{ steps.versions.outputs.svelte }}',
-              sveltekit: '${{ steps.versions.outputs.sveltekit }}',
-              storyblok: '${{ steps.versions.outputs.storyblok }}',
-              tailwind: '${{ steps.versions.outputs.tailwind }}'
-            };
-
-            let majorUpdatesSection = '';
-            if (majorUpdates.length > 0) {
-              majorUpdatesSection = '### Major Updates Available\n\n';
-              majorUpdatesSection += 'Found ' + majorUpdates.length + ' major version updates:\n\n';
-              for (const pkg of majorUpdates) {
-                majorUpdatesSection += `- **${pkg.name}**: ${pkg.current} → ${pkg.latest}\n`;
-              }
-              majorUpdatesSection += '\n';
-            } else {
-              majorUpdatesSection = '### No Major Updates Available\n\nAll packages are current.\n\n';
-            }
 
             const body = [
               '## Quarterly Maintenance - Q' + quarter + ' ' + year,
               '',
-              '---',
+              '### Dependencies',
               '',
-              majorUpdatesSection,
-              '---',
-              '',
-              '### Current Package Versions',
-              '',
-              '- Svelte: ' + currentVersions.svelte,
-              '- SvelteKit: ' + currentVersions.sveltekit,
-              '- Storyblok SDK: ' + currentVersions.storyblok,
-              '- Tailwind CSS: ' + currentVersions.tailwind,
-              '',
-              '---',
-              '',
-              '### Tasks',
-              '',
-              '#### Review Major Dependencies',
-              '',
-              'Check for major version updates:',
-              '',
-              '```bash',
-              'npm outdated',
+              '```sh',
+              'bun outdated',
+              'bun audit',
               '```',
               '',
-              'For each major update:',
-              '1. Read changelog/release notes',
-              '2. Create test branch',
-              '3. Update package: `npm install [package]@latest`',
-              '4. Test locally: `npm run dev`',
-              '5. Test all pages',
-              '6. Commit and create PR if successful',
+              '- [ ] Review major version updates',
+              '- [ ] Update SolidStart (currently alpha — check for stable release)',
+              '- [ ] Update SvelteKit / Svelte',
+              '- [ ] Update better-auth',
+              '- [ ] Update Storyblok SDK',
+              '- [ ] Run `bun audit` and fix any high/critical vulnerabilities',
               '',
-              'Key packages:',
-              '- [ ] SvelteKit: https://github.com/sveltejs/kit/releases',
-              '- [ ] Svelte: https://svelte.dev/blog',
-              '- [ ] Storyblok SDK: https://github.com/storyblok/storyblok-js/releases',
-              '- [ ] Tailwind CSS: https://tailwindcss.com/blog',
+              '### Infrastructure',
               '',
-              '#### Content Audit',
+              '- [ ] Check Docker base image versions (postgres, caddy, bun)',
+              '- [ ] Review VPS memory usage — OOM caused data loss before',
+              '- [ ] Verify daily postgres backup is running (`crontab -l` on VPS)',
+              '- [ ] Test backup restore works',
               '',
-              '- [ ] Remove outdated events/campaigns',
+              '### Content',
+              '',
+              '- [ ] Remove outdated events/campaigns in Storyblok',
               '- [ ] Update "Our Work" with recent projects',
-              '- [ ] Check page content is current',
-              '- [ ] Update resources page',
-              '- [ ] Verify links work',
+              '- [ ] Verify all links work',
               '- [ ] Check copyright year',
               '',
-              'Update in Storyblok: https://app.storyblok.com',
+              '### Verification',
               '',
-              '#### Performance Check',
-              '',
-              '- [ ] Run Lighthouse: https://pagespeed.web.dev/',
-              '- [ ] Check Core Web Vitals',
-              '- [ ] Test on mobile device',
-              '- [ ] Check image loading',
-              '',
-              '#### Security Check',
-              '',
-              '```bash',
-              'npm audit',
-              '```',
-              '',
-              '- [ ] No high/critical vulnerabilities',
-              '- [ ] Run `npm audit fix` if needed',
-              '',
-              '#### Verification',
-              '',
-              '- [ ] Production site: https://www.y4h.org',
-              '- [ ] Preview deployment: https://preview.y4h.org',
-              '- [ ] Test main pages',
-              '- [ ] Mobile view works'
+              '- [ ] https://y4h.org — public site',
+              '- [ ] https://preview.y4h.org — preview site',
+              '- [ ] https://y4h.org/admin — admin panel',
+              '- [ ] Shortlinks working (y4h.link)',
+              '- [ ] Mobile view',
             ].join('\n');
 
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: 'Quarterly Maintenance - Q' + quarter + ' ' + year,
-              body: body
+              body,
             });
 
   yearly-reminder:
@@ -180,40 +87,9 @@ jobs:
     permissions:
       issues: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Check all outdated packages
-        id: all_outdated
-        run: |
-          npm outdated --json > outdated.json || true
-          echo "outdated_json<<EOF" >> $GITHUB_OUTPUT
-          cat outdated.json >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Get detailed versions
-        id: versions
-        run: |
-          echo "svelte=$(npm list svelte --depth=0 --json | jq -r '.dependencies.svelte.version')" >> $GITHUB_OUTPUT
-          echo "sveltekit=$(npm list @sveltejs/kit --depth=0 --json | jq -r '.dependencies["@sveltejs/kit"].version')" >> $GITHUB_OUTPUT
-          echo "storyblok=$(npm list @storyblok/svelte --depth=0 --json | jq -r '.dependencies["@storyblok/svelte"].version')" >> $GITHUB_OUTPUT
-          echo "tailwind=$(npm list tailwindcss --depth=0 --json | jq -r '.dependencies.tailwindcss.version')" >> $GITHUB_OUTPUT
-          echo "vite=$(npm list vite --depth=0 --json | jq -r '.dependencies.vite.version')" >> $GITHUB_OUTPUT
-
-      - name: Check latest releases
-        id: latest
-        run: |
-          echo "svelte_latest=$(npm view svelte version)" >> $GITHUB_OUTPUT
-          echo "sveltekit_latest=$(npm view @sveltejs/kit version)" >> $GITHUB_OUTPUT
-          echo "storyblok_latest=$(npm view @storyblok/svelte version)" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
 
       - name: Create Yearly Maintenance Issue
         uses: actions/github-script@v7
@@ -221,228 +97,56 @@ jobs:
           script: |
             const year = new Date().getFullYear();
 
-            const outdatedJson = `${{ steps.all_outdated.outputs.outdated_json }}`;
-            let majorUpdates = [];
-            let minorUpdates = [];
-
-            try {
-              const outdated = JSON.parse(outdatedJson);
-              for (const [pkg, info] of Object.entries(outdated)) {
-                const current = info.current;
-                const latest = info.latest;
-                const currentMajor = parseInt(current.split('.')[0]);
-                const latestMajor = parseInt(latest.split('.')[0]);
-
-                const update = {
-                  name: pkg,
-                  current: current,
-                  latest: latest
-                };
-
-                if (latestMajor > currentMajor) {
-                  majorUpdates.push(update);
-                } else {
-                  minorUpdates.push(update);
-                }
-              }
-            } catch (e) {
-              console.log('No outdated packages or error parsing:', e);
-            }
-
-            const versions = {
-              svelte: {
-                current: '${{ steps.versions.outputs.svelte }}',
-                latest: '${{ steps.latest.outputs.svelte_latest }}'
-              },
-              sveltekit: {
-                current: '${{ steps.versions.outputs.sveltekit }}',
-                latest: '${{ steps.latest.outputs.sveltekit_latest }}'
-              },
-              storyblok: {
-                current: '${{ steps.versions.outputs.storyblok }}',
-                latest: '${{ steps.latest.outputs.storyblok_latest }}'
-              },
-              tailwind: {
-                current: '${{ steps.versions.outputs.tailwind }}',
-                latest: 'Check npm outdated'
-              },
-              vite: {
-                current: '${{ steps.versions.outputs.vite }}',
-                latest: 'Check npm outdated'
-              }
-            };
-
-            let updateSummary = '### Dependency Status\n\n';
-
-            if (majorUpdates.length > 0) {
-              updateSummary += '#### Major Updates Available (' + majorUpdates.length + ')\n\n';
-              updateSummary += 'These require testing:\n\n';
-              for (const pkg of majorUpdates) {
-                updateSummary += `- **${pkg.name}**: ${pkg.current} → ${pkg.latest}\n`;
-              }
-              updateSummary += '\n';
-            }
-
-            if (minorUpdates.length > 0) {
-              updateSummary += '#### Minor/Patch Updates Available (' + minorUpdates.length + ')\n\n';
-              updateSummary += '<details><summary>Show all minor updates</summary>\n\n';
-              for (const pkg of minorUpdates) {
-                updateSummary += `- ${pkg.name}: ${pkg.current} → ${pkg.latest}\n`;
-              }
-              updateSummary += '\n</details>\n\n';
-            }
-
-            if (majorUpdates.length === 0 && minorUpdates.length === 0) {
-              updateSummary += 'All packages are current.\n\n';
-            }
-
-            let frameworkStatus = '### Core Framework Versions\n\n';
-            frameworkStatus += '| Package | Current | Latest | Status |\n';
-            frameworkStatus += '|---------|---------|--------|--------|\n';
-
-            for (const [name, ver] of Object.entries(versions)) {
-              const status = ver.current === ver.latest ? 'Current' : 'Update available';
-              frameworkStatus += `| ${name} | ${ver.current} | ${ver.latest} | ${status} |\n`;
-            }
-            frameworkStatus += '\n';
-
             const body = [
               '## Annual Maintenance - ' + year,
               '',
-              '---',
+              '### Dependency Audit',
               '',
-              updateSummary,
-              '---',
-              '',
-              frameworkStatus,
-              '---',
-              '',
-              '### Technology Stack Review',
-              '',
-              '#### SvelteKit',
-              '- [ ] Check current version: `npm list @sveltejs/kit`',
-              '- [ ] Check latest: https://github.com/sveltejs/kit/releases',
-              '- [ ] Read migration guides if major version available',
-              '- [ ] Test upgrade in branch if needed',
-              '',
-              '#### Svelte',
-              '- [ ] Check current version: `npm list svelte`',
-              '- [ ] Check latest: https://svelte.dev/blog',
-              '- [ ] Review new features',
-              '',
-              '#### Storyblok SDK',
-              '- [ ] Check current version: `npm list @storyblok/svelte`',
-              '- [ ] Check latest: https://github.com/storyblok/storyblok-js/releases',
-              '- [ ] Review new CMS features',
-              '',
-              '#### Other Dependencies',
-              '- [ ] Run: `npm outdated`',
-              '- [ ] Review packages >1 major version behind',
-              '- [ ] Plan upgrade strategy',
-              '',
-              '---',
-              '',
-              '### Documentation Update',
-              '',
-              '- [ ] README.md - Update setup instructions, tech stack versions',
-              '- [ ] STORYBLOK_SETUP_GUIDE.md - Verify component fields',
-              '- [ ] SVELTEKIT_GUIDE.md - Update examples',
-              '- [ ] SVELTE_RUNES_GUIDE.md - Add new patterns',
-              '- [ ] .env.example - Verify environment variables',
-              '',
-              '---',
-              '',
-              '### Performance Audit',
-              '',
-              '#### Lighthouse',
-              '- [ ] Run on https://pagespeed.web.dev/',
-              '- [ ] Test homepage',
-              '- [ ] Test 2-3 content pages',
-              '- [ ] Document scores',
-              '',
-              '#### Bundle Size',
-              '```bash',
-              'npm run build',
+              '```sh',
+              'bun outdated',
+              'bun audit',
               '```',
               '',
-              '- [ ] Check total build size',
-              '- [ ] Identify large dependencies',
-              '- [ ] Remove unused packages',
-              '',
-              '#### Core Web Vitals',
-              '- [ ] LCP (Largest Contentful Paint) < 2.5s',
-              '- [ ] FID (First Input Delay) < 100ms',
-              '- [ ] CLS (Cumulative Layout Shift) < 0.1',
-              '',
-              '---',
-              '',
-              '### Backup Verification',
-              '',
-              '#### Code & Configuration',
-              '- [ ] GitHub repo accessible',
-              '- [ ] All branches pushed (main, preview)',
-              '- [ ] No uncommitted local changes',
-              '- [ ] Vercel connected to correct repo',
-              '',
-              '#### Storyblok Content',
-              '- [ ] Log in: https://app.storyblok.com',
-              '- [ ] Content > Settings > Backup',
-              '- [ ] Create manual backup (download JSON)',
-              '- [ ] Store backup securely',
-              '- [ ] Verify critical content present',
-              '',
-              '#### Environment Variables',
-              '- [ ] Document all Vercel environment variables',
-              '- [ ] Verify tokens valid',
-              '- [ ] Rotate Preview token if needed',
-              '- [ ] Confirm production uses Public token',
-              '',
-              '#### Access & Credentials',
-              '- [ ] GitHub access working',
-              '- [ ] Vercel access working',
-              '- [ ] Storyblok access working',
-              '- [ ] Domain registrar access working',
-              '',
-              '---',
+              '- [ ] All major version updates reviewed',
+              '- [ ] SolidStart stable release available? Upgrade if so',
+              '- [ ] Node/Bun engine versions still appropriate',
               '',
               '### Security Review',
               '',
-              '#### Dependency Security',
-              '```bash',
-              'npm audit',
-              'npm audit fix',
-              '```',
+              '- [ ] Rotate BETTER_AUTH_SECRET',
+              '- [ ] Rotate Storyblok tokens',
+              '- [ ] Rotate SHLINK_API_KEY',
+              '- [ ] Review GitHub Actions secrets — remove stale ones',
+              '- [ ] Review VPS SSH authorized_keys',
+              '- [ ] `bun audit` — no high/critical vulnerabilities',
               '',
-              '- [ ] No high/critical vulnerabilities',
-              '- [ ] Update vulnerable packages',
+              '### Infrastructure Review',
               '',
-              '#### Access Review',
-              '- [ ] Review GitHub collaborators',
-              '- [ ] Review Vercel team members',
-              '- [ ] Review Storyblok users',
-              '- [ ] Remove unnecessary access',
+              '- [ ] VPS plan still appropriate for usage?',
+              '- [ ] Postgres backups healthy (check /home/deploy/backups/)',
+              '- [ ] Docker volumes healthy',
+              '- [ ] Hetzner backups enabled',
+              '- [ ] SSL certificates auto-renewing (Caddy handles this)',
               '',
-              '#### Token Rotation',
-              '- [ ] Consider rotating Storyblok tokens',
-              '- [ ] Update in Vercel if rotated',
+              '### Access Review',
               '',
-              '---',
+              '- [ ] GitHub repo collaborators',
+              '- [ ] Hetzner account access',
+              '- [ ] Storyblok users',
+              '- [ ] Remove access for anyone no longer involved',
               '',
-              '### Final Verification',
+              '### Verification',
               '',
-              '- [ ] Tests pass locally',
-              '- [ ] Production deployment successful',
-              '- [ ] Preview deployment working',
-              '- [ ] Critical pages load',
-              '- [ ] Mobile view works',
-              '- [ ] Forms work',
-              '- [ ] Images load',
-              '- [ ] SEO meta tags correct'
+              '- [ ] Full smoke test of public site',
+              '- [ ] Full smoke test of admin panel',
+              '- [ ] Shortlinks working',
+              '- [ ] Email/Listmonk working',
+              '- [ ] Analytics working (Umami)',
             ].join('\n');
 
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: 'Annual Maintenance - ' + year,
-              body: body
+              body,
             });
