@@ -10,6 +10,7 @@ export { Card } from "./Card";
 export { AlertDialog } from "./AlertDialog";
 export { EmptyState } from "./EmptyState";
 export { FormField } from "./FormField";
+export { HorizontalBarList } from "./HorizontalBarList";
 export { Input } from "./Input";
 export { Logo, getLogoDataUrl } from "./Logo";
 export { PageHeader } from "./PageHeader";

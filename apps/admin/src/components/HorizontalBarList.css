@@ -1,0 +1,48 @@
+.hbar-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.hbar-row {
+	display: grid;
+	grid-template-columns: 120px 1fr 40px;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.hbar-label {
+	font-size: 0.85rem;
+	color: var(--color-foreground);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hbar-track {
+	height: 1.25rem;
+	background: var(--color-border);
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+}
+
+.hbar-fill {
+	height: 100%;
+	border-radius: var(--radius-sm);
+	transition: width 0.3s ease;
+	min-width: 2px;
+}
+
+.hbar-value {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--brand-amber-dark);
+	text-align: right;
+	white-space: nowrap;
+}
+
+.hbar-empty {
+	font-size: 0.85rem;
+	color: var(--color-muted);
+	padding: 1rem 0;
+}

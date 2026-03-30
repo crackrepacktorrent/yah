@@ -2,7 +2,7 @@ import { createAsync, type RouteDefinition } from '@solidjs/router';
 import { For, Show, createSignal } from 'solid-js';
 import { createSolidTable, getCoreRowModel, createColumnHelper } from '@tanstack/solid-table';
 import {
-	BarChart, Card, DataTable, PageHeader, Section, StatCard, ToggleGroup,
+	BarChart, Card, DataTable, HorizontalBarList, PageHeader, Section, StatCard, ToggleGroup,
 } from '~/components';
 import { formatDuration } from '~/lib/utils';
 import { getAnalytics } from '../analytics.server';
@@ -17,13 +17,15 @@ type Period = '24h' | '7d' | '30d';
 
 const metricColumnHelper = createColumnHelper<UmamiMetric>();
 
-const metricSections = [
+const outreachSections = [
 	{ title: 'Top Pages', key: 'pages' as const, label: 'Page', mono: true },
 	{ title: 'Referrers', key: 'referrers' as const, label: 'Source', mono: true, emptyLabel: '(direct)' },
+] as const;
+
+const technicalSections = [
 	{ title: 'Browsers', key: 'browsers' as const, label: 'Browser', mono: false },
 	{ title: 'Operating Systems', key: 'os' as const, label: 'OS', mono: false },
 	{ title: 'Devices', key: 'devices' as const, label: 'Device', mono: false },
-	{ title: 'Countries', key: 'countries' as const, label: 'Country', mono: false },
 ] as const;
 
 export default function AnalyticsPage() {
@@ -77,19 +79,62 @@ export default function AnalyticsPage() {
 							</section>
 						</Show>
 
-						<div class="metrics-grid">
-							<For each={metricSections}>
-								{(section) => (
-									<MetricSection
-										title={section.title}
-										items={d()[section.key]}
-										label={section.label}
-										mono={section.mono}
-										emptyLabel={'emptyLabel' in section ? section.emptyLabel : undefined}
-									/>
-								)}
-							</For>
-						</div>
+						<section class="analytics-group">
+							<h2>Geographic Reach</h2>
+							<div class="metrics-grid">
+								<Section title="Top Cities" fill>
+									<Card>
+										<HorizontalBarList
+											items={d().cities.map((m) => ({ label: m.x, value: m.y }))}
+											color="var(--brand-olive)"
+											emptyMessage="No city data yet."
+										/>
+									</Card>
+								</Section>
+								<Section title="Countries" fill>
+									<Card>
+										<HorizontalBarList
+											items={d().countries.map((m) => ({ label: m.x, value: m.y }))}
+											color="var(--brand-amber)"
+											emptyMessage="No country data yet."
+										/>
+									</Card>
+								</Section>
+							</div>
+						</section>
+
+						<section class="analytics-group">
+							<h2>Outreach</h2>
+							<div class="metrics-grid">
+								<For each={outreachSections}>
+									{(section) => (
+										<MetricSection
+											title={section.title}
+											items={d()[section.key]}
+											label={section.label}
+											mono={section.mono}
+											emptyLabel={'emptyLabel' in section ? section.emptyLabel : undefined}
+										/>
+									)}
+								</For>
+							</div>
+						</section>
+
+						<section class="analytics-group">
+							<h2>Technical</h2>
+							<div class="metrics-grid metrics-grid-3">
+								<For each={technicalSections}>
+									{(section) => (
+										<MetricSection
+											title={section.title}
+											items={d()[section.key]}
+											label={section.label}
+											mono={section.mono}
+										/>
+									)}
+								</For>
+							</div>
+						</section>
 					</>
 				)}
 			</Show>
@@ -125,6 +170,7 @@ function MetricSection(props: {
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		enableColumnFilters: false,
+		enableSorting: false,
 	});
 
 	return (

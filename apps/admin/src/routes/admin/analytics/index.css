@@ -2,14 +2,27 @@
 	margin-bottom: 1.5rem;
 }
 
+.analytics-group {
+	margin-top: 2rem;
+}
+
+.analytics-group h2 {
+	margin-bottom: 1rem;
+}
+
 .metrics-grid {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: 1.5rem;
 }
 
+.metrics-grid-3 {
+	grid-template-columns: 1fr 1fr 1fr;
+}
+
 @media (max-width: 768px) {
-	.metrics-grid {
+	.metrics-grid,
+	.metrics-grid-3 {
 		grid-template-columns: 1fr;
 	}
 }

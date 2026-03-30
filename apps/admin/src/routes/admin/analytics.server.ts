@@ -13,7 +13,7 @@ export const getAnalytics = query(async (period: '24h' | '7d' | '30d' = '7d') =>
 		};
 		const { startAt, unit } = ranges[period]!;
 
-		const [stats, pageviews, pages, referrers, browsers, os, devices, countries, active] = await Promise.all([
+		const [stats, pageviews, pages, referrers, browsers, os, devices, countries, cities, active] = await Promise.all([
 			getWebsiteStats(startAt, now),
 			getPageviews(startAt, now, unit),
 			getMetrics(startAt, now, 'path', 10),
@@ -21,7 +21,8 @@ export const getAnalytics = query(async (period: '24h' | '7d' | '30d' = '7d') =>
 			getMetrics(startAt, now, 'browser', 5),
 			getMetrics(startAt, now, 'os', 5),
 			getMetrics(startAt, now, 'device', 5),
-			getMetrics(startAt, now, 'country', 10),
+			getMetrics(startAt, now, 'country', 15),
+			getMetrics(startAt, now, 'city', 15),
 			getActiveVisitors(),
 		]);
 
@@ -40,6 +41,7 @@ export const getAnalytics = query(async (period: '24h' | '7d' | '30d' = '7d') =>
 			os,
 			devices,
 			countries,
+			cities,
 			active,
 		};
 	});
