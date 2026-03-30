@@ -1,26 +1,37 @@
 let cachedToken: { token: string; expiresAt: number } | null = null;
+let tokenPromise: Promise<string> | null = null;
 
 async function getToken(): Promise<string> {
 	if (cachedToken && Date.now() < cachedToken.expiresAt) {
 		return cachedToken.token;
 	}
 
-	const res = await fetch(`${process.env['UMAMI_URL']}/api/auth/login`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			username: process.env['UMAMI_USERNAME'],
-			password: process.env['UMAMI_PASSWORD'],
-		}),
-	});
+	if (tokenPromise) return tokenPromise;
 
-	if (!res.ok) {
-		throw new Error(`Umami auth failed: ${res.status}`);
-	}
+	tokenPromise = (async () => {
+		try {
+			const res = await fetch(`${process.env['UMAMI_URL']}/api/auth/login`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					username: process.env['UMAMI_USERNAME'],
+					password: process.env['UMAMI_PASSWORD'],
+				}),
+			});
 
-	const data = await res.json();
-	cachedToken = { token: data.token, expiresAt: getJwtExpiry(data.token) };
-	return data.token;
+			if (!res.ok) {
+				throw new Error(`Umami auth failed: ${res.status}`);
+			}
+
+			const data = await res.json();
+			cachedToken = { token: data.token, expiresAt: getJwtExpiry(data.token) };
+			return data.token;
+		} finally {
+			tokenPromise = null;
+		}
+	})();
+
+	return tokenPromise;
 }
 
 function decodeBase64Url(str: string): string {

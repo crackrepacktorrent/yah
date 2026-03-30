@@ -339,6 +339,7 @@ function ShortlinkVisits(props: { visits: Visit[]; total: number }) {
 		columns: visitColumns,
 		getCoreRowModel: getCoreRowModel(),
 		enableColumnFilters: false,
+		enableSorting: false,
 	});
 
 	return (

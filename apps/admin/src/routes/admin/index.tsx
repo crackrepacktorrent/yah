@@ -52,6 +52,7 @@ export default function DashboardPage() {
 		columns: recentColumns,
 		getCoreRowModel: getCoreRowModel(),
 		enableColumnFilters: false,
+		enableSorting: false,
 	});
 
 	return (
