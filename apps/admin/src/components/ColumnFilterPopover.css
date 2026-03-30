@@ -133,6 +133,10 @@
 	overflow-y: auto;
 }
 
+.filter-list .filter-row:last-child {
+	border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
 .filter-empty {
 	padding: 0.6rem;
 	font-size: 0.8rem;
