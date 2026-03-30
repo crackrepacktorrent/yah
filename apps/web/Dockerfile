@@ -30,4 +30,4 @@ EXPOSE 3000
 RUN addgroup -g 1001 -S nodejs && adduser -S sveltekit -u 1001
 USER sveltekit
 
-CMD ["bun", "build"]
+CMD ["bun", "./build/index.js"]
