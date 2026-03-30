@@ -124,6 +124,7 @@ function MetricSection(props: {
 		get data() { return props.items; },
 		columns,
 		getCoreRowModel: getCoreRowModel(),
+		enableColumnFilters: false,
 	});
 
 	return (

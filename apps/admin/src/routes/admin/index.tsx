@@ -51,6 +51,7 @@ export default function DashboardPage() {
 		get data() { return dashboard()?.recentShortUrls ?? []; },
 		columns: recentColumns,
 		getCoreRowModel: getCoreRowModel(),
+		enableColumnFilters: false,
 	});
 
 	return (
