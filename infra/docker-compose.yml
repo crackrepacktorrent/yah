@@ -132,7 +132,7 @@ services:
       DB_PASSWORD: ${SHLINK_DB_PASSWORD}
       INITIAL_API_KEY: ${SHLINK_API_KEY}
       GEOLITE_LICENSE_KEY: ${GEOLITE_LICENSE_KEY:-}
-      TRUSTED_PROXIES: caddy
+      TRUSTED_PROXIES: 172.18.0.0/16
     expose:
       - "8080"
     depends_on:
