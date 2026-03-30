@@ -6,8 +6,8 @@ apps/web/build/
 apps/web/.svelte-kit/
 apps/admin/.output/
 
-# Bun
-bun.lock
+# Bun (bun.lockb is the old binary format, bun.lock is the new text format)
+# Neither should be gitignored — both need to be committed
 
 # Legacy lockfiles
 package-lock.json

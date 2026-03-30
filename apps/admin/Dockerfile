@@ -2,7 +2,7 @@ FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 
 # Install deps from monorepo root + this workspace only
-COPY package.json bun.lockb turbo.json ./
+COPY package.json bun.lock turbo.json ./
 COPY apps/admin/package.json ./apps/admin/
 RUN bun install --frozen-lockfile
 
