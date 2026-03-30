@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
 								<Section title="Top Cities" fill>
 									<Card>
 										<HorizontalBarList
-											items={d().cities.map((m) => ({ label: m.x, value: m.y }))}
+											items={d().cities.filter((m) => m.x).map((m) => ({ label: m.x, value: m.y }))}
 											color="var(--brand-olive)"
 											emptyMessage="No city data yet."
 										/>
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
 								<Section title="Countries" fill>
 									<Card>
 										<HorizontalBarList
-											items={d().countries.map((m) => ({ label: m.x, value: m.y }))}
+											items={d().countries.filter((m) => m.x).map((m) => ({ label: m.x, value: m.y }))}
 											color="var(--brand-amber)"
 											emptyMessage="No country data yet."
 										/>
