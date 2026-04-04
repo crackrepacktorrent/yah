@@ -55,8 +55,10 @@ export const defaultRolePermissions: Record<string, Permissions> = {
 // Static roles for better-auth's organization plugin.
 // The cast is required because ac.newRole() expects an exact Subset type
 // that can't be derived from Record<string, string[]>.
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const roles = {
 	owner: ac.newRole(defaultRolePermissions['owner'] as any),
 	admin: ac.newRole(defaultRolePermissions['admin'] as any),
 	member: ac.newRole(defaultRolePermissions['member'] as any),
 };
+/* eslint-enable @typescript-eslint/no-explicit-any */

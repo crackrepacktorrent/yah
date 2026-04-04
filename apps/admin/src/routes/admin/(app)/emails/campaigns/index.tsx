@@ -115,12 +115,9 @@ export default function CampaignsPage() {
 			enableColumnFilter: false,
 			cell: (info) => {
 				const lists = info.getValue();
-				if (lists.length === 0) return <span class="cell-muted">—</span>;
-				return (
-					<div class="cell-badges">
-						<For each={lists}>{(list) => <Badge>{list.name}</Badge>}</For>
-					</div>
-				);
+				return lists.length === 0
+					? <span class="cell-muted">—</span>
+					: <div class="cell-badges"><For each={lists}>{(list) => <Badge>{list.name}</Badge>}</For></div>;
 			},
 		}),
 		columnHelper.display({

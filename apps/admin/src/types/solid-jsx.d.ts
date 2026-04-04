@@ -7,6 +7,7 @@ export {};
 
 declare module 'solid-js' {
 	namespace JSX {
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		interface InputHTMLAttributes<T> {
 			'prop:indeterminate'?: boolean;
 		}

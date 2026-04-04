@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- qr-code-styling has no type exports */
 import { type Component, For, createEffect, createSignal, onMount } from 'solid-js';
 import { Switch } from './Switch';
 import { Select } from './Select';

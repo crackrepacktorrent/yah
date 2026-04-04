@@ -124,6 +124,7 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 
 	// ─── Handlers ─────────────────────────────────────────────────────────────────
 
+	// eslint-disable-next-line solid/reactivity -- handleSubmit wraps this in a tracked scope
 	const handleSave = form.handleSubmit(async (values) => {
 		setSavePending(true);
 		try {

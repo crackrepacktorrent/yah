@@ -31,6 +31,7 @@ export function PerformanceTab(props: TabProps) {
 
 	const [saving, setSaving] = createSignal(false);
 
+	// eslint-disable-next-line solid/reactivity
 	const handleSave = form.handleSubmit(async (values) => {
 		setSaving(true);
 		try {

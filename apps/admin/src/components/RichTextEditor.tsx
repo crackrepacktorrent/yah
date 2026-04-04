@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Lexical is dynamically imported with no static types */
+/* eslint-disable solid/reactivity -- editor commands are event handlers, not reactive derivations */
 import { type Component, createSignal, onMount, onCleanup } from 'solid-js';
 import { Popover as KobaltePopover } from '@kobalte/core/popover';
 import { Input } from './Input';

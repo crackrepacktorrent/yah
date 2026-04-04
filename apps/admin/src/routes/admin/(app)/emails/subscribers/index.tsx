@@ -1,5 +1,5 @@
 import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
-import { Show, createMemo, createSignal } from 'solid-js';
+import { For, Show, createMemo, createSignal } from 'solid-js';
 import { createSolidTable, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, getSortedRowModel, createColumnHelper, type SortingState, type ColumnFiltersState } from '@tanstack/solid-table';
 import { toast } from 'solid-sonner';
 import {
@@ -123,16 +123,19 @@ export default function SubscribersPage() {
 			enableColumnFilter: false,
 			cell: (info) => {
 				const lists = info.getValue();
-				if (lists.length === 0) return <span class="cell-muted">—</span>;
-				return (
-					<div class="cell-badges">
-						{lists.map((list) => (
-							<Badge variant={list.subscription_status === 'unconfirmed' ? 'warning' : 'default'}>
-								{list.name}{list.subscription_status === 'unconfirmed' ? ' (unconfirmed)' : ''}
-							</Badge>
-						))}
-					</div>
-				);
+				return lists.length === 0
+					? <span class="cell-muted">—</span>
+					: (
+						<div class="cell-badges">
+							<For each={lists}>
+								{(list) => (
+									<Badge variant={list.subscription_status === 'unconfirmed' ? 'warning' : 'default'}>
+										{list.name}{list.subscription_status === 'unconfirmed' ? ' (unconfirmed)' : ''}
+									</Badge>
+								)}
+							</For>
+						</div>
+					);
 			},
 		}),
 		columnHelper.accessor('created_at', {

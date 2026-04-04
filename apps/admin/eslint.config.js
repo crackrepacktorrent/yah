@@ -63,12 +63,20 @@ export default [
         { prefer: "type-imports" },
       ],
 
+      // Solid assigns refs via ref={} props — these look unassigned to ESLint
+      "no-unassigned-vars": "off",
+
       // General rules
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "prefer-const": "warn",
       "no-var": "error",
     },
   },
-  solid,
+  {
+    ...solid,
+    rules: {
+      ...solid.rules,
+    },
+  },
   prettier,
 ];

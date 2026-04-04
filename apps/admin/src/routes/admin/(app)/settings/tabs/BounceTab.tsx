@@ -51,6 +51,7 @@ export function BounceTab(props: TabProps) {
 		{ label: 'Complaint', countKey: 'complaintCount' as const, actionKey: 'complaintAction' as const },
 	];
 
+	// eslint-disable-next-line solid/reactivity
 	const handleSave = form.handleSubmit(async (values) => {
 		setSaving(true);
 		try {
