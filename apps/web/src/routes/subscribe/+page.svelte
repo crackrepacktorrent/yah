@@ -69,8 +69,8 @@
 										<input
 											type="checkbox"
 											name="list"
-											value={list.id}
-											checked={data.preselectedListIds.includes(list.id) || data.lists.length === 1}
+											value={list.uuid}
+											checked={data.preselectedUuids.includes(list.uuid) || data.lists.length === 1}
 										/>
 										<span>{list.name}</span>
 									</label>

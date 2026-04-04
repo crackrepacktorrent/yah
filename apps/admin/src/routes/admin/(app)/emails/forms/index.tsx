@@ -16,6 +16,7 @@ export const route: RouteDefinition = {
 
 type ListItem = {
 	id: number;
+	uuid: string;
 	name: string;
 	type: 'public' | 'private';
 	optin: 'single' | 'double';
@@ -27,7 +28,7 @@ export default function FormsPage() {
 	const data = createAsync(() => listLists());
 
 	const [pendingToggle, setPendingToggle] = createSignal<number | null>(null);
-	const [copiedId, setCopiedId] = createSignal<number | null>(null);
+	const [copiedId, setCopiedId] = createSignal<string | null>(null);
 
 	const publicLists = createMemo(() => (data()?.lists ?? []).filter((l) => l.type === 'public') as ListItem[]);
 	const privateLists = createMemo(() => (data()?.lists ?? []).filter((l) => l.type === 'private') as ListItem[]);
@@ -46,23 +47,23 @@ export default function FormsPage() {
 		}
 	}
 
-	function getSubscribeUrl(listId: number) {
-		return `/subscribe?list=${listId}`;
+	function getSubscribeUrl(listUuid: string) {
+		return `/subscribe?list=${listUuid}`;
 	}
 
-	function getEmbedSnippet(listId: number, listName: string) {
+	function getEmbedSnippet(listUuid: string, listName: string) {
 		return `<form method="post" action="/subscribe">
   <input type="email" name="email" required placeholder="Your email" />
   <input type="text" name="name" placeholder="Your name" />
-  <input type="hidden" name="list" value="${listId}" />
+  <input type="hidden" name="list" value="${listUuid}" />
   <button type="submit">Subscribe to ${listName}</button>
 </form>`;
 	}
 
-	async function copySnippet(listId: number, listName: string) {
+	async function copySnippet(listUuid: string, listName: string) {
 		try {
-			await navigator.clipboard.writeText(getEmbedSnippet(listId, listName));
-			setCopiedId(listId);
+			await navigator.clipboard.writeText(getEmbedSnippet(listUuid, listName));
+			setCopiedId(listUuid);
 			setTimeout(() => setCopiedId(null), 2000);
 		} catch {
 			toast.error('Failed to copy to clipboard.');
@@ -100,7 +101,7 @@ export default function FormsPage() {
 													</div>
 												</div>
 												<div class="form-card-actions">
-													<a href={getSubscribeUrl(list.id)} target="_blank" rel="noopener" class="preview-link">Preview</a>
+													<a href={getSubscribeUrl(list.uuid)} target="_blank" rel="noopener" class="preview-link">Preview</a>
 													<Show when={can(session(), 'list', 'edit')}>
 														<Button
 															variant="ghost"
@@ -115,11 +116,11 @@ export default function FormsPage() {
 											<div class="embed-section">
 												<div class="embed-header">
 													<span class="embed-label">Embed code</span>
-													<button class="copy-btn" onClick={() => copySnippet(list.id, list.name)}>
-														{copiedId() === list.id ? 'Copied!' : 'Copy'}
+													<button class="copy-btn" onClick={() => copySnippet(list.uuid, list.name)}>
+														{copiedId() === list.uuid ? 'Copied!' : 'Copy'}
 													</button>
 												</div>
-												<pre class="embed-code">{getEmbedSnippet(list.id, list.name)}</pre>
+												<pre class="embed-code">{getEmbedSnippet(list.uuid, list.name)}</pre>
 											</div>
 										</div>
 									)}
