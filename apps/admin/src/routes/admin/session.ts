@@ -1,4 +1,4 @@
-import { query } from "@solidjs/router";
+import { query, redirect } from "@solidjs/router";
 import { getWebRequest } from "@solidjs/start/http";
 import { auth } from "~/server/auth";
 import { defaultRolePermissions } from "~/lib/permissions";
@@ -57,10 +57,9 @@ export const getSession = query(async (): Promise<Session | null> => {
   return fetchSession(getWebRequest().headers);
 }, "session");
 
-// Returns the session if authenticated, null if not.
-// Redirects are handled client-side in the layout to avoid a SolidStart alpha.2
-// bug where thrown redirect() Responses crash Seroval serialization in production.
-export const requireSession = query(async (): Promise<Session | null> => {
+export const requireSession = query(async (): Promise<Session> => {
   "use server";
-  return fetchSession(getWebRequest().headers);
+  const session = await fetchSession(getWebRequest().headers);
+  if (!session) throw redirect("/admin/login");
+  return session;
 }, "require-session");
