@@ -67,6 +67,8 @@ jobs:
           build-args: |
             VITE_STORYBLOK_TOKEN=${{ secrets[matrix.storyblok_secret] }}
             VITE_SITE_URL=https://y4h.org
+            VITE_UMAMI_URL=https://y4h.org
+            VITE_UMAMI_WEBSITE_ID=${{ secrets.VITE_UMAMI_WEBSITE_ID }}
             ${{ matrix.extra_args }}
 
   deploy:
