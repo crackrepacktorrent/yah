@@ -163,6 +163,7 @@ services:
       APP_SECRET: ${UMAMI_APP_SECRET}
       TRACKER_SCRIPT_NAME: t
       COLLECT_API_ENDPOINT: /api/t
+      CLIENT_IP_HEADER: CF-Connecting-IP
     expose:
       - "3000"
     depends_on:
