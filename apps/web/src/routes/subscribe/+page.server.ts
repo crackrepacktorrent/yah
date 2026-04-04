@@ -32,8 +32,8 @@ export const actions: Actions = {
 		const name = form.get('name')?.toString()?.trim();
 		const listUuids = form.getAll('list').map(String).filter(Boolean);
 
-		if (!email) {
-			return fail(400, { error: 'Email is required.', email, name });
+		if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+			return fail(400, { error: 'Please enter a valid email address.', email, name });
 		}
 
 		if (listUuids.length === 0) {

@@ -4,6 +4,7 @@
     "build": {
       "outputs": [".output/**", "build/**", ".svelte-kit/**"]
     },
-    "check": {}
+    "check": {},
+    "lint": {}
   }
 }

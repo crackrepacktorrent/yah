@@ -1,3 +1,5 @@
+import { env } from '~/server/env';
+
 let cachedToken: { token: string; expiresAt: number } | null = null;
 let tokenPromise: Promise<string> | null = null;
 
@@ -10,12 +12,12 @@ async function getToken(): Promise<string> {
 
 	tokenPromise = (async () => {
 		try {
-			const res = await fetch(`${process.env['UMAMI_URL']}/api/auth/login`, {
+			const res = await fetch(`${env.UMAMI_URL}/api/auth/login`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					username: process.env['UMAMI_USERNAME'],
-					password: process.env['UMAMI_PASSWORD'],
+					username: env.UMAMI_USERNAME,
+					password: env.UMAMI_PASSWORD,
 				}),
 			});
 
@@ -43,21 +45,16 @@ function decodeBase64Url(str: string): string {
 function getJwtExpiry(token: string): number {
 	try {
 		const payload = JSON.parse(decodeBase64Url(token.split('.')[1]!));
-		// Expire 5 minutes early to avoid using stale tokens
-		return payload.exp ? payload.exp * 1000 - 5 * 60 * 1000 : Date.now() + 23 * 60 * 60 * 1000;
+		const EARLY_EXPIRY_MS = 5 * 60 * 1000; // Refresh 5 min before expiry
+		const FALLBACK_TTL_MS = 23 * 60 * 60 * 1000; // 23 hours if no exp claim
+		return payload.exp ? payload.exp * 1000 - EARLY_EXPIRY_MS : Date.now() + FALLBACK_TTL_MS;
 	} catch {
 		return Date.now() + 23 * 60 * 60 * 1000;
 	}
 }
 
-function init() {
-	if (!process.env['UMAMI_URL'] || !process.env['UMAMI_USERNAME'] || !process.env['UMAMI_PASSWORD'] || !process.env['UMAMI_WEBSITE_ID']) {
-		throw new Error('UMAMI_URL, UMAMI_USERNAME, UMAMI_PASSWORD, and UMAMI_WEBSITE_ID must be set');
-	}
-}
-
 function getWebsiteId(): string {
-	return process.env['UMAMI_WEBSITE_ID']!;
+	return env.UMAMI_WEBSITE_ID;
 }
 
 async function umamiGet<T>(path: string, params?: Record<string, string>): Promise<T> {
@@ -111,7 +108,6 @@ export interface UmamiPageview {
 }
 
 export async function getWebsiteStats(startAt: number, endAt: number): Promise<UmamiStats> {
-	init();
 	return umamiGet<UmamiStats>(`/websites/${getWebsiteId()}/stats`, {
 		startAt: String(startAt),
 		endAt: String(endAt),
@@ -123,7 +119,6 @@ export async function getPageviews(
 	endAt: number,
 	unit: 'hour' | 'day' | 'week' | 'month' = 'day',
 ): Promise<{ pageviews: UmamiPageview[]; sessions: UmamiPageview[] }> {
-	init();
 	return umamiGet<{ pageviews: UmamiPageview[]; sessions: UmamiPageview[] }>(`/websites/${getWebsiteId()}/pageviews`, {
 		startAt: String(startAt),
 		endAt: String(endAt),
@@ -146,7 +141,6 @@ export async function getMetrics(
 	type: MetricType,
 	limit = 10,
 ): Promise<UmamiMetric[]> {
-	init();
 	return umamiGet<UmamiMetric[]>(`/websites/${getWebsiteId()}/metrics`, {
 		startAt: String(startAt),
 		endAt: String(endAt),
@@ -156,7 +150,6 @@ export async function getMetrics(
 }
 
 export async function getActiveVisitors(): Promise<number> {
-	init();
 	const data = await umamiGet<{ visitors: number }>(`/websites/${getWebsiteId()}/active`);
 	return data.visitors;
 }

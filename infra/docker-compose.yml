@@ -265,10 +265,11 @@ services:
       resources:
         limits:
           cpus: '1'
-          memory: 1G
+          memory: 2G
 
 volumes:
   caddy_data:
   caddy_config:
   postgres_data:
   uptime_kuma_data:
+

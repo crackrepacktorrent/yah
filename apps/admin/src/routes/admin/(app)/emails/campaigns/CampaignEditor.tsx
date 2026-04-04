@@ -457,7 +457,7 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 					<iframe
 						class="preview-frame"
 						srcdoc={previewHtml()}
-						sandbox="allow-same-origin"
+						sandbox=""
 						title="Campaign preview"
 					/>
 				</Show>

@@ -4,12 +4,13 @@ import { Pool } from 'pg';
 import { getMigrations } from 'better-auth/db/migration';
 import { getListmonk } from '~/server/listmonk';
 import { ac, roles } from '~/lib/permissions';
+import { env } from '~/server/env';
 
-const pool = new Pool({ connectionString: process.env['DATABASE_URL']! });
+const pool = new Pool({ connectionString: env.DATABASE_URL });
 
 export const auth = betterAuth({
-	secret: process.env['BETTER_AUTH_SECRET']!,
-	baseURL: process.env['BETTER_AUTH_URL']!,
+	secret: env.BETTER_AUTH_SECRET,
+	baseURL: env.BETTER_AUTH_URL,
 	database: pool,
 	emailAndPassword: {
 		enabled: true,
@@ -17,7 +18,7 @@ export const auth = betterAuth({
 			try {
 				await getListmonk().sendTransactionalEmail({
 					subscriberEmail: user.email,
-					templateId: Number(process.env['LISTMONK_PASSWORD_RESET_TEMPLATE_ID']),
+					templateId: env.LISTMONK_PASSWORD_RESET_TEMPLATE_ID,
 					data: {
 						reset_link: url,
 						user_name: user.name,
@@ -34,11 +35,11 @@ export const auth = betterAuth({
 			roles,
 			dynamicAccessControl: { enabled: true },
 			async sendInvitationEmail(data) {
-				const inviteLink = `${process.env['BETTER_AUTH_URL']}/admin/members/accept/${data.id}`;
+				const inviteLink = `${env.BETTER_AUTH_URL}/admin/members/accept/${data.id}`;
 				try {
 					await getListmonk().sendTransactionalEmail({
 						subscriberEmail: data.email,
-						templateId: Number(process.env['LISTMONK_INVITATION_TEMPLATE_ID']),
+						templateId: env.LISTMONK_INVITATION_TEMPLATE_ID,
 						data: {
 							invite_link: inviteLink,
 							org_name: data.organization.name,

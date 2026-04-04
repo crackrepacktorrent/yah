@@ -53,11 +53,18 @@ export const load: LayoutServerLoad = async ({ params, setHeaders }) => {
     const dropdownCards: Record<string, CardBlok[]> = {};
 
     if (uniquePageSlugs.length > 0) {
-      const pageResults = await Promise.all(
-        uniquePageSlugs.map((slug: string) =>
-          fetchStory(slug).then(({ data }) => ({ slug, data })).catch(() => ({ slug, data: null }))
-        )
-      );
+      // Batch fetch all dropdown pages in a single API call
+      const { data: batchData } = await storyblokApi.get('cdn/stories', {
+        version,
+        language: lang,
+        fallback_lang: 'en',
+        by_slugs: uniquePageSlugs.join(','),
+      }).catch(() => ({ data: { stories: [] } }));
+
+      const pageResults = uniquePageSlugs.map((slug: string) => {
+        const story = batchData.stories?.find((s: any) => stripLangPrefix(s.full_slug) === slug);
+        return { slug, data: story ? { story } : null };
+      });
 
       // Helper function to find card_grid recursively
       function findCardGrid(blocks: any[]): any {

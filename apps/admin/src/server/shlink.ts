@@ -114,6 +114,8 @@ export interface OverallVisitsSummary {
 	orphanVisits: { total: number; nonBots: number; bots: number };
 }
 
+import { env } from '~/server/env';
+
 // ─── Client ──────────────────────────────────────────────────────────────────
 
 class ShlinkClient {
@@ -121,13 +123,8 @@ class ShlinkClient {
 	private apiKey: string;
 
 	constructor() {
-		const url = process.env['SHLINK_URL'];
-		const key = process.env['SHLINK_API_KEY'];
-		if (!url || !key) {
-			throw new Error('SHLINK_URL and SHLINK_API_KEY must be set');
-		}
-		this.baseUrl = url.replace(/\/+$/, '');
-		this.apiKey = key;
+		this.baseUrl = env.SHLINK_URL.replace(/\/+$/, '');
+		this.apiKey = env.SHLINK_API_KEY;
 	}
 
 	private async request<T>(path: string, options: RequestInit = {}): Promise<T> {

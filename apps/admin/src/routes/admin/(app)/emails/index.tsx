@@ -406,7 +406,7 @@ export default function TemplatesPage() {
 								<iframe
 									class="preview-frame"
 									srcdoc={previewHtml(editBody())}
-									sandbox="allow-same-origin"
+									sandbox=""
 									title="Template preview"
 								/>
 							</Show>

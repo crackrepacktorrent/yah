@@ -15,9 +15,11 @@ export const statements = {
 
 export const ac = createAccessControl(statements);
 
+type Permissions = Partial<Record<keyof typeof statements, string[]>>;
+
 // Built-in role permissions — pre-defined, shown as read-only in the Roles page.
 // Custom roles are created dynamically via the Roles page.
-export const defaultRolePermissions: Record<string, Record<string, string[]>> = {
+export const defaultRolePermissions: Record<string, Permissions> = {
 	owner: {
 		organization: ['update', 'delete'],
 		member: ['create', 'update', 'delete'],
@@ -51,13 +53,10 @@ export const defaultRolePermissions: Record<string, Record<string, string[]>> = 
 };
 
 // Static roles for better-auth's organization plugin.
-// The cast is required because ac.newRole() expects a Subset<K, TStatements>
-// which is not assignable from Record<string,string[]> without it.
+// The cast is required because ac.newRole() expects an exact Subset type
+// that can't be derived from Record<string, string[]>.
 export const roles = {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	owner: ac.newRole(defaultRolePermissions['owner'] as any),
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	admin: ac.newRole(defaultRolePermissions['admin'] as any),
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	member: ac.newRole(defaultRolePermissions['member'] as any),
 };

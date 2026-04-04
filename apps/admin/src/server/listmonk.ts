@@ -1,17 +1,14 @@
 // ─── Client ──────────────────────────────────────────────────────────────────
 
+import { env } from '~/server/env';
+
 class ListmonkClient {
 	private baseUrl: string;
 	private authHeader: string;
 
 	constructor() {
-		const url = process.env['LISTMONK_URL'];
-		const token = process.env['LISTMONK_API_TOKEN'];
-		if (!url || !token) {
-			throw new Error('LISTMONK_URL and LISTMONK_API_TOKEN must be set');
-		}
-		this.baseUrl = url.replace(/\/+$/, '');
-		this.authHeader = `Basic ${Buffer.from(token).toString('base64')}`;
+		this.baseUrl = env.LISTMONK_URL.replace(/\/+$/, '');
+		this.authHeader = `token ${env.LISTMONK_API_TOKEN}`;
 	}
 
 	private async request<T>(path: string, options: RequestInit = {}): Promise<T> {

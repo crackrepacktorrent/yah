@@ -75,3 +75,8 @@ jobs:
             ADMIN_TAG=$TAG docker compose pull yah-admin
             ADMIN_TAG=$TAG docker compose up -d yah-admin
             docker image prune -f
+
+      - name: Verify deployment
+        run: |
+          sleep 10
+          curl -sf --retry 3 --retry-delay 5 https://y4h.org/admin/login || exit 1
