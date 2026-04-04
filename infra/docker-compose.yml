@@ -119,6 +119,7 @@ services:
           memory: 256M
 
   shlink:
+
     image: shlinkio/shlink:latest
     restart: unless-stopped
     environment:
@@ -153,7 +154,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 256M
+          memory: 512M
 
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
@@ -234,7 +235,7 @@ services:
       resources:
         limits:
           cpus: '0.25'
-          memory: 128M
+          memory: 256M
 
   postgres:
     image: postgres:18-alpine
