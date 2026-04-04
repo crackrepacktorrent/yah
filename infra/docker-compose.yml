@@ -119,7 +119,6 @@ services:
           memory: 256M
 
   shlink:
-
     image: shlinkio/shlink:latest
     restart: unless-stopped
     environment:
