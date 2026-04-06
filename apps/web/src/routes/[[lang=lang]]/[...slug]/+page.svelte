@@ -12,7 +12,9 @@
   let loaded = $state(false);
 
   let content = $derived(story?.content as PageBlok | undefined);
+  let isHome = $derived(story?.slug === 'home');
   let pageTitle = $derived(content?.seo_title || story?.name || '');
+  let fullTitle = $derived(isHome ? 'Youth Alliance for Housing' : `${pageTitle} | Youth Alliance for Housing`);
   let pageDescription = $derived(content?.seo_description || '');
   let ogImage = $derived(content?.og_image?.filename || `${SITE_URL}/og-image.png`);
 
@@ -35,9 +37,9 @@
 
 <svelte:head>
   {#if pageTitle}
-    <title>{pageTitle} | Youth Alliance for Housing</title>
-    <meta property="og:title" content="{pageTitle} | Youth Alliance for Housing" />
-    <meta name="twitter:title" content="{pageTitle} | Youth Alliance for Housing" />
+    <title>{fullTitle}</title>
+    <meta property="og:title" content={fullTitle} />
+    <meta name="twitter:title" content={fullTitle} />
   {/if}
   {#if pageDescription}
     <meta name="description" content={pageDescription} />
