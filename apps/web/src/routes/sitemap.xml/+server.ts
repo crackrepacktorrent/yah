@@ -1,8 +1,7 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { getStoryblokApi } from '@storyblok/svelte';
 import { getStoryblokVersion } from '$lib/storyblok/helpers';
-
-const SITE_URL = 'https://y4h.org';
+import { SITE_URL } from '$lib/config';
 
 export const GET: RequestHandler = async () => {
 	const storyblokApi = getStoryblokApi();

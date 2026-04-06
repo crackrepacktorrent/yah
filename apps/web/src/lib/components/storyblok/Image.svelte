@@ -5,7 +5,13 @@
   let { blok }: { blok: ImageBlok } = $props();
 
   let altText = $derived(blok.alt_text ?? blok.image.alt ?? "");
-  let imageUrl = $derived(blok.image.filename);
+  let originalUrl = $derived(blok.image.filename);
+  // Storyblok CDN: /m/ enables auto WebP, /m/{w}x0/ resizes by width
+  let isStoryblok = $derived(originalUrl.includes('storyblok.com'));
+  let imageUrl = $derived(isStoryblok ? `${originalUrl}/m/` : originalUrl);
+  let srcset = $derived(isStoryblok
+    ? `${originalUrl}/m/400x0/ 400w, ${originalUrl}/m/800x0/ 800w, ${originalUrl}/m/1200x0/ 1200w, ${originalUrl}/m/1600x0/ 1600w`
+    : undefined);
   let loading = $derived((blok.lazy_loading ?? true) ? 'lazy' as const : 'eager' as const);
   let clickable = $derived(blok.clickable ?? false);
   let aspectRatio = $derived(blok.aspect_ratio ?? 'natural');
@@ -23,9 +29,11 @@
   style="{containerStyles} {blok.custom_styles ?? ''}"
 >
   {#if clickable}
-    <a href={imageUrl} target="_blank" rel="noopener noreferrer" class="image-link">
+    <a href={originalUrl} target="_blank" rel="noopener noreferrer" class="image-link">
       <img
         src={imageUrl}
+        srcset={srcset}
+        sizes="100vw"
         alt={altText}
         loading={loading}
         style={imgStyles}
@@ -34,6 +42,8 @@
   {:else}
     <img
       src={imageUrl}
+      srcset={srcset}
+      sizes="100vw"
       alt={altText}
       loading={loading}
       style={imgStyles}

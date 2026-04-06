@@ -39,10 +39,16 @@ export interface AssetField {
 
 /**
  * Page component - Root content type
+ *
+ * SEO fields (seo_title, seo_description, og_image) should be added
+ * to the "page" component in the Storyblok dashboard for per-page control.
  */
 export interface PageBlok extends StoryblokBlok {
   component: 'page';
   body: StoryblokBlok[];
+  seo_title?: string;
+  seo_description?: string;
+  og_image?: AssetField;
 }
 
 /**
