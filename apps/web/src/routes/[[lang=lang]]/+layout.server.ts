@@ -3,8 +3,14 @@ import { getStoryblokApi } from "@storyblok/svelte";
 import { getLanguage } from "$lib/lang";
 import { getStoryblokVersion } from "$lib/storyblok/helpers";
 import type { HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
+import { redirect } from "@sveltejs/kit";
 
-export const load: LayoutServerLoad = async ({ params, setHeaders }) => {
+export const load: LayoutServerLoad = async ({ params, url, setHeaders }) => {
+  // English is the default — redirect /en/* to /* to avoid duplicate content
+  if (params.lang === 'en') {
+    const path = url.pathname.replace(/^\/en\/?/, '/');
+    redirect(301, path);
+  }
   // 4hr edge cache, 60s browser cache — webhook purges on content publish
   setHeaders({
     'Cache-Control': 'public, s-maxage=14400, max-age=60, stale-while-revalidate=60',
