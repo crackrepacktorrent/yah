@@ -32,6 +32,7 @@
 		"css-tree": "^3.1.0",
 		"embla-carousel-autoplay": "^8.6.0",
 		"lucide-svelte": "^0.562.0",
-		"pdfjs-dist": "^5.4.530"
+		"pdfjs-dist": "^5.4.530",
+		"photoswipe": "^5.4.4"
 	}
 }

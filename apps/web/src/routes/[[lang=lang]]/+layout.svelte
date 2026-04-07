@@ -1,6 +1,7 @@
 <script lang="ts">
   import { StoryblokComponent } from "@storyblok/svelte";
   import Header from "$lib/components/storyblok/Header.svelte";
+  import Lightbox from "$lib/components/Lightbox.svelte";
   import type { LayoutData } from "./$types";
   import { parse } from 'css-tree';
   import { page } from '$app/state';
@@ -100,6 +101,8 @@
     <StoryblokComponent blok={data.footer[0]} />
   {/if}
 </div>
+
+<Lightbox />
 
 <style>
   .skip-link {

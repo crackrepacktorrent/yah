@@ -1,5 +1,5 @@
 import { storyblokInit, apiPlugin } from "@storyblok/svelte";
-import { shouldEnableBridge } from "$lib/storyblok/helpers";
+import { isPreviewMode, shouldEnableBridge } from "$lib/storyblok/helpers";
 import Page from "$lib/components/storyblok/Page.svelte";
 import Separator from "$lib/components/storyblok/Separator.svelte";
 import Image from "$lib/components/storyblok/Image.svelte";
@@ -15,8 +15,12 @@ import Button from "$lib/components/storyblok/Button.svelte";
 import Footer from "$lib/components/storyblok/Footer.svelte";
 
 
+const accessToken = isPreviewMode()
+  ? import.meta.env.VITE_STORYBLOK_PREVIEW_TOKEN
+  : import.meta.env.VITE_STORYBLOK_PUBLIC_TOKEN;
+
 storyblokInit({
-  accessToken: import.meta.env.VITE_STORYBLOK_TOKEN,
+  accessToken,
   use: [apiPlugin],
   bridge: shouldEnableBridge(),
   components: {

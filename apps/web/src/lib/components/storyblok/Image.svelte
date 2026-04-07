@@ -1,6 +1,10 @@
 <script lang="ts">
   import { storyblokEditable } from "@storyblok/svelte";
+  import { getContext } from "svelte";
   import type { ImageBlok } from "$lib/storyblok/types";
+  import { lightbox, type LightboxImage } from "$lib/stores/lightbox.svelte";
+  import { CAROUSEL_GALLERY_KEY, type CarouselGalleryContext } from "$lib/stores/carousel-gallery";
+  import { getStoryblokImageDimensions } from "$lib/storyblok/helpers";
 
   let { blok }: { blok: ImageBlok } = $props();
 
@@ -13,13 +17,29 @@
     ? `${originalUrl}/m/400x0/ 400w, ${originalUrl}/m/800x0/ 800w, ${originalUrl}/m/1200x0/ 1200w, ${originalUrl}/m/1600x0/ 1600w`
     : undefined);
   let loading = $derived((blok.lazy_loading ?? true) ? 'lazy' as const : 'eager' as const);
-  let clickable = $derived(blok.clickable ?? false);
+
+  // In a carousel, images are clickable by default. Standalone images use the blok.clickable field.
+  let gallery = getContext<CarouselGalleryContext | undefined>(CAROUSEL_GALLERY_KEY);
+  let inCarousel = $derived(gallery !== undefined);
+  let clickable = $derived(inCarousel || (blok.clickable ?? false));
+
   let aspectRatio = $derived(blok.aspect_ratio ?? 'natural');
   let objectFit = $derived(blok.object_fit ?? (aspectRatio === 'natural' ? 'none' : 'cover'));
   let objectPosition = $derived(blok.object_position ?? 'center');
   let containerStyles = $derived(aspectRatio !== 'natural' ? `aspect-ratio: ${aspectRatio};` : '');
   let objectFitStyle = $derived(objectFit !== 'none' ? `object-fit: ${objectFit};` : '');
   let imgStyles = $derived(objectFitStyle + `object-position: ${objectPosition};` + (blok.img_custom_styles ? ` ${blok.img_custom_styles}` : ''));
+
+  function openLightbox() {
+    if (gallery) {
+      const images: LightboxImage[] = gallery.images();
+      const idx = images.findIndex((img) => img.src === originalUrl);
+      lightbox.open(images, Math.max(0, idx));
+    } else {
+      const dims = getStoryblokImageDimensions(originalUrl) ?? { width: 1600, height: 1200 };
+      lightbox.open([{ src: originalUrl, alt: altText, ...dims }], 0);
+    }
+  }
 </script>
 
 <div
@@ -29,7 +49,7 @@
   style="{containerStyles} {blok.custom_styles ?? ''}"
 >
   {#if clickable}
-    <a href={originalUrl} target="_blank" rel="noopener noreferrer" class="image-link">
+    <button type="button" class="image-link" onclick={openLightbox} aria-label="View image">
       <img
         src={imageUrl}
         srcset={srcset}
@@ -38,7 +58,7 @@
         loading={loading}
         style={imgStyles}
       />
-    </a>
+    </button>
   {:else}
     <img
       src={imageUrl}
@@ -74,6 +94,10 @@
     width: 100%;
     height: 100%;
     cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
     text-decoration: none;
   }
 

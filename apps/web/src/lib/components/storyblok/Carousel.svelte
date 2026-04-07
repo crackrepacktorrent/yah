@@ -1,8 +1,12 @@
 <script lang="ts">
   import { storyblokEditable, StoryblokComponent } from "@storyblok/svelte";
+  import { setContext } from "svelte";
   import * as CarouselPrimitive from "$lib/components/ui/carousel";
   import Autoplay from "embla-carousel-autoplay";
-  import type { CarouselBlok } from "$lib/storyblok/types";
+  import type { CarouselBlok, ImageBlok } from "$lib/storyblok/types";
+  import { CAROUSEL_GALLERY_KEY, type CarouselGalleryContext } from "$lib/stores/carousel-gallery";
+  import type { LightboxImage } from "$lib/stores/lightbox.svelte";
+  import { getStoryblokImageDimensions } from "$lib/storyblok/helpers";
 
   let { blok }: { blok: CarouselBlok } = $props();
 
@@ -12,6 +16,27 @@
   let align = $derived(blok.align ?? 'center');
   let plugins = $derived(blok.autoplay ? [Autoplay({ delay: autoplayDelay })] : []);
   let isPeekEffect = $derived(align === 'center');
+
+  // Provide gallery context so child Image components know they're in a carousel
+  // and can open the lightbox with sibling navigation
+  setContext<CarouselGalleryContext>(CAROUSEL_GALLERY_KEY, {
+    images: () => {
+      const slides = blok.slides ?? [];
+      const result: LightboxImage[] = [];
+      for (const slide of slides) {
+        if (slide.component === 'image') {
+          const img = slide as ImageBlok;
+          const dims = getStoryblokImageDimensions(img.image.filename) ?? { width: 1600, height: 1200 };
+          result.push({
+            src: img.image.filename,
+            alt: img.alt_text ?? img.image.alt ?? '',
+            ...dims,
+          });
+        }
+      }
+      return result;
+    },
+  });
 </script>
 
 <div
