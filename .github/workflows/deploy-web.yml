@@ -39,11 +39,9 @@ jobs:
         include:
           - target: web
             image_env: WEB_IMAGE
-            storyblok_secret: VITE_STORYBLOK_PUBLIC_TOKEN
             extra_args: ""
           - target: web-preview
             image_env: PREVIEW_IMAGE
-            storyblok_secret: VITE_STORYBLOK_PREVIEW_TOKEN
             extra_args: "VITE_STORYBLOK_IS_PREVIEW=true"
     steps:
       - uses: actions/checkout@v5
@@ -65,7 +63,8 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
           build-args: |
-            VITE_STORYBLOK_TOKEN=${{ secrets[matrix.storyblok_secret] }}
+            VITE_STORYBLOK_PUBLIC_TOKEN=${{ secrets.VITE_STORYBLOK_PUBLIC_TOKEN }}
+            VITE_STORYBLOK_PREVIEW_TOKEN=${{ secrets.VITE_STORYBLOK_PREVIEW_TOKEN }}
             VITE_SITE_URL=https://y4h.org
             VITE_UMAMI_URL=https://y4h.org
             VITE_UMAMI_WEBSITE_ID=${{ secrets.VITE_UMAMI_WEBSITE_ID }}

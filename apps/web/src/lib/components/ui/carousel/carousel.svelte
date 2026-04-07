@@ -71,6 +71,14 @@
 
 		carouselState.scrollSnaps = carouselState.api.scrollSnapList();
 		carouselState.api.on("select", onSelect);
+		// reInit fires when Embla recalculates layout — e.g. after images
+		// finish loading and change slide widths. Without this, canScroll*
+		// can stay stuck on the values from the very first init when slides
+		// hadn't measured their final size yet.
+		carouselState.api.on("reInit", () => {
+			carouselState.scrollSnaps = carouselState.api?.scrollSnapList() ?? [];
+			onSelect();
+		});
 		onSelect();
 	}
 
