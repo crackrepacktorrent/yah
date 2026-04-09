@@ -52,6 +52,7 @@ const STATIC_NAV_SECTIONS = [
 					{ href: '/emails/forms', label: 'Forms', icon: 'clipboard-list' },
 				],
 			},
+			{ href: '/emails/logs', label: 'Logs', icon: 'file-text' },
 		],
 	},
 ];
@@ -95,7 +96,6 @@ export default function AppLayout(props: { children: JSX.Element }) {
 				label: 'Settings',
 				items: [
 					{ href: '/settings/email', label: 'Email', icon: 'settings' },
-					{ href: '/settings/logs', label: 'Logs', icon: 'file-text' },
 				],
 			});
 		}
