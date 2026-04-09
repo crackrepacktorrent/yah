@@ -351,6 +351,35 @@ class ListmonkClient {
 			body: JSON.stringify(settings),
 		});
 	}
+
+	async updateSettingsByKey(key: string, value: unknown): Promise<void> {
+		await this.request(`/settings/${key}`, {
+			method: 'PUT',
+			body: JSON.stringify(value),
+		});
+	}
+
+	async testSmtp(config: ListmonkSmtpConfig & { email: string }): Promise<string[]> {
+		const res = await this.request<{ data: string[] }>('/settings/smtp/test', {
+			method: 'POST',
+			body: JSON.stringify(config),
+		});
+		return res.data;
+	}
+
+	async getLogs(): Promise<string[]> {
+		const res = await this.request<{ data: string[] }>('/logs');
+		return res.data;
+	}
+
+	/** Returns the URL for the SSE event stream (caller handles EventSource). */
+	get eventsUrl(): string {
+		return `${this.baseUrl}/api/events`;
+	}
+
+	get eventsAuthHeader(): string {
+		return this.authHeader;
+	}
 }
 
 // ─── Settings Types ──────────────────────────────────────────────────────────
