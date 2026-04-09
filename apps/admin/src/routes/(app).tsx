@@ -4,6 +4,7 @@ import { Sidebar, Spinner } from '~/components';
 import { authClient } from '~/lib/auth-client';
 import { can } from '~/lib/can';
 import { requireSession } from '~/routes/session';
+import './(app).css';
 
 export const route: RouteDefinition = {
 	preload: () => { void requireSession(); },

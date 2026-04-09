@@ -210,3 +210,33 @@ a:hover {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* ─── Toast theming (renders in portal, needs global scope) ─────────── */
+
+.toast-success {
+  --normal-bg: var(--color-success-bg) !important;
+  --normal-border: var(--brand-olive-light) !important;
+  --normal-text: var(--brand-olive-dark) !important;
+  border: 1px solid var(--brand-olive-light) !important;
+}
+
+.toast-error {
+  --normal-bg: var(--color-destructive-bg) !important;
+  --normal-border: var(--brand-magenta-light) !important;
+  --normal-text: var(--brand-magenta-dark) !important;
+  border: 1px solid var(--brand-magenta-light) !important;
+}
+
+.toast-warning {
+  --normal-bg: var(--color-warning-bg) !important;
+  --normal-border: var(--brand-amber) !important;
+  --normal-text: var(--brand-amber-dark) !important;
+  border: 1px solid var(--brand-amber) !important;
+}
+
+.toast-info {
+  --normal-bg: var(--color-surface) !important;
+  --normal-border: var(--color-border) !important;
+  --normal-text: var(--color-foreground) !important;
+  border: 1px solid var(--color-border) !important;
+}
