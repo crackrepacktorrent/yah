@@ -20,6 +20,13 @@
 	}
 }
 
+/* ─── Page loading spinner ───────────────────────────────────────────── */
+
+.admin-layout > main > .spinner-container {
+  min-height: 60vh;
+  padding: 0;
+}
+
 /* ─── Error boundary ─────────────────────────────────────────────────── */
 
 .error-boundary {
