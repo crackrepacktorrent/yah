@@ -1,5 +1,5 @@
 import { createAsync, revalidate, useNavigate, useParams, type RouteDefinition } from '@solidjs/router';
-import { createSignal, Match, Show, Suspense, Switch } from 'solid-js';
+import { createSignal, Match, onMount, Show, Suspense, Switch } from 'solid-js';
 import { authClient } from '~/lib/auth-client';
 import { ORG_SLUG, LOGO_FILL_ORANGE } from '~/lib/constants';
 import { Button, FormField, Input, Logo } from '~/components';
@@ -27,7 +27,6 @@ export default function AcceptInvitationPage() {
 	const [loading, setLoading] = createSignal(false);
 	const [accepted, setAccepted] = createSignal(false);
 	const [autoAcceptError, setAutoAcceptError] = createSignal('');
-	let autoAcceptFired = false;
 
 	async function acceptAndRedirect() {
 		const result = await authClient.organization.acceptInvitation({ invitationId: params['id'] });
@@ -83,7 +82,7 @@ export default function AcceptInvitationPage() {
 	}
 
 	function AutoAcceptCard() {
-		if (!autoAcceptFired) { autoAcceptFired = true; handleAutoAccept(); }
+		onMount(() => handleAutoAccept());
 		return (
 			<div class="auth-card" style={{ 'text-align': 'center' }}>
 				<Show when={!autoAcceptError()} fallback={<>
