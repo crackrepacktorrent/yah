@@ -33,24 +33,23 @@ export async function updateEmailSettings(settings: Partial<ListmonkSettings>): 
 	return withPermissions({ settings: ['edit'] }, async () => {
 		const client = getListmonk();
 
-		// For SMTP, preserve unchanged passwords ourselves since the per-key
-		// endpoint does a raw overwrite. The frontend sends empty string for
-		// unchanged passwords — we copy the real password from the DB by UUID.
-		if ('smtp' in settings && Array.isArray(settings.smtp)) {
-			const current = await client.getSettings();
-			settings.smtp = settings.smtp.map((s) => {
-				if (s.password === '') {
-					const existing = current.smtp?.find((c) => c.uuid === s.uuid);
-					if (existing) s = { ...s, password: existing.password };
-				}
-				return s;
-			});
+		// SMTP goes through the full PUT endpoint — it's the only one with
+		// server-side password preservation (copies real password from DB when
+		// incoming value is empty string, matched by UUID).
+		if ('smtp' in settings) {
+			const current = await client.getRawSettings();
+			const merged = { ...current, ...settings };
+			// Listmonk masks passwords as bullet dots (U+2022) in GET responses.
+			// Strip to empty strings so the preservation logic kicks in.
+			await client.updateSettings(stripMaskedValues(merged));
 		}
 
-		await Promise.all(
-			Object.entries(settings).map(([key, value]) =>
-				client.updateSettingsByKey(key, stripMaskedValues(value)),
-			),
-		);
+		// Everything else uses per-key — no masking, no merge, no coupling.
+		const otherKeys = Object.entries(settings).filter(([key]) => key !== 'smtp');
+		if (otherKeys.length > 0) {
+			await Promise.all(
+				otherKeys.map(([key, value]) => client.updateSettingsByKey(key, value)),
+			);
+		}
 	});
 }
