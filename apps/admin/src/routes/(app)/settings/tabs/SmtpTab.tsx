@@ -321,7 +321,7 @@ function SmtpServerCard(props: SmtpCardProps) {
 								value={isMasked() ? '' : props.server.password}
 								onInput={(e) => props.onUpdate({ password: e.currentTarget.value, _passwordChanged: true })}
 								disabled={!props.canEdit}
-								placeholder={isMasked() ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : ''}
+								placeholder={isMasked() ? '\u2022'.repeat(16) : ''}
 							/>
 						</FormField>
 					</Show>
