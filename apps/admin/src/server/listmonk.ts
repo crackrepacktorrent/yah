@@ -345,6 +345,12 @@ class ListmonkClient {
 		return res.data;
 	}
 
+	/** Fetch settings as raw untyped JSON so no fields are lost during merge. */
+	async getRawSettings(): Promise<Record<string, unknown>> {
+		const res = await this.request<{ data: Record<string, unknown> }>('/settings');
+		return res.data;
+	}
+
 	async updateSettings(settings: Record<string, unknown>): Promise<void> {
 		await this.request('/settings', {
 			method: 'PUT',
