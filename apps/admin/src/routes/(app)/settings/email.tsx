@@ -12,7 +12,6 @@ import { SmtpTab } from './tabs/SmtpTab';
 import { PerformanceTab } from './tabs/PerformanceTab';
 import { BounceTab } from './tabs/BounceTab';
 import { PrivacyTab } from './tabs/PrivacyTab';
-import { LogsTab } from './tabs/LogsTab';
 import './email.css';
 
 export const route: RouteDefinition = {
@@ -58,7 +57,6 @@ export default function EmailSettingsPage() {
 								{ value: 'performance', label: 'Performance' },
 								{ value: 'bounce', label: 'Bounces' },
 								{ value: 'privacy', label: 'Privacy' },
-								{ value: 'logs', label: 'Logs' },
 							]}
 						>
 							<TabContent value="general">
@@ -75,9 +73,6 @@ export default function EmailSettingsPage() {
 							</TabContent>
 							<TabContent value="privacy">
 								<PrivacyTab settings={s} canEdit={canEdit()} onSave={save} />
-							</TabContent>
-							<TabContent value="logs">
-								<LogsTab />
 							</TabContent>
 						</Tabs>
 					</Card>

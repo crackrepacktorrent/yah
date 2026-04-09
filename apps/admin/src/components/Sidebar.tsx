@@ -8,7 +8,7 @@ import { Tooltip } from '@kobalte/core/tooltip';
 import { Logo } from './Logo';
 import {
 	AlertCircle, BarChart3, ChevronRight, ClipboardList, Contact,
-	Image, LayoutDashboard, Link, ListChecks, LogOut, Mail,
+	FileText, Image, LayoutDashboard, Link, ListChecks, LogOut, Mail,
 	Megaphone, Menu, PieChart, Settings, Shield, Upload, Users, X,
 } from 'lucide-solid';
 import './Sidebar.css';
@@ -27,6 +27,7 @@ const icons: Record<string, Component<{ size?: number; class?: string }>> = {
 	image: Image,
 	'pie-chart': PieChart,
 	'clipboard-list': ClipboardList,
+	'file-text': FileText,
 	settings: Settings,
 	upload: Upload,
 };

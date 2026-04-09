@@ -95,6 +95,7 @@ export default function AppLayout(props: { children: JSX.Element }) {
 				label: 'Settings',
 				items: [
 					{ href: '/settings/email', label: 'Email', icon: 'settings' },
+					{ href: '/settings/logs', label: 'Logs', icon: 'file-text' },
 				],
 			});
 		}
