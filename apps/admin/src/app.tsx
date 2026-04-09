@@ -1,12 +1,13 @@
 import { Router } from '@solidjs/router';
 import { FileRoutes } from '@solidjs/start/router';
+import { Suspense, type ParentProps } from 'solid-js';
 import { Toaster } from 'solid-sonner';
 import './app.css';
 import './admin.css';
 
-export default function App() {
+function RootLayout(props: ParentProps) {
 	return (
-		<Router>
+		<>
 			<Toaster
 				position="bottom-right"
 				toastOptions={{
@@ -19,6 +20,14 @@ export default function App() {
 					},
 				}}
 			/>
+			<Suspense>{props.children}</Suspense>
+		</>
+	);
+}
+
+export default function App() {
+	return (
+		<Router root={RootLayout}>
 			<FileRoutes />
 		</Router>
 	);
