@@ -4,7 +4,7 @@ import { authClient } from '~/lib/auth-client';
 import { ORG_SLUG, LOGO_FILL_ORANGE } from '~/lib/constants';
 import { Button, FormField, Input, Logo } from '~/components';
 import { getSession } from '~/routes/session';
-import { getInvitationInfo } from './accept.server';
+import { getInvitationInfo, cleanupOrphanedAccount } from './accept.server';
 import '../../(auth)/auth.css';
 
 export const route: RouteDefinition = {
@@ -49,8 +49,9 @@ export default function AcceptInvitationPage() {
 
 		setLoading(true);
 		try {
+			const email = invitation()!.email;
 			const result = await authClient.signUp.email({
-				email: invitation()!.email,
+				email,
 				password: password(),
 				name: name(),
 			});
@@ -58,7 +59,13 @@ export default function AcceptInvitationPage() {
 				setError(result.error.message ?? 'Signup failed.');
 				return;
 			}
-			await acceptAndRedirect();
+			try {
+				await acceptAndRedirect();
+			} catch (acceptErr) {
+				// Signup succeeded but invitation acceptance failed — clean up the orphaned account
+				await cleanupOrphanedAccount();
+				throw acceptErr;
+			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Something went wrong.');
 		} finally {
