@@ -35,7 +35,7 @@ export const auth = betterAuth({
 			roles,
 			dynamicAccessControl: { enabled: true },
 			async sendInvitationEmail(data) {
-				const inviteLink = `${env.BETTER_AUTH_URL}/admin/members/accept/${data.id}`;
+				const inviteLink = `${env.BETTER_AUTH_URL}/members/accept/${data.id}`;
 				try {
 					await getListmonk().sendTransactionalEmail({
 						subscriberEmail: data.email,

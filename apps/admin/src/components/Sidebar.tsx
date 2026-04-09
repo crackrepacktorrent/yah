@@ -115,7 +115,7 @@ type SidebarContentProps = SidebarProps & {
 const SidebarContent: Component<SidebarContentProps> = (props) => (
 	<>
 		<div class="sidebar-header">
-			<a href="/admin" class="brand">
+			<a href="/" class="brand">
 				<Logo fill="var(--brand-magenta-light)" height={72} />
 			</a>
 		</div>
@@ -172,7 +172,7 @@ export const Sidebar: Component<SidebarProps> = (props) => {
 	const [collapsibleOpen, setCollapsibleOpen] = createSignal<Record<string, boolean>>({});
 
 	function isActive(href: string) {
-		if (href === '/admin') return location.pathname === '/admin';
+		if (href === '/') return location.pathname === '/';
 		return location.pathname === href;
 	}
 

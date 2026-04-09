@@ -32,25 +32,13 @@ y4h.org, www.y4h.org {
 		reverse_proxy umami:3000
 	}
 
-	handle /admin* {
-		reverse_proxy yah-admin:3002
-	}
-
-	handle /api/auth* {
-		reverse_proxy yah-admin:3002
-	}
-
-	# yah-admin static assets (SolidStart/Nitro build output)
-	handle /_build* {
-		reverse_proxy yah-admin:3002
-	}
-
-	# SolidStart v2 server function RPC endpoint
-	handle /_server* {
-		reverse_proxy yah-admin:3002
-	}
-
 	reverse_proxy sveltekit:3000
+}
+
+admin.y4h.org {
+	import security_headers
+	encode gzip
+	reverse_proxy yah-admin:3002
 }
 
 y4h.link {
