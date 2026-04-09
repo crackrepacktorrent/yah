@@ -1,5 +1,5 @@
 import { createAsync, revalidate, useNavigate, useParams, type RouteDefinition } from '@solidjs/router';
-import { createSignal, Match, onMount, Show, Suspense, Switch } from 'solid-js';
+import { createSignal, Match, Show, Suspense, Switch } from 'solid-js';
 import { authClient } from '~/lib/auth-client';
 import { ORG_SLUG, LOGO_FILL_ORANGE } from '~/lib/constants';
 import { Button, FormField, Input, Logo } from '~/components';
@@ -26,8 +26,6 @@ export default function AcceptInvitationPage() {
 	const [error, setError] = createSignal('');
 	const [loading, setLoading] = createSignal(false);
 	const [accepted, setAccepted] = createSignal(false);
-	const [autoAcceptError, setAutoAcceptError] = createSignal('');
-
 	async function acceptAndRedirect() {
 		const result = await authClient.organization.acceptInvitation({ invitationId: params['id'] });
 		if (result.error) throw new Error(result.error.message ?? 'Failed to accept invitation.');
@@ -68,32 +66,9 @@ export default function AcceptInvitationPage() {
 		}
 	}
 
-	async function handleAutoAccept() {
-		try {
-			await acceptAndRedirect();
-		} catch (err) {
-			setAutoAcceptError(err instanceof Error ? err.message : 'Failed to accept invitation.');
-		}
-	}
-
 	async function handleSignOut() {
 		await authClient.signOut();
 		await revalidate(['session', 'require-session', 'guest']);
-	}
-
-	function AutoAcceptCard() {
-		onMount(() => handleAutoAccept());
-		return (
-			<div class="auth-card" style={{ 'text-align': 'center' }}>
-				<Show when={!autoAcceptError()} fallback={<>
-					<h2>Something went wrong</h2>
-					<p class="auth-error">{autoAcceptError()}</p>
-					<Button variant="secondary" onClick={() => navigate('/admin')}>Go to Dashboard</Button>
-				</>}>
-					<p class="auth-muted">Accepting invitation…</p>
-				</Show>
-			</div>
-		);
 	}
 
 	return (
@@ -129,11 +104,6 @@ export default function AcceptInvitationPage() {
 									Go to Login
 								</Button>
 							</div>
-						</Match>
-
-						{/* Logged in as the invited user → auto-accept */}
-						<Match when={session() && session()!.user.email === invitation()!.email}>
-							<AutoAcceptCard />
 						</Match>
 
 						{/* Logged in as different user */}
