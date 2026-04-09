@@ -117,7 +117,7 @@ export default function AppLayout(props: { children: JSX.Element }) {
 			/>
 			<main>
 				<ErrorBoundary fallback={(err, reset) => { console.error('[ErrorBoundary]', err); return <ErrorView error={err} reset={reset} />; }}>
-					<Suspense fallback={<Spinner size={48} centered />}>
+					<Suspense fallback={<Spinner size={80} centered />}>
 						{props.children}
 					</Suspense>
 				</ErrorBoundary>
