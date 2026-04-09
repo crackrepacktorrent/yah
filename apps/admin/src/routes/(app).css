@@ -22,8 +22,8 @@
 
 /* ─── Page loading spinner ───────────────────────────────────────────── */
 
-.admin-layout > main > .spinner-container {
-  min-height: 60vh;
+.admin-layout > main .spinner-container {
+  min-height: calc(100vh - 4rem);
   padding: 0;
 }
 
