@@ -1,12 +1,12 @@
 import { betterAuth } from 'better-auth';
-import { organization } from 'better-auth/plugins';
+import { admin, organization } from 'better-auth/plugins';
 import { Pool } from 'pg';
 import { getMigrations } from 'better-auth/db/migration';
 import { getListmonk } from '~/server/listmonk';
 import { ac, roles } from '~/lib/permissions';
 import { env } from '~/server/env';
 
-const pool = new Pool({ connectionString: env.DATABASE_URL });
+export const pool = new Pool({ connectionString: env.DATABASE_URL });
 
 export const auth = betterAuth({
 	secret: env.BETTER_AUTH_SECRET,
@@ -30,6 +30,7 @@ export const auth = betterAuth({
 		},
 	},
 	plugins: [
+		admin(),
 		organization({
 			ac,
 			roles,

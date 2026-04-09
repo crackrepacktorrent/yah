@@ -50,7 +50,14 @@ export async function removeMember(memberId: string): Promise<void> {
 	'use server';
 	return withPermissions({ member: ['delete'] }, async () => {
 		const request = getWebRequest();
+		const session = await getSessionOrThrow();
+		const members = await auth.api.listMembers({ headers: request.headers });
+		const member = members.members.find((m) => m.id === memberId);
+		if (!member) throw new HttpError('Member not found', 404);
+		if (member.userId === session.user.id) throw new HttpError('Cannot remove yourself', 400);
+		if (member.role === 'owner') throw new HttpError('Cannot remove the owner', 403);
 		await auth.api.removeMember({ headers: request.headers, body: { memberIdOrEmail: memberId } });
+		await auth.api.removeUser({ body: { userId: member.userId } });
 	});
 }
 

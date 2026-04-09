@@ -273,7 +273,7 @@ export default function MembersPage() {
 				open={confirmRemove().open}
 				onOpenChange={(open) => setConfirmRemove((s) => ({ ...s, open }))}
 				title="Remove Member"
-				description={`Remove ${confirmRemove().name} from the organization? They will lose access.`}
+				description={`Remove ${confirmRemove().name} from the organization? Their account will be permanently deleted.`}
 				confirmLabel="Yes, remove"
 				onconfirm={handleRemove}
 			/>
