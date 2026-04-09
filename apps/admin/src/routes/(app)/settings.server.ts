@@ -1,5 +1,5 @@
 import { query } from '@solidjs/router';
-import { getListmonk, type ListmonkSettings } from '~/server/listmonk';
+import { getListmonk, type ListmonkSettings, type ListmonkSmtpConfig } from '~/server/listmonk';
 import { withPermissions } from '~/server/auth-helpers';
 
 const MASK_RE = /^\u2022+$/;
@@ -51,5 +51,24 @@ export async function updateEmailSettings(settings: Partial<ListmonkSettings>): 
 				otherKeys.map(([key, value]) => client.updateSettingsByKey(key, value)),
 			);
 		}
+	});
+}
+
+export const getEmailLogs = query(async () => {
+	'use server';
+	return withPermissions({ settings: ['view'] }, async () => {
+		return getListmonk().getLogs();
+	});
+}, 'getEmailLogs');
+
+export async function testSmtpConnection(
+	config: ListmonkSmtpConfig & { email: string },
+): Promise<string[]> {
+	'use server';
+	return withPermissions({ settings: ['edit'] }, async () => {
+		if (!config.password) {
+			throw new Error('Enter the SMTP password to test the connection.');
+		}
+		return getListmonk().testSmtp(config);
 	});
 }

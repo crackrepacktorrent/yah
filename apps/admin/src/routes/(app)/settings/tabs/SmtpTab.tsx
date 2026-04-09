@@ -1,8 +1,10 @@
 import { For, Show, createMemo, createSignal, untrack } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { toast } from 'solid-sonner';
-import { Badge, Button, Card, AlertDialog, FormField, Input, Select, Switch } from '~/components';
+import { Badge, Button, Card, Dialog, AlertDialog, FormField, Input, Select, Switch } from '~/components';
+import { toastError } from '~/lib/utils';
 import type { ListmonkSmtpConfig } from '~/server/listmonk';
+import { testSmtpConnection } from '../../settings.server';
 import type { TabProps } from '../email';
 
 type SmtpDraft = ListmonkSmtpConfig & { _passwordChanged: boolean };
@@ -40,6 +42,9 @@ export function SmtpTab(props: TabProps) {
 	);
 	const [deleteIdx, setDeleteIdx] = createSignal<number | null>(null);
 	const [saving, setSaving] = createSignal(false);
+	const [testIdx, setTestIdx] = createSignal<number | null>(null);
+	const [testEmail, setTestEmail] = createSignal('');
+	const [testing, setTesting] = createSignal(false);
 
 	function addServer() {
 		setServers(servers.length, emptySmtpServer());
@@ -50,6 +55,61 @@ export function SmtpTab(props: TabProps) {
 		if (i === null) return;
 		setServers((prev) => prev.filter((_, idx) => idx !== i));
 		setDeleteIdx(null);
+	}
+
+	function openTest(idx: number) {
+		const s = servers[idx];
+		if (s && !s._passwordChanged && s.auth_protocol !== 'none') {
+			toast.error('Enter the SMTP password before testing.');
+			setServers(idx, { password: '', _passwordChanged: true });
+			// Focus the password input in this card
+			const el = document.querySelectorAll<HTMLInputElement>('.smtp-fields input[type="password"]')[idx];
+			el?.focus();
+			return;
+		}
+		setTestIdx(idx);
+		setTestEmail('');
+	}
+
+	async function handleTest() {
+		const i = testIdx();
+		if (i === null) return;
+		const s = servers[i];
+		if (!s) return;
+
+		const email = testEmail().trim();
+		if (!email) {
+			toast.error('Enter an email address.');
+			return;
+		}
+
+		setTesting(true);
+		try {
+			await testSmtpConnection({
+				uuid: s.uuid,
+				enabled: s.enabled,
+				host: s.host,
+				port: s.port,
+				auth_protocol: s.auth_protocol,
+				username: s.username,
+				password: s._passwordChanged ? s.password : '',
+				email_headers: s.email_headers,
+				hello_hostname: s.hello_hostname,
+				max_conns: s.max_conns,
+				max_msg_retries: s.max_msg_retries,
+				idle_timeout: s.idle_timeout,
+				wait_timeout: s.wait_timeout,
+				tls_type: s.tls_type,
+				tls_skip_verify: s.tls_skip_verify,
+				email,
+			});
+			toast.success('Test email sent successfully.');
+			setTestIdx(null);
+		} catch (err) {
+			toastError(err, 'SMTP test failed.');
+		} finally {
+			setTesting(false);
+		}
 	}
 
 	async function handleSave() {
@@ -92,6 +152,7 @@ export function SmtpTab(props: TabProps) {
 						canDelete={servers.length > 1}
 						onUpdate={(patch) => setServers(i(), patch)}
 						onDelete={() => setDeleteIdx(i())}
+						onTest={() => openTest(i())}
 					/>
 				)}
 			</For>
@@ -117,6 +178,29 @@ export function SmtpTab(props: TabProps) {
 				confirmLabel="Delete"
 				onconfirm={handleDelete}
 			/>
+
+			<Dialog
+				open={testIdx() !== null}
+				onOpenChange={(open) => { if (!open) setTestIdx(null); }}
+				title="Send Test Email"
+				maxWidth="420px"
+				footer={
+					<div class="tab-actions">
+						<Button variant="secondary" onClick={() => setTestIdx(null)} disabled={testing()}>Cancel</Button>
+						<Button onClick={handleTest} disabled={testing()}>{testing() ? 'Sending…' : 'Send Test'}</Button>
+					</div>
+				}
+			>
+				<FormField label="Recipient email" hint="A test email will be sent to this address using the current SMTP configuration.">
+					<Input
+						type="email"
+						value={testEmail()}
+						onInput={(e) => setTestEmail(e.currentTarget.value)}
+						placeholder="test@example.com"
+						autofocus
+					/>
+				</FormField>
+			</Dialog>
 		</div>
 	);
 }
@@ -155,6 +239,7 @@ type SmtpCardProps = {
 	canDelete: boolean;
 	onUpdate: (patch: Partial<SmtpDraft>) => void;
 	onDelete: () => void;
+	onTest: () => void;
 };
 
 function SmtpServerCard(props: SmtpCardProps) {
@@ -182,9 +267,14 @@ function SmtpServerCard(props: SmtpCardProps) {
 						</Badge>
 					</Show>
 				</div>
-				<Show when={props.canEdit && props.canDelete}>
-					<Button variant="danger-outline" onClick={props.onDelete}>Delete</Button>
-				</Show>
+				<div class="smtp-header-actions">
+					<Show when={props.canEdit}>
+						<Button variant="secondary" onClick={props.onTest}>Test</Button>
+					</Show>
+					<Show when={props.canEdit && props.canDelete}>
+						<Button variant="danger-outline" onClick={props.onDelete}>Delete</Button>
+					</Show>
+				</div>
 			</div>
 
 			<div class="smtp-fields">
@@ -225,13 +315,13 @@ function SmtpServerCard(props: SmtpCardProps) {
 								placeholder="mysmtp"
 							/>
 						</FormField>
-						<FormField label="Password">
+						<FormField label="Password" hint={isMasked() ? 'Enter to change.' : undefined}>
 							<Input
 								type="password"
 								value={isMasked() ? '' : props.server.password}
 								onInput={(e) => props.onUpdate({ password: e.currentTarget.value, _passwordChanged: true })}
 								disabled={!props.canEdit}
-								placeholder={isMasked() ? 'Enter to change' : ''}
+								placeholder={isMasked() ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : ''}
 							/>
 						</FormField>
 					</Show>
