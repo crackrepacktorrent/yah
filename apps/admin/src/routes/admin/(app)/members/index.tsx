@@ -7,6 +7,7 @@ import {
 	FormField, Input, Select,
 } from '~/components';
 import { requireSession } from '~/routes/admin/session';
+import { can } from '~/lib/can';
 import { toastError } from '~/lib/utils';
 import {
 	listMembers, listInvitations,
@@ -36,6 +37,11 @@ export default function MembersPage() {
 	const invitations = createAsync(() => listInvitations());
 
 	const currentEmail = createMemo(() => session()?.user.email);
+	const isOwner = createMemo(() => session()?.role === 'owner');
+	const canUpdate = createMemo(() => can(session(), 'member', 'update'));
+	const canDelete = createMemo(() => can(session(), 'member', 'delete'));
+	const canInvite = createMemo(() => can(session(), 'invitation', 'create'));
+	const canCancelInvite = createMemo(() => can(session(), 'invitation', 'cancel'));
 
 	// ─── Invite dialog ───────────────────────────────────────────────────────────
 
@@ -131,25 +137,36 @@ export default function MembersPage() {
 			header: 'Actions',
 			cell: (info) => {
 				const member = info.row.original;
+				const isSelf = member.user.email === currentEmail();
+				const targetIsOwner = member.role === 'owner';
+				// API rules: only owners can manage other owners
+				const showRoleSelect = canUpdate() && (!targetIsOwner || isOwner());
+				const showRemove = canDelete() && (!targetIsOwner || isOwner());
+				// Only owners can assign the owner role
+				const roleOptions = isOwner()
+					? [{ value: 'owner', label: 'Owner' }, { value: 'admin', label: 'Admin' }, { value: 'member', label: 'Member' }]
+					: [{ value: 'admin', label: 'Admin' }, { value: 'member', label: 'Member' }];
 				return (
-					<Show when={member.user.email !== currentEmail()} fallback={<span class="you-label">You</span>}>
-						<div class="actions-cell">
-							<Select
-								value={member.role}
-								onValueChange={(v) => handleRoleChange(member.id, v)}
-								options={[
-									{ value: 'owner', label: 'Owner' },
-									{ value: 'admin', label: 'Admin' },
-									{ value: 'member', label: 'Member' },
-								]}
-							/>
-							<button
-								class="remove-btn"
-								onClick={() => setConfirmRemove({ open: true, memberId: member.id, name: member.user.name ?? member.user.email })}
-							>
-								Remove
-							</button>
-						</div>
+					<Show when={!isSelf} fallback={<span class="you-label">You</span>}>
+						<Show when={showRoleSelect || showRemove}>
+							<div class="actions-cell">
+								<Show when={showRoleSelect}>
+									<Select
+										value={member.role}
+										onValueChange={(v) => handleRoleChange(member.id, v)}
+										options={roleOptions}
+									/>
+								</Show>
+								<Show when={showRemove}>
+									<button
+										class="remove-btn"
+										onClick={() => setConfirmRemove({ open: true, memberId: member.id, name: member.user.name ?? member.user.email })}
+									>
+										Remove
+									</button>
+								</Show>
+							</div>
+						</Show>
 					</Show>
 				);
 			},
@@ -183,7 +200,7 @@ export default function MembersPage() {
 			cell: (info) => {
 				const inv = info.row.original;
 				return (
-					<Show when={inv.status === 'pending'}>
+					<Show when={inv.status === 'pending' && canCancelInvite()}>
 						<button
 							class="remove-btn"
 							onClick={() => setConfirmCancel({ open: true, id: inv.id, email: inv.email })}
@@ -218,7 +235,9 @@ export default function MembersPage() {
 	return (
 		<>
 			<PageHeader title="Members">
-				<Button onClick={() => setInviteOpen(true)}>+ Invite Member</Button>
+				<Show when={canInvite()}>
+					<Button onClick={() => setInviteOpen(true)}>+ Invite Member</Button>
+				</Show>
 			</PageHeader>
 
 			<section class="members-section">

@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth';
-import { admin, organization } from 'better-auth/plugins';
+import { organization } from 'better-auth/plugins';
 import { Pool } from 'pg';
 import { getMigrations } from 'better-auth/db/migration';
 import { getListmonk } from '~/server/listmonk';
@@ -30,7 +30,6 @@ export const auth = betterAuth({
 		},
 	},
 	plugins: [
-		admin(),
 		organization({
 			ac,
 			roles,

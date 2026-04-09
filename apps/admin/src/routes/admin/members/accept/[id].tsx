@@ -20,7 +20,6 @@ export default function AcceptInvitationPage() {
 	const invitation = createAsync(() => getInvitationInfo(params['id']));
 	const session = createAsync(() => getSession());
 
-	const [mode, setMode] = createSignal<'signup' | 'login'>('signup');
 	const [name, setName] = createSignal('');
 	const [password, setPassword] = createSignal('');
 	const [confirmPassword, setConfirmPassword] = createSignal('');
@@ -28,6 +27,7 @@ export default function AcceptInvitationPage() {
 	const [loading, setLoading] = createSignal(false);
 	const [accepted, setAccepted] = createSignal(false);
 	const [autoAcceptError, setAutoAcceptError] = createSignal('');
+	let autoAcceptFired = false;
 
 	async function acceptAndRedirect() {
 		const result = await authClient.organization.acceptInvitation({ invitationId: params['id'] });
@@ -69,27 +69,6 @@ export default function AcceptInvitationPage() {
 		}
 	}
 
-	async function handleLogin(e: SubmitEvent) {
-		e.preventDefault();
-		setError('');
-		setLoading(true);
-		try {
-			const result = await authClient.signIn.email({
-				email: invitation()!.email,
-				password: password(),
-			});
-			if (result.error) {
-				setError(result.error.message ?? 'Login failed.');
-				return;
-			}
-			await acceptAndRedirect();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Something went wrong.');
-		} finally {
-			setLoading(false);
-		}
-	}
-
 	async function handleAutoAccept() {
 		try {
 			await acceptAndRedirect();
@@ -104,7 +83,7 @@ export default function AcceptInvitationPage() {
 	}
 
 	function AutoAcceptCard() {
-		handleAutoAccept();
+		if (!autoAcceptFired) { autoAcceptFired = true; handleAutoAccept(); }
 		return (
 			<div class="auth-card" style={{ 'text-align': 'center' }}>
 				<Show when={!autoAcceptError()} fallback={<>
@@ -171,7 +150,7 @@ export default function AcceptInvitationPage() {
 						</Match>
 
 						{/* Not logged in — signup */}
-						<Match when={mode() === 'signup'}>
+						<Match when={!session()}>
 							<form class="auth-card" onSubmit={handleSignup}>
 								<h2>Create your account</h2>
 								<p class="auth-muted">
@@ -214,45 +193,6 @@ export default function AcceptInvitationPage() {
 								<Button type="submit" disabled={loading()} class="login-btn">
 									{loading() ? 'Creating account…' : 'Create Account'}
 								</Button>
-
-								<button type="button" class="auth-link" onClick={() => { setError(''); setPassword(''); setMode('login'); }}>
-									Already have an account? Sign in
-								</button>
-							</form>
-						</Match>
-
-						{/* Not logged in — login */}
-						<Match when={mode() === 'login'}>
-							<form class="auth-card" onSubmit={handleLogin}>
-								<h2>Sign in to accept</h2>
-								<p class="auth-muted">
-									Sign in to join <strong>{invitation()!.organizationName}</strong>.
-								</p>
-
-								<FormField label="Email">
-									<Input type="email" value={invitation()!.email} readonly />
-								</FormField>
-								<FormField label="Password" required>
-									<Input
-										type="password"
-										value={password()}
-										onInput={(e) => setPassword(e.currentTarget.value)}
-										required
-									/>
-								</FormField>
-
-								<Show when={error()}>
-									<p class="auth-error">{error()}</p>
-								</Show>
-
-								<Button type="submit" disabled={loading()} class="login-btn">
-									{loading() ? 'Signing in…' : 'Sign in & Accept'}
-								</Button>
-
-								<button type="button" class="auth-link" onClick={() => { setError(''); setPassword(''); setConfirmPassword(''); setMode('signup'); }}>
-									Don't have an account? Create one
-								</button>
-								<a href="/admin/forgot-password" class="auth-link">Forgot password?</a>
 							</form>
 						</Match>
 					</Switch>

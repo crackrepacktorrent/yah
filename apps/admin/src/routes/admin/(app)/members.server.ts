@@ -1,6 +1,6 @@
 import { query } from '@solidjs/router';
 import { getWebRequest } from '@solidjs/start/http';
-import { auth } from '~/server/auth';
+import { auth, pool } from '~/server/auth';
 import { withPermissions, getSessionOrThrow, HttpError } from '~/server/auth-helpers';
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
@@ -55,9 +55,22 @@ export async function removeMember(memberId: string): Promise<void> {
 		const member = members.members.find((m) => m.id === memberId);
 		if (!member) throw new HttpError('Member not found', 404);
 		if (member.userId === session.user.id) throw new HttpError('Cannot remove yourself', 400);
-		if (member.role === 'owner') throw new HttpError('Cannot remove the owner', 403);
+		// Better Auth enforces: only owners can remove owners, can't remove last owner
 		await auth.api.removeMember({ headers: request.headers, body: { memberIdOrEmail: memberId } });
-		await auth.api.removeUser({ body: { userId: member.userId } });
+		// Delete user account in a transaction
+		const client = await pool.connect();
+		try {
+			await client.query('BEGIN');
+			await client.query('DELETE FROM session WHERE "userId" = $1', [member.userId]);
+			await client.query('DELETE FROM account WHERE "userId" = $1', [member.userId]);
+			await client.query('DELETE FROM "user" WHERE id = $1', [member.userId]);
+			await client.query('COMMIT');
+		} catch (err) {
+			await client.query('ROLLBACK');
+			throw err;
+		} finally {
+			client.release();
+		}
 	});
 }
 
