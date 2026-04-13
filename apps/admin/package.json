@@ -16,7 +16,7 @@
   "dependencies": {
     "@fontsource-variable/rubik": "^5.2.8",
     "@kobalte/core": "^0.13.11",
-    "@lexical/html": "^0.42.0",
+    "@lexical/html": "^0.43.0",
     "@lexical/link": "^0.42.0",
     "@lexical/list": "^0.42.0",
     "@lexical/rich-text": "^0.42.0",
