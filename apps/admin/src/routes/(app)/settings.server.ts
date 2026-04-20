@@ -66,7 +66,7 @@ export async function testSmtpConnection(
 ): Promise<string[]> {
 	'use server';
 	return withPermissions({ settings: ['edit'] }, async () => {
-		if (!config.password) {
+		if (config.auth_protocol !== 'none' && !config.password) {
 			throw new Error('Enter the SMTP password to test the connection.');
 		}
 		return getListmonk().testSmtp(config);
