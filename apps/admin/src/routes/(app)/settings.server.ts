@@ -4,8 +4,10 @@ import { withPermissions } from '~/server/auth-helpers';
 
 const MASK_RE = /^\u2022+$/;
 
-/** Replace any string that is purely bullet-dot characters (U+2022) with empty
- *  string so Listmonk's server-side password preservation logic kicks in. */
+/** Replace masked bullet-dot strings (U+2022) with empty strings.
+ *  Listmonk's full PUT endpoint preserves all password fields (SMTP,
+ *  bounce boxes, messengers, postmark) when it receives an empty string,
+ *  matched by UUID. */
 function stripMaskedValues<T>(obj: T): T {
 	if (typeof obj === 'string') return (MASK_RE.test(obj) ? '' : obj) as T;
 	if (Array.isArray(obj)) return obj.map(stripMaskedValues) as T;
@@ -33,24 +35,13 @@ export async function updateEmailSettings(settings: Partial<ListmonkSettings>): 
 	return withPermissions({ settings: ['edit'] }, async () => {
 		const client = getListmonk();
 
-		// SMTP goes through the full PUT endpoint — it's the only one with
-		// server-side password preservation (copies real password from DB when
-		// incoming value is empty string, matched by UUID).
-		if ('smtp' in settings) {
-			const current = await client.getRawSettings();
-			const merged = { ...current, ...settings };
-			// Listmonk masks passwords as bullet dots (U+2022) in GET responses.
-			// Strip to empty strings so the preservation logic kicks in.
-			await client.updateSettings(stripMaskedValues(merged));
-		}
-
-		// Everything else uses per-key — no masking, no merge, no coupling.
-		const otherKeys = Object.entries(settings).filter(([key]) => key !== 'smtp');
-		if (otherKeys.length > 0) {
-			await Promise.all(
-				otherKeys.map(([key, value]) => client.updateSettingsByKey(key, value)),
-			);
-		}
+		// Single full PUT: avoids per-key calls racing with Listmonk's
+		// ~500ms post-write restart. Masked passwords (U+2022) are stripped
+		// to empty strings — Listmonk preserves all password fields (SMTP,
+		// bounce boxes, messengers, postmark) via UUID matching when empty.
+		const current = await client.getRawSettings();
+		const merged = { ...current, ...settings };
+		await client.updateSettings(stripMaskedValues(merged));
 	});
 }
 
