@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'infra/Caddyfile'
+      - 'infra/caddy/Caddyfile'
       - 'infra/docker-compose.yml'
       - 'infra/config/**'
       - 'infra/scripts/**'
