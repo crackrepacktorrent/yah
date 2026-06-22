@@ -9,7 +9,10 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Mount the directory, not the single file: a single-file bind mount
+      # pins to the original inode, so `git pull` (which replaces the file via
+      # rename) leaves the container reading stale config even after a reload.
+      - ./caddy:/etc/caddy:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
