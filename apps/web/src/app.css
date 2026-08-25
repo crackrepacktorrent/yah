@@ -2,7 +2,7 @@
 
 /* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 
-:root {
+:where(:root) {
   --radius: 0.625rem;
   --radius-xs: calc(var(--radius) - 6px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -194,31 +194,25 @@
   border-color: var(--color-border);
 }
 
-input,
-button,
-textarea,
-select {
+:where(input, button, textarea, select) {
   font-family: inherit;
   font-size: inherit;
 }
 
-img,
-video,
-svg {
+:where(img, video, svg) {
   display: block;
   max-width: 100%;
 }
 
-img,
-video {
+:where(img, video) {
   height: auto;
 }
 
-html {
+:where(html) {
   font-size: clamp(14px, 12px + 0.5vw, 19px);
 }
 
-body {
+:where(body) {
   margin: 0;
   font-family: "Rubik Variable", sans-serif;
   background-color: var(--color-background);
@@ -228,7 +222,7 @@ body {
 
 /* ─── Typography ────────────────────────────────────────────────────────────── */
 
-h1 {
+:where(h1) {
   margin-top: 0;
   font-size: 3rem;
   font-weight: 900;
@@ -236,7 +230,7 @@ h1 {
   margin-bottom: 2rem;
 }
 
-h2 {
+:where(h2) {
   margin-top: 0;
   font-size: 1.875rem;
   font-weight: 800;
@@ -244,7 +238,7 @@ h2 {
   margin-bottom: 2rem;
 }
 
-h3 {
+:where(h3) {
   margin-top: 0;
   font-size: 1.5rem;
   font-weight: 700;
@@ -252,7 +246,7 @@ h3 {
   margin-bottom: 2rem;
 }
 
-h4 {
+:where(h4) {
   margin-top: 0;
   font-size: 1.25rem;
   font-weight: 700;
@@ -260,7 +254,7 @@ h4 {
   margin-bottom: 1.5rem;
 }
 
-h5 {
+:where(h5) {
   margin-top: 0;
   font-size: 1.125rem;
   font-weight: 600;
@@ -268,7 +262,7 @@ h5 {
   margin-bottom: 1.25rem;
 }
 
-h6 {
+:where(h6) {
   margin-top: 0;
   font-size: 1rem;
   font-weight: 600;
@@ -276,49 +270,49 @@ h6 {
   margin-bottom: 1rem;
 }
 
-p {
+:where(p) {
   font-size: 1.125rem;
   line-height: 2rem;
   margin-bottom: 2rem;
 }
 
-p:last-child {
+:where(p:last-child) {
   margin-bottom: 0;
 }
 
-ul, ol {
+:where(ul, ol) {
   margin-bottom: 1rem;
   padding-left: 1.5rem;
 }
 
-ul {
+:where(ul) {
   list-style-type: disc;
 }
 
-ol {
+:where(ol) {
   list-style-type: decimal;
 }
 
-li {
+:where(li) {
   margin-bottom: 0.5rem;
   line-height: 1.6;
 }
 
-strong {
+:where(strong) {
   font-weight: 700;
 }
 
-em {
+:where(em) {
   font-style: italic;
 }
 
-a {
+:where(a) {
   color: inherit;
   text-decoration: underline;
 }
 
 @media (max-width: 640px) {
-  h1 {
+  :where(h1) {
     font-size: 2.25rem;
   }
 }
