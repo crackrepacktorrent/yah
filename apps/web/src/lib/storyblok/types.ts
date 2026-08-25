@@ -19,6 +19,7 @@ export type RichTextField = StoryblokRichTextNode;
  * Link field type from Storyblok
  */
 export interface LinkField {
+  id?: string;
   url?: string;
   cached_url?: string;
   linktype?: string;
