@@ -6,6 +6,8 @@ import {
 	getStoryblokRequestContext,
 	getStoryblokRequestOptions
 } from '$lib/server/storyblok';
+import type { ISbStoryData } from '@storyblok/svelte';
+import type { PageBlok } from '$lib/storyblok/types';
 
 export const load: PageServerLoad = async ({ params, url }) => {
 	const requestedSlug = params.slug?.replace(/^\/+|\/+$/g, '') || '';
@@ -30,7 +32,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const context = getStoryblokRequestContext(url);
 	const { api, isDraft } = context;
 
-	let data: any;
+	let data: { story?: ISbStoryData<PageBlok> };
 	try {
 		({ data } = await api.get(
 			`cdn/stories/${slug}`,

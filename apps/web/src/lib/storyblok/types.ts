@@ -1,14 +1,13 @@
-import type { StoryblokRichTextNode } from '@storyblok/svelte';
+import type { SbBlokData, StoryblokRichTextNode } from '@storyblok/svelte';
 
 /**
  * Base interface for all Storyblok blocks
  * Note: The index signature is required by Storyblok's use:storyblokEditable directive
  */
-export interface StoryblokBlok {
+export interface StoryblokBlok extends SbBlokData {
   _uid: string;
   component: string;
   custom_styles?: string;
-  [key: string]: any;
 }
 
 /**
@@ -366,4 +365,12 @@ export interface HeaderButtonBlok {
 export interface HeaderBlok extends StoryblokBlok {
   component: 'header';
   buttons?: HeaderButtonBlok[];
+}
+
+/** Site-wide content stored in the reserved Storyblok `config` story. */
+export interface ConfigBlok extends StoryblokBlok {
+  component: 'config';
+  header?: HeaderBlok[];
+  footer?: FooterBlok[];
+  custom_global_css?: string;
 }

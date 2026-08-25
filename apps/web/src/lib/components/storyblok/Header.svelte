@@ -47,8 +47,17 @@
     if (targetLang === "en") {
       return `${pathWithoutLang === "/" ? "/" : pathWithoutLang}${page.url.search}${page.url.hash}`;
     } else {
-      return `/${targetLang}${pathWithoutLang}${page.url.search}${page.url.hash}`;
+      const localizedPath = pathWithoutLang === "/" ? `/${targetLang}` : `/${targetLang}${pathWithoutLang}`;
+      return `${localizedPath}${page.url.search}${page.url.hash}`;
     }
+  }
+
+  function currentLanguageLabel(name: string): string {
+    return lang === 'es' ? `Idioma actual: ${name}` : `Current language: ${name}`;
+  }
+
+  function switchLanguageLabel(name: string): string {
+    return lang === 'es' ? `Cambiar a ${name}` : `Switch to ${name}`;
   }
 
   function localizeHref(link?: CardBlok['link'] | HeaderButtonBlok['link']): string {
@@ -73,7 +82,12 @@
   });
 </script>
 
-<nav use:storyblokEditable={blok} class="header" style={blok.custom_styles ?? ""}>
+<nav
+  use:storyblokEditable={blok}
+  class="header"
+  style={blok.custom_styles ?? ""}
+  aria-label={lang === 'es' ? 'Navegación principal' : 'Main navigation'}
+>
   <a href={lang === "en" ? "/" : `/${lang}`} class="logo">
     <img src={logo} width="600" height="323" alt="Youth Alliance for Housing" />
   </a>
@@ -161,7 +175,7 @@
             href={getLanguageLink(code as Language)}
             hreflang={code}
             aria-current="true"
-            aria-label="Current language: {name}"
+            aria-label={currentLanguageLabel(name)}
           >
             {code.toUpperCase()}
           </a>
@@ -170,7 +184,7 @@
             class="lang-link"
             href={getLanguageLink(code as Language)}
             hreflang={code}
-            aria-label="Switch to {name}"
+            aria-label={switchLanguageLabel(name)}
           >
             {code.toUpperCase()}
           </a>
@@ -208,7 +222,7 @@
                     href={getLanguageLink(code as Language)}
                     hreflang={code}
                     aria-current="true"
-                    aria-label="Current language: {name}"
+                    aria-label={currentLanguageLabel(name)}
                     onclick={closeMobileMenu}
                   >
                     {code.toUpperCase()}
@@ -218,7 +232,7 @@
                     class="mobile-lang-link"
                     href={getLanguageLink(code as Language)}
                     hreflang={code}
-                    aria-label="Switch to {name}"
+                    aria-label={switchLanguageLabel(name)}
                     onclick={closeMobileMenu}
                   >
                     {code.toUpperCase()}
@@ -258,7 +272,9 @@
                           type="button"
                           class="mobile-chevron-button"
                           onclick={() => expandedMobileItem = isExpanded ? null : button._uid}
-                          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${button.text} submenu`}
+                          aria-label={lang === 'es'
+                            ? `${isExpanded ? 'Contraer' : 'Expandir'} submenú de ${button.text}`
+                            : `${isExpanded ? 'Collapse' : 'Expand'} ${button.text} submenu`}
                           aria-expanded={isExpanded}
                           aria-controls={`mobile-submenu-${button._uid}`}
                         >

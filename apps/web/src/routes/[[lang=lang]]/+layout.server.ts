@@ -7,24 +7,44 @@ import {
 	getStoryblokRequestOptions
 } from '$lib/server/storyblok';
 import { validateCustomCss } from '$lib/server/custom-css';
-import type { HeaderButtonBlok, CardBlok } from '$lib/storyblok/types';
+import type { ISbStoryData } from '@storyblok/svelte';
+import type {
+	HeaderButtonBlok,
+	CardBlok,
+	CardGridBlok,
+	ConfigBlok,
+	HeaderBlok,
+	StoryblokBlok
+} from '$lib/storyblok/types';
 
-const EMPTY_HEADER = {
+const EMPTY_HEADER: HeaderBlok = {
 	_uid: 'header',
 	component: 'header',
 	buttons: []
 };
+
+interface NavigationPageBlok extends StoryblokBlok {
+	body?: StoryblokBlok[];
+}
 
 function stripLangPrefix(slug: string): string {
 	const withoutSlash = slug.replace(/^\//, '');
 	return withoutSlash.replace(/^(?:en|es)\//, '');
 }
 
-function findCardGrid(blocks: any[]): any {
-	if (!Array.isArray(blocks)) return null;
-	for (const block of blocks) {
-		if (block.component === 'card_grid') return block;
-		const found = findCardGrid(block.blocks);
+function isStoryblokBlock(value: unknown): value is StoryblokBlok {
+	return typeof value === 'object' && value !== null &&
+		typeof (value as { _uid?: unknown })._uid === 'string' &&
+		typeof (value as { component?: unknown }).component === 'string';
+}
+
+function findCardGrid(blocks: StoryblokBlok[] | undefined): CardGridBlok | null {
+	for (const block of blocks ?? []) {
+		if (block.component === 'card_grid') return block as CardGridBlok;
+		const nestedBlocks = Array.isArray(block.blocks)
+			? block.blocks.filter(isStoryblokBlock)
+			: undefined;
+		const found = findCardGrid(nestedBlocks);
 		if (found) return found;
 	}
 	return null;
@@ -43,7 +63,7 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 	const { api, isDraft } = context;
 	const requestOptions = getStoryblokRequestOptions(context, lang);
 
-	let dataConfig: any;
+	let dataConfig: { story?: ISbStoryData<ConfigBlok> };
 	try {
 		({ data: dataConfig } = await api.get('cdn/stories/config', requestOptions));
 	} catch (reason) {
@@ -70,7 +90,7 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 	const dropdownCards: Record<string, CardBlok[]> = {};
 
 	if (uniquePageSlugs.length > 0) {
-		let stories: any[];
+		let stories: ISbStoryData<NavigationPageBlok>[];
 		try {
 			const { data } = await api.get('cdn/stories', {
 				...requestOptions,

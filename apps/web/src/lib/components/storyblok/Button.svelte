@@ -46,7 +46,10 @@
     text-decoration: none;
     font-weight: 600;
     border-radius: var(--radius-sm);
-    transition: all 150ms ease-in-out;
+    transition:
+      background-color 150ms ease-in-out,
+      border-color 150ms ease-in-out,
+      color 150ms ease-in-out;
     cursor: pointer;
     border: 2px solid transparent;
     letter-spacing: 0.025em;

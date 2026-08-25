@@ -47,6 +47,7 @@
       const params = new URLSearchParams();
       if (blok.autoplay) params.set('autoplay', '1');
       if (blok.muted) params.set('mute', '1');
+      if (blok.controls === false) params.set('controls', '0');
       if (blok.loop) {
         params.set('loop', '1');
         params.set('playlist', youtubeId);
@@ -63,6 +64,7 @@
         if (blok.autoplay) params.set('autoplay', '1');
         if (blok.muted) params.set('muted', '1');
         if (blok.loop) params.set('loop', '1');
+        if (blok.controls === false) params.set('controls', '0');
         const query = params.size > 0 ? `?${params}` : '';
         return { src: `https://player.vimeo.com/video/${videoId}${query}`, provider: 'Vimeo' };
       }

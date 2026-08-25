@@ -37,7 +37,6 @@ describe('Storyblok rich-text resolvers', () => {
 
     expect(html).toContain('<mark');
     expect(html).toContain('background-color: #6B7700');
-    expect(html).toContain('data-color="#6B7700"');
   });
 
   test('localizes story links and keeps the global link color as their default', () => {

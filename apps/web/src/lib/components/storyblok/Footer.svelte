@@ -12,6 +12,13 @@
 
   const defaultCopyright = `© ${new Date().getFullYear()} Youth Alliance for Housing`;
   const copyrightText = $derived(blok.copyright_text?.trim() || defaultCopyright);
+  const socialTypes = {
+    instagram: { icon: Instagram, label: 'Instagram' },
+    twitter: { icon: Twitter, label: 'Twitter' },
+    facebook: { icon: Facebook, label: 'Facebook' },
+    linkedin: { icon: Linkedin, label: 'LinkedIn' },
+    youtube: { icon: Youtube, label: 'YouTube' }
+  } as const;
 </script>
 
 <footer use:storyblokEditable={blok} class="footer" style={blok.custom_styles ?? ""}>
@@ -19,24 +26,16 @@
     <nav class="social-links" aria-label="Social media">
       {#each blok.social_links as link}
         {@const href = getSafeHttpUrl(link.url)}
-        {@const Icon = link.icon === 'twitter' ? Twitter :
-                      link.icon === 'facebook' ? Facebook :
-                      link.icon === 'linkedin' ? Linkedin :
-                      link.icon === 'youtube' ? Youtube : Instagram}
-        {@const label = link.icon === 'instagram' ? 'Instagram' :
-                       link.icon === 'twitter' ? 'Twitter' :
-                       link.icon === 'facebook' ? 'Facebook' :
-                       link.icon === 'linkedin' ? 'LinkedIn' :
-                       'YouTube'}
-        {#if href}
+        {@const social = socialTypes[link.icon]}
+        {#if href && social}
           <a
             {href}
             class="social-link"
-            aria-label={label}
+            aria-label={social.label}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon size={28} aria-hidden="true" />
+            <social.icon size={28} aria-hidden="true" />
           </a>
         {/if}
       {/each}

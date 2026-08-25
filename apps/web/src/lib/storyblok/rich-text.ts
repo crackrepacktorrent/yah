@@ -36,7 +36,6 @@ export const highlightResolver: StoryblokRichTextNodeResolver = (node, context) 
   if (!color) return context.render('mark', {}, nodeText(node));
 
   return context.render('mark', {
-    'data-color': escapeAttribute(color),
     style: escapeAttribute(`background-color: ${color}; color: inherit;`)
   }, nodeText(node));
 };

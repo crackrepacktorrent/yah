@@ -35,7 +35,7 @@ When a dashboard field or block changes, update these code sources in the same
 change:
 
 1. `src/lib/storyblok/types.ts` for the delivery API shape.
-2. `src/routes/[[lang=lang]]/+layout.ts` when registering or removing a rendered block.
+2. `src/lib/storyblok/setup.ts` when registering or removing a rendered block.
 3. The matching component under `src/lib/components/storyblok/`.
 
 The dashboard block names must exactly match the `component` values in the

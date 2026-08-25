@@ -15,7 +15,6 @@
     menuId: string;
     triggerId: string;
     toggle: () => void;
-    open: () => void;
   }
 
   let {
@@ -169,8 +168,7 @@
       isOpen,
       menuId,
       triggerId,
-      toggle: toggleDropdown,
-      open: () => void openDropdown()
+      toggle: toggleDropdown
     })}
   </div>
 

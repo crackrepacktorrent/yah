@@ -1,4 +1,4 @@
-import { apiPlugin, storyblokInit } from '@storyblok/svelte';
+import { storyblokInit, type SbSvelteComponentsMap } from '@storyblok/svelte';
 import { isPreviewMode } from '$lib/storyblok/helpers';
 import Page from '$lib/components/storyblok/Page.svelte';
 import Separator from '$lib/components/storyblok/Separator.svelte';
@@ -16,37 +16,29 @@ import Footer from '$lib/components/storyblok/Footer.svelte';
 
 let initialized = false;
 
+// The SDK's map type assumes components have no required props, while every
+// registered Storyblok component correctly requires `blok` at runtime.
+const components = {
+	page: Page,
+	separator: Separator,
+	image: Image,
+	video: Video,
+	pdf: PDF,
+	carousel: Carousel,
+	text_section: TextSection,
+	card_grid: CardGrid,
+	card: Card,
+	section: Section,
+	grid: Grid,
+	button: Button,
+	footer: Footer
+} as unknown as SbSvelteComponentsMap;
+
 /** Register Storyblok components for SSR and hydration without exposing a preview token. */
 export function initializeStoryblokComponents(): void {
 	if (initialized) return;
 
-	storyblokInit({
-		// The browser only needs the public token. Draft requests are made exclusively
-		// by the server after the Visual Editor signature has been validated.
-		accessToken: import.meta.env.VITE_STORYBLOK_PUBLIC_TOKEN,
-		use: [apiPlugin],
-		bridge: isPreviewMode(),
-		components: {
-			page: Page as any,
-			separator: Separator as any,
-			image: Image as any,
-			video: Video as any,
-			pdf: PDF as any,
-			carousel: Carousel as any,
-			text_section: TextSection as any,
-			card_grid: CardGrid as any,
-			card: Card as any,
-			section: Section as any,
-			grid: Grid as any,
-			button: Button as any,
-			footer: Footer as any
-		},
-		apiOptions: {
-			https: true,
-			cache: { clear: 'auto', type: 'none' },
-			region: 'eu'
-		}
-	});
+	storyblokInit({ bridge: isPreviewMode(), components });
 
 	initialized = true;
 }
