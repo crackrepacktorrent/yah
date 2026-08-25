@@ -66,7 +66,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
           build-args: |
             VITE_STORYBLOK_PUBLIC_TOKEN=${{ secrets.VITE_STORYBLOK_PUBLIC_TOKEN }}
-            VITE_STORYBLOK_PREVIEW_TOKEN=${{ secrets.VITE_STORYBLOK_PREVIEW_TOKEN }}
             VITE_SITE_URL=${{ matrix.site_url }}
             VITE_UMAMI_URL=https://y4h.org
             VITE_UMAMI_WEBSITE_ID=${{ secrets.VITE_UMAMI_WEBSITE_ID }}
