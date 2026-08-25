@@ -1,64 +1,56 @@
 <script lang="ts">
   import { storyblokEditable, renderRichText } from "@storyblok/svelte";
-  import type { StoryblokRichTextNodeResolver } from "@storyblok/svelte";
+  import { page } from "$app/state";
+  import { getLanguage } from "$lib/lang";
+  import { createLinkResolver, highlightResolver, textStyleResolver } from "$lib/storyblok/rich-text";
   import type { TextSectionBlok } from "$lib/storyblok/types";
 
   let { blok }: { blok: TextSectionBlok } = $props();
 
-  const highlightResolver: StoryblokRichTextNodeResolver = (node, context) => {
-    const { color, style, ...attributes } = node.attrs ?? {};
-    const text = "text" in node ? node.text : "";
-
-    if (typeof color !== "string" || color.trim() === "") {
-      return context.render(
-        "mark",
-        { ...attributes, ...(style ? { style } : {}) },
-        text
-      );
-    }
-
-    const existingStyle = typeof style === "string" ? style.trim().replace(/;$/, "") : "";
-    const highlightStyle = [
-      existingStyle,
-      `background-color: ${color}`,
-      "color: inherit"
-    ].filter(Boolean).join("; ");
-
-    return context.render(
-      "mark",
-      {
-        ...attributes,
-        "data-color": color,
-        style: `${highlightStyle};`
-      },
-      text
-    );
+  const textSizes: Record<string, string> = {
+    sm: '0.875rem',
+    base: '1rem',
+    lg: '1.125rem',
+    xl: '1.25rem',
+    '2xl': '1.5rem'
   };
 
-  // Render rich text from Storyblok and fix textAlign attributes
-  // Fix: Convert textAlign attribute to style
-  // Storyblok outputs textAlign="center" (JSX style) but browsers need style="text-align: center"
-  // Also remove textAlign="null" which Storyblok outputs when no alignment is set
+  const maxWidths: Record<string, string> = {
+    sm: '40rem',
+    md: '48rem',
+    lg: '64rem',
+    xl: '80rem',
+    full: '100%'
+  };
+
+  let lang = $derived(getLanguage(page.params.lang));
+  let sectionStyles = $derived([
+    blok.text_align ? `text-align: ${blok.text_align}` : '',
+    blok.text_size && textSizes[blok.text_size] ? `font-size: ${textSizes[blok.text_size]}` : '',
+    blok.text_color ? `color: ${blok.text_color}` : '',
+    blok.max_width && maxWidths[blok.max_width] ? `max-width: ${maxWidths[blok.max_width]}` : '',
+    blok.max_width && blok.max_width !== 'full' ? 'margin-inline: auto' : '',
+    blok.custom_styles ?? ''
+  ].filter(Boolean).join('; '));
+
   const renderedContent = $derived(
-    ((blok.content
+    (blok.content
       ? renderRichText(blok.content, {
-          resolvers: { highlight: highlightResolver }
+          resolvers: {
+            highlight: highlightResolver,
+            link: createLinkResolver(lang),
+            textStyle: textStyleResolver
+          }
         })
-      : "") || "")
-      // First, remove textAlign="null" (invalid)
-      .replace(/\s*textAlign="null"/g, '')
-      // Case 1: Element already has style attribute - append to it
-      .replace(/style="([^"]*)" textAlign="(left|center|right|justify)"/g, 'style="$1; text-align: $2"')
-      .replace(/textAlign="(left|center|right|justify)" style="([^"]*)"/g, 'style="text-align: $1; $2"')
-      // Case 2: Element has no style attribute - create one
-      .replace(/textAlign="(left|center|right|justify)"/g, 'style="text-align: $1"')
+      : "") || ""
   );
 </script>
 
 <div
   use:storyblokEditable={blok}
   class="text-section"
-  style={blok.custom_styles ?? ""}
+  class:has-text-size={!!(blok.text_size && textSizes[blok.text_size])}
+  style={sectionStyles}
 >
   {@html renderedContent}
 </div>
@@ -70,5 +62,15 @@
 
   .text-section :global(a:hover) {
     color: var(--color-link-hover, var(--color-link, currentColor));
+  }
+
+  .text-section :global([data-rich-text-color] a) {
+    color: inherit;
+  }
+
+  .text-section.has-text-size :global(p),
+  .text-section.has-text-size :global(li),
+  .text-section.has-text-size :global(blockquote) {
+    font-size: inherit;
   }
 </style>

@@ -1,7 +1,12 @@
 <script lang="ts">
   import { storyblokEditable } from "@storyblok/svelte";
-  import { Instagram, Twitter, Facebook, Linkedin, Youtube } from "@lucide/svelte";
+  import Instagram from "@lucide/svelte/icons/instagram";
+  import Twitter from "@lucide/svelte/icons/twitter";
+  import Facebook from "@lucide/svelte/icons/facebook";
+  import Linkedin from "@lucide/svelte/icons/linkedin";
+  import Youtube from "@lucide/svelte/icons/youtube";
   import type { FooterBlok } from "$lib/storyblok/types";
+  import { getSafeHttpUrl } from "$lib/storyblok/client";
 
   let { blok }: { blok: FooterBlok } = $props();
 
@@ -11,8 +16,9 @@
 
 <footer use:storyblokEditable={blok} class="footer" style={blok.custom_styles ?? ""}>
   {#if blok.social_links && blok.social_links.length > 0}
-    <nav class="social-links">
+    <nav class="social-links" aria-label="Social media">
       {#each blok.social_links as link}
+        {@const href = getSafeHttpUrl(link.url)}
         {@const Icon = link.icon === 'twitter' ? Twitter :
                       link.icon === 'facebook' ? Facebook :
                       link.icon === 'linkedin' ? Linkedin :
@@ -22,15 +28,17 @@
                        link.icon === 'facebook' ? 'Facebook' :
                        link.icon === 'linkedin' ? 'LinkedIn' :
                        'YouTube'}
-        <a
-          href={link.url}
-          class="social-link"
-          aria-label={label}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Icon size={28} />
-        </a>
+        {#if href}
+          <a
+            {href}
+            class="social-link"
+            aria-label={label}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon size={28} aria-hidden="true" />
+          </a>
+        {/if}
       {/each}
     </nav>
   {/if}

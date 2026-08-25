@@ -3,13 +3,13 @@
   import { storyblokEditable } from "@storyblok/svelte";
   import { languages, type Language } from "$lib/lang";
   import type { HeaderBlok, HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
-  import { getLinkUrl, isExternalLink } from "$lib/storyblok/client";
+  import { getLinkUrl, getLocalizedLinkUrl } from "$lib/storyblok/client";
   import { Dialog } from "bits-ui";
   import Dropdown from "./Dropdown.svelte";
   import logo from "$lib/assets/logo.png";
-  import Menu from "lucide-svelte/icons/menu";
-  import ChevronDown from "lucide-svelte/icons/chevron-down";
-
+  import Menu from "@lucide/svelte/icons/menu";
+  import ChevronDown from "@lucide/svelte/icons/chevron-down";
+  import X from "@lucide/svelte/icons/x";
 
   let expandedMobileItem = $state<string | null>(null);
   let mobileMenuOpen = $state(false);
@@ -45,30 +45,37 @@
     const pathWithoutLang = getPathWithoutLang(page.url.pathname);
 
     if (targetLang === "en") {
-      return pathWithoutLang === "/" ? "/" : pathWithoutLang;
+      return `${pathWithoutLang === "/" ? "/" : pathWithoutLang}${page.url.search}${page.url.hash}`;
     } else {
-      return `/${targetLang}${pathWithoutLang}`;
+      return `/${targetLang}${pathWithoutLang}${page.url.search}${page.url.hash}`;
     }
   }
 
   function localizeHref(link?: CardBlok['link'] | HeaderButtonBlok['link']): string {
-    if (isExternalLink(link)) return getLinkUrl(link);
-    const path = getPathWithoutLang(getLinkUrl(link));
-    return lang === "en" ? path : `/${lang}${path}`;
+    return getLocalizedLinkUrl(link, lang);
   }
 
   function getCards(button: HeaderButtonBlok): CardBlok[] {
-    if (!button.show_dropdown) return [];
+    if (button.show_dropdown !== true) return [];
     const url = getLinkUrl(button.link);
-    if (url === '#') return [];
-    const baseSlug = getPathWithoutLang(url).slice(1);
-    return dropdownCards[baseSlug] || [];
+    if (!url) return [];
+    const baseSlug = getPathWithoutLang(url.split(/[?#]/, 1)[0]).slice(1);
+    return (dropdownCards[baseSlug] || []).filter((card) => !!localizeHref(card.link));
   }
+
+  function closeMobileMenu() {
+    mobileMenuOpen = false;
+    expandedMobileItem = null;
+  }
+
+  $effect(() => {
+    if (!mobileMenuOpen) expandedMobileItem = null;
+  });
 </script>
 
-<nav class="header" style={blok.custom_styles ?? ""}>
+<nav use:storyblokEditable={blok} class="header" style={blok.custom_styles ?? ""}>
   <a href={lang === "en" ? "/" : `/${lang}`} class="logo">
-    <img src={logo} alt="Youth Alliance for Housing logo" />
+    <img src={logo} width="600" height="323" alt="Youth Alliance for Housing" />
   </a>
 
   <!-- Desktop menu -->
@@ -79,11 +86,14 @@
           {@const cards = getCards(button)}
           {@const hasDropdown = cards.length > 0}
           {@const openInNewTab = button.link?.target === '_blank'}
+          {@const href = localizeHref(button.link)}
 
           {#if hasDropdown}
             <!-- Dropdown button -->
             <Dropdown
+              id={`header-dropdown-${button._uid}`}
               align="right"
+              openOnFocus={true}
               items={cards.map(card => {
                 const newTab = card.link?.target === '_blank';
                 return {
@@ -94,29 +104,51 @@
                 };
               })}
             >
-              {#snippet trigger()}
-                <a
-                  href={localizeHref(button.link)}
-                  class="nav-button"
-                  style={button.custom_styles ?? ""}
-                  target={openInNewTab ? "_blank" : undefined}
-                  rel={openInNewTab ? "noopener noreferrer" : undefined}
-                >
-                  {button.text}
-                  <ChevronDown class="nav-chevron" />
-                </a>
+              {#snippet trigger({ isOpen, menuId, triggerId, toggle })}
+                <div class="nav-dropdown-trigger" style={button.custom_styles ?? ""}>
+                  {#if href}
+                    <a
+                      href={href}
+                      class="nav-button nav-parent-link"
+                      target={openInNewTab ? "_blank" : undefined}
+                      rel={openInNewTab ? "noopener noreferrer" : undefined}
+                    >
+                      {button.text}
+                    </a>
+                  {:else}
+                    <span class="nav-button nav-parent-link">{button.text}</span>
+                  {/if}
+                  <button
+                    id={triggerId}
+                    type="button"
+                    class="nav-dropdown-toggle"
+                    aria-label={lang === 'es'
+                      ? `${isOpen ? 'Cerrar' : 'Abrir'} submenú de ${button.text}`
+                      : `${isOpen ? 'Close' : 'Open'} ${button.text} submenu`}
+                    aria-haspopup="menu"
+                    aria-expanded={isOpen}
+                    aria-controls={menuId}
+                    onclick={toggle}
+                  >
+                    <ChevronDown class={`nav-chevron${isOpen ? ' expanded' : ''}`} aria-hidden="true" />
+                  </button>
+                </div>
               {/snippet}
             </Dropdown>
           {:else}
-            <a
-              href={localizeHref(button.link)}
-              class="nav-button"
-              style={button.custom_styles ?? ""}
-              target={openInNewTab ? "_blank" : undefined}
-              rel={openInNewTab ? "noopener noreferrer" : undefined}
-            >
-              {button.text}
-            </a>
+            {#if href}
+              <a
+                href={href}
+                class="nav-button"
+                style={button.custom_styles ?? ""}
+                target={openInNewTab ? "_blank" : undefined}
+                rel={openInNewTab ? "noopener noreferrer" : undefined}
+              >
+                {button.text}
+              </a>
+            {:else}
+              <span class="nav-button" style={button.custom_styles ?? ""}>{button.text}</span>
+            {/if}
           {/if}
         {/each}
       {/if}
@@ -152,17 +184,21 @@
 
   <!-- Mobile Sheet menu -->
   <Dialog.Root bind:open={mobileMenuOpen}>
-    <Dialog.Trigger class="mobile-menu-trigger" aria-label="Open navigation menu">
-      <Menu class="mobile-menu-icon" />
+    <Dialog.Trigger class="mobile-menu-trigger" aria-label={lang === 'es' ? 'Abrir menú de navegación' : 'Open navigation menu'}>
+      <Menu class="mobile-menu-icon" aria-hidden="true" />
     </Dialog.Trigger>
 
     <Dialog.Portal>
       <Dialog.Overlay class="sheet-overlay" />
 
       <Dialog.Content class="sheet-panel">
-          <Dialog.Title class="sr-only">Menu</Dialog.Title>
+          <Dialog.Title class="sr-only">{lang === 'es' ? 'Menú' : 'Menu'}</Dialog.Title>
 
-          <nav class="mobile-nav">
+          <Dialog.Close class="mobile-menu-close" aria-label={lang === 'es' ? 'Cerrar menú de navegación' : 'Close navigation menu'}>
+            <X aria-hidden="true" />
+          </Dialog.Close>
+
+          <nav class="mobile-nav" aria-label={lang === 'es' ? 'Navegación móvil' : 'Mobile navigation'}>
             <!-- Language switcher -->
             <div class="mobile-lang-switcher">
               {#each Object.entries(languages) as [code, name]}
@@ -173,6 +209,7 @@
                     hreflang={code}
                     aria-current="true"
                     aria-label="Current language: {name}"
+                    onclick={closeMobileMenu}
                   >
                     {code.toUpperCase()}
                   </a>
@@ -182,6 +219,7 @@
                     href={getLanguageLink(code as Language)}
                     hreflang={code}
                     aria-label="Switch to {name}"
+                    onclick={closeMobileMenu}
                   >
                     {code.toUpperCase()}
                   </a>
@@ -197,30 +235,38 @@
                   {@const hasDropdown = cards.length > 0}
                   {@const isExpanded = expandedMobileItem === button._uid}
                   {@const openInNewTab = button.link?.target === '_blank'}
+                  {@const href = localizeHref(button.link)}
 
                   {#if hasDropdown}
                     <div class="mobile-expandable-item">
                       <div class="mobile-expandable-header">
-                        <a
-                          href={localizeHref(button.link)}
-                          class="mobile-menu-link-expandable"
-                          style={button.custom_styles ?? ""}
-                          target={openInNewTab ? "_blank" : undefined}
-                          rel={openInNewTab ? "noopener noreferrer" : undefined}
-                        >
-                          {button.text}
-                        </a>
+                        {#if href}
+                          <a
+                            href={href}
+                            class="mobile-menu-link-expandable"
+                            style={button.custom_styles ?? ""}
+                            target={openInNewTab ? "_blank" : undefined}
+                            rel={openInNewTab ? "noopener noreferrer" : undefined}
+                            onclick={closeMobileMenu}
+                          >
+                            {button.text}
+                          </a>
+                        {:else}
+                          <span class="mobile-menu-link-expandable" style={button.custom_styles ?? ""}>{button.text}</span>
+                        {/if}
                         <button
                           type="button"
                           class="mobile-chevron-button"
                           onclick={() => expandedMobileItem = isExpanded ? null : button._uid}
-                          aria-label="Toggle menu"
+                          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${button.text} submenu`}
+                          aria-expanded={isExpanded}
+                          aria-controls={`mobile-submenu-${button._uid}`}
                         >
                           <ChevronDown class="mobile-chevron {isExpanded ? 'expanded' : ''}" />
                         </button>
                       </div>
                       {#if isExpanded}
-                        <div class="mobile-dropdown-content">
+                        <div id={`mobile-submenu-${button._uid}`} class="mobile-dropdown-content">
                           {#each cards as card}
                             {@const newTab = card.link?.target === '_blank'}
                             <a
@@ -228,6 +274,7 @@
                               class="mobile-dropdown-item"
                               target={newTab ? "_blank" : undefined}
                               rel={newTab ? "noopener noreferrer" : undefined}
+                              onclick={closeMobileMenu}
                             >
                               {card.title}
                             </a>
@@ -236,15 +283,20 @@
                       {/if}
                     </div>
                   {:else}
-                    <a
-                      href={localizeHref(button.link)}
-                      class="mobile-menu-link"
-                      style={button.custom_styles ?? ""}
-                      target={openInNewTab ? "_blank" : undefined}
-                      rel={openInNewTab ? "noopener noreferrer" : undefined}
-                    >
-                      {button.text}
-                    </a>
+                    {#if href}
+                      <a
+                        href={href}
+                        class="mobile-menu-link"
+                        style={button.custom_styles ?? ""}
+                        target={openInNewTab ? "_blank" : undefined}
+                        rel={openInNewTab ? "noopener noreferrer" : undefined}
+                        onclick={closeMobileMenu}
+                      >
+                        {button.text}
+                      </a>
+                    {:else}
+                      <span class="mobile-menu-link" style={button.custom_styles ?? ""}>{button.text}</span>
+                    {/if}
                   {/if}
                 {/each}
               </div>
@@ -317,11 +369,51 @@
     background-color: var(--color-hover);
   }
 
+  .nav-dropdown-trigger {
+    display: inline-flex;
+    align-items: stretch;
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
+    color: var(--color-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .nav-dropdown-trigger .nav-button {
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    background-color: transparent;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  .nav-dropdown-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.625rem;
+    border: 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .nav-dropdown-toggle:hover,
+  .nav-dropdown-toggle:focus-visible {
+    background-color: var(--color-hover);
+  }
+
   :global(.nav-chevron) {
     display: inline-block;
     width: 1rem;
     height: 1rem;
     margin-left: 0.25rem;
+    transition: transform 150ms ease-in-out;
+  }
+
+  :global(.nav-chevron.expanded) {
+    transform: rotate(180deg);
   }
 
   /* Desktop language switcher */
@@ -403,6 +495,28 @@
     background-color: var(--color-background);
     box-shadow: var(--shadow-lg);
     overflow-y: auto;
+  }
+
+  :global(.mobile-menu-close) {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
+    color: var(--color-primary);
+    cursor: pointer;
+  }
+
+  :global(.mobile-menu-close:hover),
+  :global(.mobile-menu-close:focus-visible) {
+    background-color: var(--color-hover);
   }
 
   /* Mobile nav */

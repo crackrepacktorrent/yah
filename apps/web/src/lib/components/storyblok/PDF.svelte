@@ -1,10 +1,11 @@
 <script lang="ts">
   import { storyblokEditable } from "@storyblok/svelte";
   import type { PDFBlok } from "$lib/storyblok/types";
+  import { getSafeHttpUrl } from "$lib/storyblok/client";
 
   let { blok }: { blok: PDFBlok } = $props();
 
-  let pdfUrl = $derived(blok.pdf_file?.filename ?? "");
+  let pdfUrl = $derived(getSafeHttpUrl(blok.pdf_file?.filename));
   let title = $derived(blok.title ?? "PDF Document");
   let spreadMode = $derived(blok.spread_mode ?? 'two-page-odd');
   let zoom = $derived(blok.zoom ?? 'auto');
@@ -63,6 +64,7 @@
       width="100%"
       height="100%"
       aria-label={title}
+      loading="lazy"
     ></iframe>
   {:else}
     <div class="pdf-placeholder">

@@ -6,6 +6,8 @@
   "scripts": {
     "build": "turbo build",
     "check": "turbo check",
+    "lint": "turbo lint",
+    "test": "turbo test",
     "dev:web": "bun run --cwd apps/web dev",
     "dev:admin": "bun run --cwd apps/admin dev"
   },
