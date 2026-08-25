@@ -7,6 +7,7 @@ import {
 	getStoryblokRequestOptions
 } from '$lib/server/storyblok';
 import { renderCustomCssStyle } from '$lib/server/custom-css';
+import { normalizeStorySlug } from '$lib/storyblok/client';
 import type { ISbStoryData } from '@storyblok/svelte';
 import type {
 	HeaderButtonBlok,
@@ -27,7 +28,8 @@ interface NavigationPageBlok extends StoryblokBlok {
 	body?: StoryblokBlok[];
 }
 
-function stripLangPrefix(slug: string): string {
+// Storyblok folder landing pages keep a trailing slash in `by_slugs` queries.
+function getStoryblokApiSlug(slug: string): string {
 	const withoutSlash = slug.replace(/^\//, '');
 	return withoutSlash.replace(/^(?:en|es)\//, '');
 }
@@ -84,7 +86,7 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 			(button: HeaderButtonBlok) =>
 				button.show_dropdown === true && button.link?.linktype === 'story'
 		)
-		.map((button: HeaderButtonBlok) => stripLangPrefix(button.link?.cached_url || ''))
+		.map((button: HeaderButtonBlok) => getStoryblokApiSlug(button.link?.cached_url || ''))
 		.filter((slug): slug is string => Boolean(slug));
 	const uniquePageSlugs: string[] = [...new Set<string>(dropdownPageSlugs)];
 	const dropdownCards: Record<string, CardBlok[]> = {};
@@ -105,9 +107,9 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 		}
 
 		for (const slug of uniquePageSlugs) {
-			const story = stories.find((item) => stripLangPrefix(item.full_slug) === slug);
+			const story = stories.find((item) => getStoryblokApiSlug(item.full_slug) === slug);
 			const cardGrid = findCardGrid(story?.content?.body);
-			dropdownCards[slug] = cardGrid?.cards ?? [];
+			dropdownCards[normalizeStorySlug(slug)] = cardGrid?.cards ?? [];
 		}
 	}
 

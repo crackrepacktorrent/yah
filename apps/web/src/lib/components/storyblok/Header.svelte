@@ -3,7 +3,7 @@
   import { storyblokEditable } from "@storyblok/svelte";
   import { languages, type Language } from "$lib/lang";
   import type { HeaderBlok, HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
-  import { getLinkUrl, getLocalizedLinkUrl } from "$lib/storyblok/client";
+  import { getLinkUrl, getLocalizedLinkUrl, normalizeStorySlug } from "$lib/storyblok/client";
   import { Dialog } from "bits-ui";
   import Dropdown from "./Dropdown.svelte";
   import logo from "$lib/assets/logo.png";
@@ -66,9 +66,8 @@
 
   function getCards(button: HeaderButtonBlok): CardBlok[] {
     if (button.show_dropdown !== true) return [];
-    const url = getLinkUrl(button.link);
-    if (!url) return [];
-    const baseSlug = getPathWithoutLang(url.split(/[?#]/, 1)[0]).slice(1);
+    const baseSlug = normalizeStorySlug(getLinkUrl(button.link));
+    if (!baseSlug) return [];
     return (dropdownCards[baseSlug] || []).filter((card) => !!localizeHref(card.link));
   }
 

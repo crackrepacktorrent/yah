@@ -4,7 +4,8 @@ import {
 	getLocalizedLinkUrl,
 	getSafeHttpUrl,
 	getSafeUrl,
-	isExternalLink
+	isExternalLink,
+	normalizeStorySlug
 } from './client';
 
 describe('getSafeUrl', () => {
@@ -76,5 +77,12 @@ describe('localized links', () => {
 		const link = { linktype: 'url', url: 'https://example.com/es' };
 		expect(getLocalizedLinkUrl(link, 'es')).toBe(link.url);
 		expect(isExternalLink(link)).toBe(true);
+	});
+});
+
+describe('normalizeStorySlug', () => {
+	test('normalizes locale prefixes, slashes, queries, and anchors', () => {
+		expect(normalizeStorySlug('our-work/')).toBe('our-work');
+		expect(normalizeStorySlug('/es/resources/?view=all#top')).toBe('resources');
 	});
 });
