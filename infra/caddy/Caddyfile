@@ -2,15 +2,19 @@
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
-		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		-Server
 	}
 }
 
+(same_origin_frames) {
+	header X-Frame-Options "SAMEORIGIN"
+}
+
 y4h.org, www.y4h.org {
 	import security_headers
+	import same_origin_frames
 	encode gzip
 
 	@www host www.y4h.org
@@ -37,18 +41,21 @@ y4h.org, www.y4h.org {
 
 admin.y4h.org {
 	import security_headers
+	import same_origin_frames
 	encode gzip
 	reverse_proxy yah-admin:3002
 }
 
 y4h.link {
 	import security_headers
+	import same_origin_frames
 	encode gzip
 	reverse_proxy shlink:8080
 }
 
 mail.y4h.org {
 	import security_headers
+	import same_origin_frames
 	encode gzip
 
 	# Only expose Listmonk's public pages (subscription, unsubscribe, archive)
@@ -74,8 +81,6 @@ preview.y4h.org {
 	respond /robots.txt "User-agent: *\nDisallow: /\n" 200
 
 	# Allow Storyblok Visual Editor to embed this site in an iframe
-	# frame-ancestors supersedes X-Frame-Options in modern browsers
-	header -X-Frame-Options
 	header Content-Security-Policy "frame-ancestors https://app.storyblok.com"
 
 	reverse_proxy sveltekit-preview:3001
