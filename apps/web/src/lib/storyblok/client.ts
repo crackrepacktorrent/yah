@@ -56,6 +56,17 @@ export function getLinkUrl(link?: LinkField): string {
   return getSafeUrl(rawUrl);
 }
 
+/** Normalizes Storyblok story paths for stable lookups and comparisons. */
+export function normalizeStorySlug(slug?: string): string {
+  if (!slug) return '';
+
+  const path = slug.trim().split(/[?#]/, 1)[0];
+  return path
+    .replace(/^\/+|\/+$/g, '')
+    .replace(/^(?:en|es)(?:\/|$)/, '')
+    .replace(/^\/+|\/+$/g, '');
+}
+
 /**
  * Returns true if the link points outside the site (linktype is not "story").
  */

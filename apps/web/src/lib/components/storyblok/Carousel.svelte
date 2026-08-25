@@ -17,7 +17,6 @@
   let lang = $derived(getLanguage(page.params.lang));
   let slides = $derived(blok.slides ?? []);
   let showArrows = $derived((blok.show_arrows ?? true) && slides.length > 1);
-  let showDots = $derived((blok.show_dots ?? true) && slides.length > 1);
   let autoplayDelay = $derived(Math.max(1000, Number(blok.autoplay_delay) || 3000));
   let loop = $derived(blok.loop ?? true);
   let align = $derived(blok.align ?? 'center');
@@ -27,7 +26,6 @@
   let carouselApi = $state<CarouselAPI>();
   let selectedIndex = $state(0);
   let prefersReducedMotion = $state(true);
-  let autoplayPaused = $state(false);
 
   let autoplayPlugin = $derived(Autoplay({
     delay: autoplayDelay,
@@ -37,7 +35,7 @@
     stopOnMouseEnter: true
   }));
   let plugins = $derived(blok.autoplay && slides.length > 1 ? [autoplayPlugin] : []);
-  let autoplayRunning = $derived(!!blok.autoplay && !prefersReducedMotion && !autoplayPaused);
+  let autoplayRunning = $derived(!!blok.autoplay && !prefersReducedMotion);
 
   onMount(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -141,33 +139,6 @@
       <CarouselPrimitive.Next aria-label={lang === 'es' ? 'Diapositiva siguiente' : 'Next slide'} />
     {/if}
 
-    {#if showDots}
-      <div class="carousel-dots" role="group" aria-label={lang === 'es' ? 'Elegir una diapositiva' : 'Choose a slide'}>
-        {#each slides as _, index}
-          <button
-            type="button"
-            class="carousel-dot"
-            class:active={selectedIndex === index}
-            aria-label={lang === 'es' ? `Ir a la diapositiva ${index + 1}` : `Go to slide ${index + 1}`}
-            aria-current={selectedIndex === index ? 'true' : undefined}
-            onclick={() => carouselApi?.scrollTo(index)}
-          ></button>
-        {/each}
-      </div>
-    {/if}
-
-    {#if blok.autoplay && slides.length > 1 && !prefersReducedMotion}
-      <button
-        type="button"
-        class="autoplay-toggle"
-        aria-label={autoplayPaused
-          ? (lang === 'es' ? 'Reproducir presentación' : 'Play slideshow')
-          : (lang === 'es' ? 'Pausar presentación' : 'Pause slideshow')}
-        onclick={() => autoplayPaused = !autoplayPaused}
-      >
-        <span aria-hidden="true">{autoplayPaused ? '▶' : '❚❚'}</span>
-      </button>
-    {/if}
   </CarouselPrimitive.Root>
 </div>
 
@@ -226,45 +197,6 @@
     width: auto;
     max-width: none;
     height: 100%;
-  }
-
-  .carousel-dots {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-  }
-
-  .carousel-dot {
-    width: 0.75rem;
-    height: 0.75rem;
-    padding: 0;
-    border: 1px solid currentColor;
-    border-radius: 9999px;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-  }
-
-  .carousel-dot.active {
-    background: currentColor;
-  }
-
-  .autoplay-toggle {
-    position: absolute;
-    right: 0.5rem;
-    bottom: 0.25rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    border: 0;
-    border-radius: 9999px;
-    background-color: var(--color-background);
-    color: var(--color-primary);
-    cursor: pointer;
   }
 
   @media (max-width: 1024px) {
