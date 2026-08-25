@@ -104,6 +104,8 @@
   --color-background: var(--brand-white);
   --color-foreground: var(--brand-brown);
   --color-muted: var(--brand-warm-500);
+  --color-link: currentColor;
+  --color-link-hover: var(--color-link);
   --color-surface: oklch(0.993 0.005 67.7);
   --color-page-bg: var(--brand-warm-200);
   --color-input-bg: var(--brand-warm-50);
