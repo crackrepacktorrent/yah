@@ -182,32 +182,34 @@
       aria-labelledby={triggerId}
       transition:fly={{ y: -8, duration: 150 }}
     >
-      {#each items as item}
-        {#if item.href}
-          <a
-            href={item.href}
-            class="dropdown-item"
-            role="menuitem"
-            target={item.target}
-            rel={item.rel}
-            onclick={() => closeDropdown()}
-          >
-            {item.label}
-          </a>
-        {:else if onSelect}
-          <button
-            type="button"
-            class="dropdown-item"
-            role="menuitem"
-            onclick={() => {
-              onSelect?.(item.value || item.label);
-              closeDropdown(true);
-            }}
-          >
-            {item.label}
-          </button>
-        {/if}
-      {/each}
+      <div class="dropdown-panel">
+        {#each items as item}
+          {#if item.href}
+            <a
+              href={item.href}
+              class="dropdown-item"
+              role="menuitem"
+              target={item.target}
+              rel={item.rel}
+              onclick={() => closeDropdown()}
+            >
+              {item.label}
+            </a>
+          {:else if onSelect}
+            <button
+              type="button"
+              class="dropdown-item"
+              role="menuitem"
+              onclick={() => {
+                onSelect?.(item.value || item.label);
+                closeDropdown(true);
+              }}
+            >
+              {item.label}
+            </button>
+          {/if}
+        {/each}
+      </div>
     </div>
   {/if}
 </div>
@@ -232,6 +234,12 @@
     min-width: 100%;
     width: max-content;
     z-index: 50;
+  }
+
+  .dropdown-panel {
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background-color: var(--color-background);
     box-shadow: var(--shadow-md);
   }
 
@@ -254,18 +262,6 @@
     background-color: var(--color-background);
     transition: background-color 150ms ease-in-out;
     cursor: pointer;
-  }
-
-  .dropdown-item:first-child {
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
-  }
-
-  .dropdown-item:last-child {
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
-  }
-
-  .dropdown-item:only-child {
-    border-radius: var(--radius-md);
   }
 
   .dropdown-item:hover,
