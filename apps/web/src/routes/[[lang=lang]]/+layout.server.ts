@@ -7,7 +7,6 @@ import {
 	getStoryblokRequestOptions
 } from '$lib/server/storyblok';
 import { renderCustomCssStyle } from '$lib/server/custom-css';
-import { normalizeStorySlug } from '$lib/storyblok/client';
 import type { ISbStoryData } from '@storyblok/svelte';
 import type {
 	HeaderButtonBlok,
@@ -26,12 +25,6 @@ const EMPTY_HEADER: HeaderBlok = {
 
 interface NavigationPageBlok extends StoryblokBlok {
 	body?: StoryblokBlok[];
-}
-
-// Storyblok folder landing pages keep a trailing slash in `by_slugs` queries.
-function getStoryblokApiSlug(slug: string): string {
-	const withoutSlash = slug.replace(/^\//, '');
-	return withoutSlash.replace(/^(?:en|es)\//, '');
 }
 
 function isStoryblokBlock(value: unknown): value is StoryblokBlok {
@@ -81,22 +74,23 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 
 	const header = config.header?.[0] ?? EMPTY_HEADER;
 	const buttons = (header.buttons ?? []) as HeaderButtonBlok[];
-	const dropdownPageSlugs = buttons
+	const dropdownButtons = buttons
 		.filter(
 			(button: HeaderButtonBlok) =>
-				button.show_dropdown === true && button.link?.linktype === 'story'
-		)
-		.map((button: HeaderButtonBlok) => getStoryblokApiSlug(button.link?.cached_url || ''))
-		.filter((slug): slug is string => Boolean(slug));
-	const uniquePageSlugs: string[] = [...new Set<string>(dropdownPageSlugs)];
+				button.show_dropdown === true &&
+				button.link?.linktype === 'story'
+		);
+	const storyIds = [
+		...new Set(dropdownButtons.flatMap((button) => button.link.id ? [button.link.id] : []))
+	];
 	const dropdownCards: Record<string, CardBlok[]> = {};
 
-	if (uniquePageSlugs.length > 0) {
+	if (storyIds.length > 0) {
 		let stories: ISbStoryData<NavigationPageBlok>[];
 		try {
 			const { data } = await api.get('cdn/stories', {
 				...requestOptions,
-				by_slugs: uniquePageSlugs.join(',')
+				by_uuids: storyIds.join(',')
 			});
 			stories = data.stories ?? [];
 		} catch (reason) {
@@ -106,10 +100,11 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 			throw error(502, { message: 'Site navigation is temporarily unavailable.' });
 		}
 
-		for (const slug of uniquePageSlugs) {
-			const story = stories.find((item) => getStoryblokApiSlug(item.full_slug) === slug);
+		for (const button of dropdownButtons) {
+			const story = stories.find((item) => item.uuid === button.link.id);
 			const cardGrid = findCardGrid(story?.content?.body);
-			dropdownCards[normalizeStorySlug(slug)] = cardGrid?.cards ?? [];
+			// The button UID is stable across localized and trailing-slash URLs.
+			dropdownCards[button._uid] = cardGrid?.cards ?? [];
 		}
 	}
 

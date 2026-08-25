@@ -3,7 +3,7 @@
   import { storyblokEditable } from "@storyblok/svelte";
   import { languages, type Language } from "$lib/lang";
   import type { HeaderBlok, HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
-  import { getLinkUrl, getLocalizedLinkUrl, normalizeStorySlug } from "$lib/storyblok/client";
+  import { getLocalizedLinkUrl } from "$lib/storyblok/client";
   import { Dialog } from "bits-ui";
   import Dropdown from "./Dropdown.svelte";
   import logo from "$lib/assets/logo.png";
@@ -66,9 +66,7 @@
 
   function getCards(button: HeaderButtonBlok): CardBlok[] {
     if (button.show_dropdown !== true) return [];
-    const baseSlug = normalizeStorySlug(getLinkUrl(button.link));
-    if (!baseSlug) return [];
-    return (dropdownCards[baseSlug] || []).filter((card) => !!localizeHref(card.link));
+    return (dropdownCards[button._uid] || []).filter((card) => !!localizeHref(card.link));
   }
 
   function closeMobileMenu() {
