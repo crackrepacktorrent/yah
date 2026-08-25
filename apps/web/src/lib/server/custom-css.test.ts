@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { validateCustomCss } from './custom-css';
+import { renderCustomCssStyle, validateCustomCss } from './custom-css';
 
 describe('validateCustomCss', () => {
 	test('keeps root variables overrideable without selector rewriting', () => {
@@ -25,5 +25,12 @@ describe('validateCustomCss', () => {
 
 	test('rejects invalid CSS', () => {
 		expect(() => validateCustomCss('body { color: red; } }')).toThrow();
+	});
+
+	test('renders validated CSS as the style element contents', () => {
+		expect(renderCustomCssStyle(':root { --color-link: brown; }')).toBe(
+			'<style data-storyblok-custom-css>:root{--color-link: brown}</style>'
+		);
+		expect(renderCustomCssStyle('')).toBe('');
 	});
 });

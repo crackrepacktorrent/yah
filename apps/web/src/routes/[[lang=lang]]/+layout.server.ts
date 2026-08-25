@@ -6,7 +6,7 @@ import {
 	getStoryblokRequestContext,
 	getStoryblokRequestOptions
 } from '$lib/server/storyblok';
-import { validateCustomCss } from '$lib/server/custom-css';
+import { renderCustomCssStyle } from '$lib/server/custom-css';
 import type { ISbStoryData } from '@storyblok/svelte';
 import type {
 	HeaderButtonBlok,
@@ -111,9 +111,9 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 		}
 	}
 
-	let customCSS = '';
+	let customCSSStyle = '';
 	try {
-		customCSS = validateCustomCss(config.custom_global_css ?? '');
+		customCSSStyle = renderCustomCssStyle(config.custom_global_css ?? '');
 	} catch (reason) {
 		console.error('Storyblok custom CSS was rejected', {
 			message: reason instanceof Error ? reason.message : 'Invalid CSS'
@@ -124,7 +124,7 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 		lang,
 		header,
 		footer: config.footer ?? [],
-		customCSS,
+		customCSSStyle,
 		dropdownCards,
 		isDraft
 	};

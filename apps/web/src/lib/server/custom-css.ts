@@ -33,3 +33,9 @@ export function validateCustomCss(source: string): string {
 
 	return normalized;
 }
+
+/** Validate editor CSS and wrap it for raw insertion into the document head. */
+export function renderCustomCssStyle(source: string): string {
+	const css = validateCustomCss(source);
+	return css ? `<style data-storyblok-custom-css>${css}</style>` : '';
+}
