@@ -65,10 +65,10 @@
 
 <style>
   .text-section :global(a) {
-    color: var(--color-link);
+    color: var(--color-link, currentColor);
   }
 
   .text-section :global(a:hover) {
-    color: var(--color-link-hover);
+    color: var(--color-link-hover, var(--color-link, currentColor));
   }
 </style>
