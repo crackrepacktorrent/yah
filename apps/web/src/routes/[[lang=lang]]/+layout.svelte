@@ -31,8 +31,8 @@
   {#if umamiUrl && umamiId}
     <script async defer data-website-id={umamiId} src="{umamiUrl}/t"></script>
   {/if}
-  {#if data.customCSS}
-    <style data-storyblok-custom-css>{data.customCSS}</style>
+  {#if data.customCSSStyle}
+    {@html data.customCSSStyle}
   {/if}
 </svelte:head>
 
