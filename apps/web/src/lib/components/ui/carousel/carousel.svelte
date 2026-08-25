@@ -55,6 +55,11 @@
 		carouselState.canScrollPrev = carouselState.api.canScrollPrev();
 	}
 
+	function onReInit() {
+		carouselState.scrollSnaps = carouselState.api?.scrollSnapList() ?? [];
+		onSelect();
+	}
+
 	function handleKeyDown(e: KeyboardEvent) {
 		if (e.key === "ArrowLeft") {
 			e.preventDefault();
@@ -66,6 +71,8 @@
 	}
 
 	function onInit(event: CustomEvent<CarouselAPI>) {
+		carouselState.api?.off("select", onSelect);
+		carouselState.api?.off("reInit", onReInit);
 		carouselState.api = event.detail;
 		setApi(carouselState.api);
 
@@ -75,16 +82,15 @@
 		// finish loading and change slide widths. Without this, canScroll*
 		// can stay stuck on the values from the very first init when slides
 		// hadn't measured their final size yet.
-		carouselState.api.on("reInit", () => {
-			carouselState.scrollSnaps = carouselState.api?.scrollSnapList() ?? [];
-			onSelect();
-		});
+		carouselState.api.on("reInit", onReInit);
 		onSelect();
 	}
 
 	$effect(() => {
 		return () => {
 			carouselState.api?.off("select", onSelect);
+			carouselState.api?.off("reInit", onReInit);
+			setApi(undefined);
 		};
 	});
 </script>

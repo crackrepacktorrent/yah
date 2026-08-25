@@ -3,20 +3,12 @@
   import Header from "$lib/components/storyblok/Header.svelte";
   import Lightbox from "$lib/components/Lightbox.svelte";
   import type { LayoutData } from "./$types";
-  import { parse } from 'css-tree';
-  import { page } from '$app/state';
+  import type { Snippet } from "svelte";
   import { SITE_URL } from '$lib/config';
   const umamiUrl = import.meta.env.VITE_UMAMI_URL;
   const umamiId = import.meta.env.VITE_UMAMI_WEBSITE_ID;
 
-  let { data, children }: { data: LayoutData; children: any } = $props();
-
-  // Strip lang prefix to get the base path for hreflang alternates
-  let basePath = $derived(
-    page.url.pathname.startsWith('/es')
-      ? page.url.pathname.slice(3) || '/'
-      : page.url.pathname
-  );
+  let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
@@ -32,61 +24,21 @@
     ]
   });
 
-  let validatedCSS = $state('');
-  let cssError = $state('');
-
-  $effect(() => {
-    console.log('Custom CSS from Storyblok:', data.customCSS);
-
-    if (!data.customCSS || data.customCSS.trim() === '') {
-      validatedCSS = '';
-      cssError = '';
-      console.log('No custom CSS provided');
-      return;
-    }
-
-    try {
-      // Parse CSS to validate syntax
-      parse(data.customCSS);
-      validatedCSS = data.customCSS;
-      cssError = '';
-      console.log('Custom CSS validated successfully');
-      console.log('CSS being injected:', validatedCSS);
-    } catch (error: any) {
-      cssError = error.message;
-      validatedCSS = '';
-      console.error('Invalid CSS:', error.message);
-      console.error('CSS content:', data.customCSS);
-    }
-  });
 </script>
 
 <svelte:head>
-  <link rel="canonical" href="{SITE_URL}{page.url.pathname}" />
-  <meta property="og:url" content="{SITE_URL}{page.url.pathname}" />
-  <meta name="twitter:url" content="{SITE_URL}{page.url.pathname}" />
-  <link rel="alternate" hreflang="en" href="{SITE_URL}{basePath}" />
-  <link rel="alternate" hreflang="es" href="{SITE_URL}/es{basePath === '/' ? '' : basePath}" />
-  <link rel="alternate" hreflang="x-default" href="{SITE_URL}{basePath}" />
   {@html `<script type="application/ld+json">${jsonLd}</script>`}
   {#if umamiUrl && umamiId}
     <script async defer data-website-id={umamiId} src="{umamiUrl}/t"></script>
   {/if}
-  {#if validatedCSS}
-    {@html `<style>${validatedCSS}</style>`}
+  {#if data.customCSS}
+    <style data-storyblok-custom-css>{data.customCSS}</style>
   {/if}
 </svelte:head>
 
-{#if cssError}
-  <div style="position: fixed; bottom: 1rem; right: 1rem; background: var(--color-destructive); color: var(--color-destructive-foreground); padding: 1rem; border-radius: var(--radius-lg); max-width: 400px; z-index: 9999; font-family: monospace; font-size: 0.875rem;">
-    <strong>Custom CSS Error:</strong><br/>
-    {cssError}
-  </div>
-{/if}
-
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
-<div class="layout-container">
+<div class="layout-container" data-sveltekit-reload={data.isDraft ? '' : undefined}>
   <header>
     <Header
       blok={data.header}
@@ -94,12 +46,12 @@
       dropdownCards={data.dropdownCards}
     />
   </header>
-  <main id="main-content" class="layout-main">
+  <main id="main-content" class="layout-main" tabindex="-1">
     {@render children()}
   </main>
-  {#if data.footer && data.footer.length > 0}
-    <StoryblokComponent blok={data.footer[0]} />
-  {/if}
+  {#each data.footer ?? [] as footer (footer._uid)}
+    <StoryblokComponent blok={footer} />
+  {/each}
 </div>
 
 <Lightbox />
@@ -129,7 +81,7 @@
     height: auto;
   }
 
-  :global(body) {
+  :global(:where(body)) {
     background-color: var(--color-primary);
     color: var(--color-surface);
   }

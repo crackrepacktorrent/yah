@@ -1,24 +1,31 @@
 <script lang="ts">
   import { storyblokEditable, StoryblokComponent } from "@storyblok/svelte";
+  import { page } from "$app/state";
+  import { getLanguage } from "$lib/lang";
   import type { CardBlok } from "$lib/storyblok/types";
-  import { getLinkUrl } from "$lib/storyblok/client";
+  import { getLocalizedLinkUrl } from "$lib/storyblok/client";
 
   let { blok }: { blok: CardBlok } = $props();
 
-  function formatDate(dateString: string): string {
+  let lang = $derived(getLanguage(page.params.lang));
+  let locale = $derived(lang === 'es' ? 'es' : 'en-US');
+
+  function formatDate(dateString: string, currentLocale: string): string {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString(currentLocale, {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: /^\d{4}-\d{2}-\d{2}$/.test(dateString) ? 'UTC' : undefined
     });
   }
 
-  let linkUrl = $derived(getLinkUrl(blok.link));
+  let linkUrl = $derived(getLocalizedLinkUrl(blok.link, lang));
   let openInNewTab = $derived(blok.link?.target === '_blank');
-  let linkText = $derived(blok.link_text ?? 'Learn More');
-  let formattedDate = $derived(blok.date ? formatDate(blok.date) : '');
+  let linkText = $derived(blok.link_text?.trim() || (lang === 'es' ? 'Más información' : 'Learn more'));
+  let formattedDate = $derived(blok.date ? formatDate(blok.date, locale) : '');
 </script>
 
 <div
@@ -33,17 +40,23 @@
   {/if}
 
   <div class="card-content">
-    <a
-      href={linkUrl}
-      class="card-title-link"
-      target={openInNewTab ? "_blank" : undefined}
-      rel={openInNewTab ? "noopener noreferrer" : undefined}
-    >
-      <h3 class="card-title">{blok.title}</h3>
-    </a>
+    <h3 class="card-title">
+      {#if linkUrl}
+        <a
+          href={linkUrl}
+          class="card-title-link"
+          target={openInNewTab ? "_blank" : undefined}
+          rel={openInNewTab ? "noopener noreferrer" : undefined}
+        >
+          {blok.title}
+        </a>
+      {:else}
+        {blok.title}
+      {/if}
+    </h3>
 
     {#if formattedDate}
-      <p class="card-date">{formattedDate}</p>
+      <time class="card-date" datetime={blok.date}>{formattedDate}</time>
     {/if}
 
     {#if blok.description}
@@ -58,14 +71,28 @@
       </div>
     {/if}
 
-    <a
-      href={linkUrl}
-      class="card-link-text"
-      target={openInNewTab ? "_blank" : undefined}
-      rel={openInNewTab ? "noopener noreferrer" : undefined}
-    >
-      {linkText} →
-    </a>
+    {#if blok.metadata && blok.metadata.length > 0}
+      <dl class="card-metadata">
+        {#each blok.metadata as item}
+          <div class="metadata-item">
+            {#if item.icon}<span class="metadata-icon" aria-hidden="true">{item.icon}</span>{/if}
+            {#if item.label}<dt>{item.label}</dt>{/if}
+            <dd>{item.value}</dd>
+          </div>
+        {/each}
+      </dl>
+    {/if}
+
+    {#if linkUrl}
+      <a
+        href={linkUrl}
+        class="card-link-text"
+        target={openInNewTab ? "_blank" : undefined}
+        rel={openInNewTab ? "noopener noreferrer" : undefined}
+      >
+        {linkText} →
+      </a>
+    {/if}
   </div>
 </div>
 
@@ -92,16 +119,6 @@
     flex: 1;
   }
 
-  .card-title-link {
-    text-decoration: none;
-    color: inherit;
-    transition: color 150ms ease-in-out;
-  }
-
-  .card-title-link:hover {
-    color: var(--color-primary);
-  }
-
   .card-title {
     font-size: 1.25rem;
     font-weight: 700;
@@ -110,8 +127,13 @@
     line-height: 1.3;
   }
 
-  .card-title-link:hover .card-title {
-    color: var(--color-primary);
+  .card-title-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .card-title-link:hover {
+    text-decoration: underline;
   }
 
   .card-date {
@@ -139,6 +161,36 @@
     background-color: var(--color-secondary);
     color: var(--color-muted);
     border-radius: var(--radius-xs);
+  }
+
+  .card-metadata {
+    display: grid;
+    gap: 0.375rem;
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-muted);
+  }
+
+  .metadata-item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .metadata-icon {
+    line-height: inherit;
+  }
+
+  .metadata-item dt {
+    font-weight: 600;
+  }
+
+  .metadata-item dt::after {
+    content: ':';
+  }
+
+  .metadata-item dd {
+    margin: 0;
   }
 
   .card-link-text {

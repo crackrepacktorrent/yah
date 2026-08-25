@@ -1,14 +1,33 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types';
 	import { enhance } from '$app/forms';
+	import { SITE_URL } from '$lib/config';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let submitting = $state(false);
+	let unavailable = $derived(
+		!data.available || Boolean(form && 'unavailable' in form && form.unavailable)
+	);
+	const title = 'Subscribe | Youth Alliance for Housing';
+	const description = 'Subscribe to Youth Alliance for Housing email updates.';
+	const canonicalUrl = `${SITE_URL}/subscribe`;
+	const socialImage = `${SITE_URL}/og-image.png`;
 </script>
 
 <svelte:head>
-	<title>Subscribe</title>
+	<title>{title}</title>
+	<meta name="description" content={description} />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content={title} />
+	<meta property="og:description" content={description} />
+	<meta property="og:image" content={socialImage} />
+	<meta property="og:url" content={canonicalUrl} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={title} />
+	<meta name="twitter:description" content={description} />
+	<meta name="twitter:image" content={socialImage} />
+	<link rel="canonical" href={canonicalUrl} />
 </svelte:head>
 
 <div class="subscribe-page">
@@ -16,51 +35,60 @@
 		<h1>Subscribe</h1>
 
 		{#if form?.success}
-			<div class="success-message">
+			<div class="success-message" role="status" aria-live="polite">
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M20 6L9 17l-5-5"/>
 				</svg>
 				<p>You're subscribed! Check your inbox for a confirmation email.</p>
 			</div>
 		{:else}
-			<p class="subscribe-description">Enter your details below to subscribe to our mailing list.</p>
+			{#if unavailable}
+				<div class="error-message" role="alert">
+					Subscriptions are temporarily unavailable. Please try again later.
+				</div>
+			{:else}
+				<p class="subscribe-description">Enter your details below to subscribe to our mailing list.</p>
 
-			{#if form?.error}
-				<div class="error-message">{form.error}</div>
-			{/if}
+				{#if form?.error}
+					<div class="error-message" role="alert" aria-live="assertive">{form.error}</div>
+				{/if}
 
-			<form method="POST" use:enhance={() => {
-				submitting = true;
-				return async ({ update }) => {
-					submitting = false;
-					await update();
-				};
-			}}>
-				<div class="form-fields">
-					<div class="field">
-						<label for="email">Email <span class="required">*</span></label>
-						<input
-							id="email"
-							type="email"
-							name="email"
-							required
-							placeholder="you@example.com"
-							value={form?.email ?? ''}
-						/>
-					</div>
+				<form method="POST" use:enhance={() => {
+					submitting = true;
+					return async ({ update }) => {
+						try {
+							await update();
+						} finally {
+							submitting = false;
+						}
+					};
+				}}>
+					<div class="form-fields">
+						<div class="field">
+							<label for="email">Email <span class="required">*</span></label>
+							<input
+								id="email"
+								type="email"
+								name="email"
+								autocomplete="email"
+								required
+								placeholder="you@example.com"
+								value={form?.email ?? ''}
+							/>
+						</div>
 
-					<div class="field">
-						<label for="name">Name</label>
-						<input
-							id="name"
-							type="text"
-							name="name"
-							placeholder="Your name (optional)"
-							value={form?.name ?? ''}
-						/>
-					</div>
+						<div class="field">
+							<label for="name">Name</label>
+							<input
+								id="name"
+								type="text"
+								name="name"
+								autocomplete="name"
+								placeholder="Your name (optional)"
+								value={form?.name ?? ''}
+							/>
+						</div>
 
-					{#if data.lists.length > 0}
 						<fieldset class="field">
 							<legend>Lists</legend>
 							<div class="list-options">
@@ -77,13 +105,13 @@
 								{/each}
 							</div>
 						</fieldset>
-					{/if}
 
-					<button type="submit" class="submit-btn" disabled={submitting}>
-						{submitting ? 'Subscribing...' : 'Subscribe'}
-					</button>
-				</div>
-			</form>
+						<button type="submit" class="submit-btn" disabled={submitting}>
+							{submitting ? 'Subscribing...' : 'Subscribe'}
+						</button>
+					</div>
+				</form>
+			{/if}
 		{/if}
 	</div>
 </div>

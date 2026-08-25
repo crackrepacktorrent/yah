@@ -68,6 +68,11 @@ preview.y4h.org {
 	import security_headers
 	encode gzip
 
+	# Draft content must never be indexed or stored by shared caches.
+	header X-Robots-Tag "noindex, nofollow, noarchive"
+	header Cache-Control "private, no-store"
+	respond /robots.txt "User-agent: *\nDisallow: /\n" 200
+
 	# Allow Storyblok Visual Editor to embed this site in an iframe
 	# frame-ancestors supersedes X-Frame-Options in modern browsers
 	header -X-Frame-Options

@@ -1,17 +1,20 @@
 <script lang="ts">
   import { storyblokEditable, StoryblokComponent } from "@storyblok/svelte";
+  import { page } from "$app/state";
+  import { getLanguage } from "$lib/lang";
   import type { CardGridBlok } from "$lib/storyblok/types";
   import Dropdown from "./Dropdown.svelte";
-  import ChevronDown from "lucide-svelte/icons/chevron-down";
+  import ChevronDown from "@lucide/svelte/icons/chevron-down";
 
   let { blok }: { blok: CardGridBlok } = $props();
+  let lang = $derived(getLanguage(page.params.lang));
 
-  let columns = $derived(blok.columns ?? 3);
+  let columns = $derived(Math.min(6, Math.max(1, Math.trunc(Number(blok.columns) || 3))));
   let gap = $derived(blok.gap ?? "24px");
   let equalHeightRows = $derived(blok.equal_height_rows ?? false);
   let fullWidthCards = $derived(blok.full_width_cards ?? false);
   let gridStyles = $derived(`grid-template-columns: repeat(${columns}, 1fr); gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''} ${blok.custom_styles ?? ''}`);
-  let searchPlaceholder = $derived(blok.search_placeholder ?? "Search...");
+  let searchPlaceholder = $derived(blok.search_placeholder?.trim() || (lang === 'es' ? 'Buscar…' : 'Search…'));
   let sortOptions = $derived(blok.sort_options ?? []);
   let enableSearch = $derived(blok.enable_search ?? false);
   let enableSort = $derived(blok.enable_sort ?? false);
@@ -19,6 +22,16 @@
   let searchQuery = $state("");
   // svelte-ignore state_referenced_locally
   let sortBy = $state(blok.default_sort ?? "");
+
+  function sortOptionLabel(option: string): string {
+    const labels: Record<string, [string, string]> = {
+      title: ['Title', 'Título'],
+      date: ['Date', 'Fecha'],
+      tags: ['Tags', 'Etiquetas']
+    };
+    return labels[option]?.[lang === 'es' ? 1 : 0]
+      ?? `${option.charAt(0).toLocaleUpperCase()}${option.slice(1)}`;
+  }
 
   const filteredAndSortedItems = $derived.by(() => {
     let items = blok.cards ?? [];
@@ -43,8 +56,10 @@
           const bTag = b.tags?.[0] || '';
           return aTag.localeCompare(bTag);
         } else if (sortBy === 'date') {
-          const aDate = a.date ? new Date(a.date).getTime() : 0;
-          const bDate = b.date ? new Date(b.date).getTime() : 0;
+          const parsedADate = a.date ? new Date(a.date).getTime() : 0;
+          const parsedBDate = b.date ? new Date(b.date).getTime() : 0;
+          const aDate = Number.isFinite(parsedADate) ? parsedADate : 0;
+          const bDate = Number.isFinite(parsedBDate) ? parsedBDate : 0;
           return bDate - aDate;
         }
         return 0;
@@ -69,16 +84,26 @@
       {/if}
       {#if enableSort && sortOptions.length > 0}
         <Dropdown
+          id={`card-grid-sort-${blok._uid}`}
+          openOnHover={false}
           items={sortOptions.map(opt => ({
-            label: opt.charAt(0).toUpperCase() + opt.slice(1),
+            label: sortOptionLabel(opt),
             value: opt
           }))}
           onSelect={(value) => sortBy = value}
         >
-          {#snippet trigger()}
-            <button type="button" class="sort-button">
-              {sortBy ? sortBy.charAt(0).toUpperCase() + sortBy.slice(1) : 'Sort by...'}
-              <ChevronDown class="chevron-icon" />
+          {#snippet trigger({ isOpen, menuId, triggerId, toggle })}
+            <button
+              id={triggerId}
+              type="button"
+              class="sort-button"
+              aria-haspopup="menu"
+              aria-expanded={isOpen}
+              aria-controls={menuId}
+              onclick={toggle}
+            >
+              {sortBy ? sortOptionLabel(sortBy) : (lang === 'es' ? 'Ordenar por…' : 'Sort by…')}
+              <ChevronDown class="chevron-icon" aria-hidden="true" />
             </button>
           {/snippet}
         </Dropdown>
@@ -96,7 +121,7 @@
 
   {#if filteredAndSortedItems.length === 0}
     <div class="empty-state">
-      <p>No items found</p>
+      <p>{lang === 'es' ? 'No se encontraron resultados' : 'No items found'}</p>
     </div>
   {/if}
 </div>

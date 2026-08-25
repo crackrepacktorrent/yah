@@ -1,43 +1,67 @@
+import { timingSafeEqual } from 'node:crypto';
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { getStoryblokApi } from '@storyblok/svelte';
 import { env } from '$env/dynamic/private';
+import { flushStoryblokCaches } from '$lib/server/storyblok-client';
+import { getPublishedStoryblokApi } from '$lib/server/storyblok';
 
-const CLOUDFLARE_ZONE_ID = env.CLOUDFLARE_ZONE_ID ?? '';
-const CLOUDFLARE_API_TOKEN = env.CLOUDFLARE_API_TOKEN ?? '';
-const STORYBLOK_WEBHOOK_SECRET = env.STORYBLOK_WEBHOOK_SECRET ?? '';
+const NO_STORE = { 'Cache-Control': 'private, no-store' };
+const PURGE_TIMEOUT_MS = 8_000;
+
+function secretMatches(provided: string | undefined, expected: string): boolean {
+	if (!provided || !expected) return false;
+	const left = Buffer.from(provided);
+	const right = Buffer.from(expected);
+	return left.length === right.length && timingSafeEqual(left, right);
+}
 
 export const POST: RequestHandler = async ({ params }) => {
-	// Verify secret from URL path
-	if (!STORYBLOK_WEBHOOK_SECRET || params.secret !== STORYBLOK_WEBHOOK_SECRET) {
-		return json({ error: 'Unauthorized' }, { status: 401 });
+	if (!secretMatches(params.secret, env.STORYBLOK_WEBHOOK_SECRET ?? '')) {
+		return json({ error: 'Unauthorized' }, { status: 401, headers: NO_STORE });
 	}
 
-	// Flush Storyblok SDK memory cache
 	try {
-		const api = getStoryblokApi();
-		await api.flushCache();
-	} catch (e) {
-		console.error('Failed to flush Storyblok cache:', e);
+		// Ensure this endpoint also works in a cold process where no page loader has
+		// initialized a Storyblok client yet, then flush every token-specific client.
+		getPublishedStoryblokApi();
+		await flushStoryblokCaches();
+	} catch (reason) {
+		console.error('Failed to initialize or flush Storyblok clients', reason);
+		return json({ error: 'Storyblok cache flush failed' }, { status: 502, headers: NO_STORE });
 	}
 
-	// Purge Cloudflare edge cache
-	if (CLOUDFLARE_ZONE_ID && CLOUDFLARE_API_TOKEN) {
+	const zoneId = env.CLOUDFLARE_ZONE_ID ?? '';
+	const apiToken = env.CLOUDFLARE_API_TOKEN ?? '';
+	if (Boolean(zoneId) !== Boolean(apiToken)) {
+		console.error('Cloudflare cache purge is partially configured');
+		return json({ error: 'Cloudflare cache purge is misconfigured' }, { status: 500, headers: NO_STORE });
+	}
+
+	if (zoneId && apiToken) {
+		let response: Response;
 		try {
-			await fetch(
-				`https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache`,
+			response = await fetch(
+				`https://api.cloudflare.com/client/v4/zones/${encodeURIComponent(zoneId)}/purge_cache`,
 				{
 					method: 'POST',
 					headers: {
-						'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
-						'Content-Type': 'application/json',
+						Authorization: `Bearer ${apiToken}`,
+						'Content-Type': 'application/json'
 					},
 					body: JSON.stringify({ purge_everything: true }),
+					signal: AbortSignal.timeout(PURGE_TIMEOUT_MS)
 				}
 			);
-		} catch (e) {
-			console.error('Failed to purge Cloudflare cache:', e);
+		} catch (reason) {
+			console.error('Cloudflare cache purge request failed', reason);
+			return json({ error: 'Cloudflare cache purge failed' }, { status: 502, headers: NO_STORE });
+		}
+
+		const result = await response.json().catch(() => null) as { success?: boolean } | null;
+		if (!response.ok || result?.success !== true) {
+			console.error('Cloudflare cache purge was rejected', { status: response.status });
+			return json({ error: 'Cloudflare cache purge failed' }, { status: 502, headers: NO_STORE });
 		}
 	}
 
-	return json({ success: true });
+	return json({ success: true }, { headers: NO_STORE });
 };

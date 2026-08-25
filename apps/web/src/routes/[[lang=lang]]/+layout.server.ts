@@ -1,119 +1,131 @@
-import type { LayoutServerLoad } from "./$types";
-import { getStoryblokApi } from "@storyblok/svelte";
-import { getLanguage } from "$lib/lang";
-import { getStoryblokVersion } from "$lib/storyblok/helpers";
-import type { HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
-import { redirect } from "@sveltejs/kit";
+import type { LayoutServerLoad } from './$types';
+import { error, redirect } from '@sveltejs/kit';
+import { getLanguage } from '$lib/lang';
+import {
+	getStoryblokErrorStatus,
+	getStoryblokRequestContext,
+	getStoryblokRequestOptions
+} from '$lib/server/storyblok';
+import { validateCustomCss } from '$lib/server/custom-css';
+import type { ISbStoryData } from '@storyblok/svelte';
+import type {
+	HeaderButtonBlok,
+	CardBlok,
+	CardGridBlok,
+	ConfigBlok,
+	HeaderBlok,
+	StoryblokBlok
+} from '$lib/storyblok/types';
 
-export const load: LayoutServerLoad = async ({ params, url, setHeaders }) => {
-  // English is the default — redirect /en/* to /* to avoid duplicate content
-  if (params.lang === 'en') {
-    const path = url.pathname.replace(/^\/en\/?/, '/');
-    redirect(301, path);
-  }
-  // 4hr edge cache, 60s browser cache — webhook purges on content publish
-  setHeaders({
-    'Cache-Control': 'public, s-maxage=14400, max-age=60, stale-while-revalidate=60',
-  });
+const EMPTY_HEADER: HeaderBlok = {
+	_uid: 'header',
+	component: 'header',
+	buttons: []
+};
 
-  const lang = getLanguage(params.lang);
-  const storyblokApi = getStoryblokApi();
+interface NavigationPageBlok extends StoryblokBlok {
+	body?: StoryblokBlok[];
+}
 
-  try {
-    const version = getStoryblokVersion();
+function stripLangPrefix(slug: string): string {
+	const withoutSlash = slug.replace(/^\//, '');
+	return withoutSlash.replace(/^(?:en|es)\//, '');
+}
 
-    const fetchStory = (slug: string) =>
-      storyblokApi.get(`cdn/stories/${slug}`, {
-        version,
-        language: lang,
-        fallback_lang: 'en',
-      });
+function isStoryblokBlock(value: unknown): value is StoryblokBlok {
+	return typeof value === 'object' && value !== null &&
+		typeof (value as { _uid?: unknown })._uid === 'string' &&
+		typeof (value as { component?: unknown }).component === 'string';
+}
 
-    const { data: dataConfig } = await fetchStory('config');
-    const config = dataConfig.story?.content;
-    const header = config?.header?.[0] ?? {
-      _uid: 'header',
-      component: 'header',
-      buttons: []
-    };
-    const buttons = header.buttons ?? [];
-    // Helper to strip language prefix from slugs (for field-level translation)
-    const stripLangPrefix = (slug: string) => {
-      const withoutSlash = slug.startsWith("/") ? slug.slice(1) : slug;
-      if (withoutSlash.startsWith("en/") || withoutSlash.startsWith("es/")) {
-        return withoutSlash.slice(3);
-      }
-      return withoutSlash;
-    };
+function findCardGrid(blocks: StoryblokBlok[] | undefined): CardGridBlok | null {
+	for (const block of blocks ?? []) {
+		if (block.component === 'card_grid') return block as CardGridBlok;
+		const nestedBlocks = Array.isArray(block.blocks)
+			? block.blocks.filter(isStoryblokBlock)
+			: undefined;
+		const found = findCardGrid(nestedBlocks);
+		if (found) return found;
+	}
+	return null;
+}
 
-    // Find which pages are referenced by buttons for dropdowns
-    // Strip language prefixes - field-level translation uses single story with language parameter
-    const dropdownPageSlugs = buttons
-      .filter((btn: HeaderButtonBlok) => btn.show_dropdown && btn.link?.linktype === 'story')
-      .map((btn: HeaderButtonBlok) => stripLangPrefix(btn.link?.cached_url || ''))
-      .filter((slug: string) => slug);
+export const load: LayoutServerLoad = async ({ params, url }) => {
+	// English is the default. Preserve the query because Storyblok editor and
+	// campaign parameters are meaningful across this canonical redirect.
+	if (params.lang === 'en') {
+		const path = url.pathname.replace(/^\/en\/?/, '/');
+		redirect(301, `${path}${url.search}`);
+	}
 
-    const uniquePageSlugs = [...new Set(dropdownPageSlugs)] as string[];
+	const lang = getLanguage(params.lang);
+	const context = getStoryblokRequestContext(url);
+	const { api, isDraft } = context;
+	const requestOptions = getStoryblokRequestOptions(context, lang);
 
-    // Fetch only the pages that are actually referenced
-    const dropdownCards: Record<string, CardBlok[]> = {};
+	let dataConfig: { story?: ISbStoryData<ConfigBlok> };
+	try {
+		({ data: dataConfig } = await api.get('cdn/stories/config', requestOptions));
+	} catch (reason) {
+		console.error('Storyblok config request failed', { status: getStoryblokErrorStatus(reason) });
+		throw error(502, { message: 'Site configuration is temporarily unavailable.' });
+	}
 
-    if (uniquePageSlugs.length > 0) {
-      // Batch fetch all dropdown pages in a single API call
-      const { data: batchData } = await storyblokApi.get('cdn/stories', {
-        version,
-        language: lang,
-        fallback_lang: 'en',
-        by_slugs: uniquePageSlugs.join(','),
-      }).catch(() => ({ data: { stories: [] } }));
+	const config = dataConfig.story?.content;
+	if (!config || config.component !== 'config') {
+		console.error('Storyblok config story is missing or has the wrong root component');
+		throw error(502, { message: 'Site configuration is temporarily unavailable.' });
+	}
 
-      const pageResults = uniquePageSlugs.map((slug: string) => {
-        const story = batchData.stories?.find((s: any) => stripLangPrefix(s.full_slug) === slug);
-        return { slug, data: story ? { story } : null };
-      });
+	const header = config.header?.[0] ?? EMPTY_HEADER;
+	const buttons = (header.buttons ?? []) as HeaderButtonBlok[];
+	const dropdownPageSlugs = buttons
+		.filter(
+			(button: HeaderButtonBlok) =>
+				button.show_dropdown === true && button.link?.linktype === 'story'
+		)
+		.map((button: HeaderButtonBlok) => stripLangPrefix(button.link?.cached_url || ''))
+		.filter((slug): slug is string => Boolean(slug));
+	const uniquePageSlugs: string[] = [...new Set<string>(dropdownPageSlugs)];
+	const dropdownCards: Record<string, CardBlok[]> = {};
 
-      // Helper function to find card_grid recursively
-      function findCardGrid(blocks: any[]): any {
-        if (!blocks) return null;
-        for (const block of blocks) {
-          if (block.component === 'card_grid') return block;
-          if (block.blocks && Array.isArray(block.blocks)) {
-            const found = findCardGrid(block.blocks);
-            if (found) return found;
-          }
-        }
-        return null;
-      }
+	if (uniquePageSlugs.length > 0) {
+		let stories: ISbStoryData<NavigationPageBlok>[];
+		try {
+			const { data } = await api.get('cdn/stories', {
+				...requestOptions,
+				by_slugs: uniquePageSlugs.join(',')
+			});
+			stories = data.stories ?? [];
+		} catch (reason) {
+			console.error('Storyblok navigation request failed', {
+				status: getStoryblokErrorStatus(reason)
+			});
+			throw error(502, { message: 'Site navigation is temporarily unavailable.' });
+		}
 
-      for (const { slug, data } of pageResults) {
-        if (data) {
-          const cardGrid = findCardGrid(data.story?.content?.body || []);
-          dropdownCards[slug] = cardGrid?.cards ?? [];
-        } else {
-          dropdownCards[slug] = [];
-        }
-      }
-    }
+		for (const slug of uniquePageSlugs) {
+			const story = stories.find((item) => stripLangPrefix(item.full_slug) === slug);
+			const cardGrid = findCardGrid(story?.content?.body);
+			dropdownCards[slug] = cardGrid?.cards ?? [];
+		}
+	}
 
-    return {
-      lang,
-      header,
-      footer: config?.footer ?? null,
-      customCSS: config?.custom_global_css ?? '',
-      dropdownCards,
-    };
-  } catch (error) {
-    console.error('Failed to load layout data:', error);
-    return {
-      lang,
-      header: {
-        _uid: 'header',
-        component: 'header',
-        buttons: []
-      },
-      footer: null,
-      customCSS: '',
-      dropdownCards: {},
-    };
-  }
+	let customCSS = '';
+	try {
+		customCSS = validateCustomCss(config.custom_global_css ?? '');
+	} catch (reason) {
+		console.error('Storyblok custom CSS was rejected', {
+			message: reason instanceof Error ? reason.message : 'Invalid CSS'
+		});
+	}
+
+	return {
+		lang,
+		header,
+		footer: config.footer ?? [],
+		customCSS,
+		dropdownCards,
+		isDraft
+	};
 };

@@ -1,44 +1,54 @@
-import type { PageServerLoad } from "./$types";
-import { error } from "@sveltejs/kit";
-import { getStoryblokApi } from "@storyblok/svelte";
-import { getStoryblokVersion } from "$lib/storyblok/helpers";
+import type { PageServerLoad } from './$types';
+import { error, redirect } from '@sveltejs/kit';
+import { getLanguage } from '$lib/lang';
+import {
+	getStoryblokErrorStatus,
+	getStoryblokRequestContext,
+	getStoryblokRequestOptions
+} from '$lib/server/storyblok';
+import type { ISbStoryData } from '@storyblok/svelte';
+import type { PageBlok } from '$lib/storyblok/types';
 
-export const load: PageServerLoad = async ({ parent, params }) => {
-  const { lang } = await parent();
-  const storyblokApi = getStoryblokApi();
-  const slug = params.slug && params.slug !== "" ? params.slug : "home";
+export const load: PageServerLoad = async ({ params, url }) => {
+	const requestedSlug = params.slug?.replace(/^\/+|\/+$/g, '') || '';
 
-  // Reject paths that are obviously not Storyblok content pages
-  // Prevents vulnerability scanners from wasting API calls
-  if (
-    slug === 'admin' || slug.startsWith('admin/') ||
-    slug.includes('.') ||
-    slug.startsWith('_') ||
-    slug.startsWith('api/')
-  ) {
-    throw error(404, { message: 'Not found' });
-  }
+	// The root route is the only canonical URL for the home story.
+	if (requestedSlug === 'home') {
+		const homePath = params.lang === 'es' ? '/es' : '/';
+		redirect(301, `${homePath}${url.search}`);
+	}
 
-  try {
-    const { data } = await storyblokApi.get(`cdn/stories/${slug}`, {
-      version: getStoryblokVersion(),
-      language: lang,
-      fallback_lang: 'en',
-    });
+	const slug = requestedSlug || 'home';
+	if (
+		slug === 'config' || slug === 'admin' || slug.startsWith('admin/') ||
+		slug.includes('.') || slug.startsWith('_') || slug.startsWith('api/')
+	) {
+		throw error(404, { message: 'Not found' });
+	}
 
-    if (!data.story) {
-      throw error(404, {
-        message: `Story not found: ${slug}`
-      });
-    }
+	// Do not await parent(): this lets the page and layout Storyblok calls run in
+	// parallel while deriving the same language directly from the route.
+	const lang = getLanguage(params.lang);
+	const context = getStoryblokRequestContext(url);
+	const { api, isDraft } = context;
 
-    return {
-      story: data.story,
-    };
-  } catch (err) {
-    console.error(`Failed to load story: ${slug}`, err);
-    throw error(404, {
-      message: `Page not found: ${slug}`
-    });
-  }
+	let data: { story?: ISbStoryData<PageBlok> };
+	try {
+		({ data } = await api.get(
+			`cdn/stories/${slug}`,
+			getStoryblokRequestOptions(context, lang)
+		));
+	} catch (reason) {
+		const status = getStoryblokErrorStatus(reason);
+		if (status === 404) throw error(404, { message: `Page not found: ${slug}` });
+		console.error('Storyblok page request failed', { slug, status });
+		throw error(502, { message: 'This page is temporarily unavailable.' });
+	}
+
+	const story = data.story;
+	if (!story || story.content?.component !== 'page') {
+		throw error(404, { message: `Page not found: ${slug}` });
+	}
+
+	return { story, isDraft, lang };
 };

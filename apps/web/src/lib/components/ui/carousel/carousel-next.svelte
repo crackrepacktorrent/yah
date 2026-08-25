@@ -15,7 +15,7 @@
 	bind:this={ref}
 	data-slot="carousel-next"
 	type="button"
-	aria-disabled={!emblaCtx.canScrollNext}
+	disabled={!emblaCtx.canScrollNext}
 	class="carousel-nav-btn {emblaCtx.orientation === 'vertical' ? 'vertical' : 'horizontal'} next {className ?? ''}"
 	onclick={emblaCtx.scrollNext}
 	onkeydown={emblaCtx.handleKeyDown}
@@ -47,9 +47,9 @@
 		background-color: var(--color-hover);
 	}
 
-	.carousel-nav-btn[aria-disabled="true"] {
-		pointer-events: none;
+	.carousel-nav-btn:disabled {
 		opacity: 0.5;
+		cursor: default;
 	}
 
 	.carousel-nav-btn.horizontal.next {

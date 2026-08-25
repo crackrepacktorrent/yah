@@ -1,18 +1,19 @@
+import type { SbBlokData, StoryblokRichTextNode } from '@storyblok/svelte';
+
 /**
  * Base interface for all Storyblok blocks
  * Note: The index signature is required by Storyblok's use:storyblokEditable directive
  */
-export interface StoryblokBlok {
+export interface StoryblokBlok extends SbBlokData {
   _uid: string;
   component: string;
   custom_styles?: string;
-  [key: string]: any;
 }
 
 /**
  * Rich text field type from Storyblok
  */
-export type RichTextField = any; // Storyblok's rich text format
+export type RichTextField = StoryblokRichTextNode;
 
 /**
  * Link field type from Storyblok
@@ -25,6 +26,7 @@ export interface LinkField {
   story?: {
     slug: string;
     name: string;
+    full_slug?: string;
   };
 }
 
@@ -35,6 +37,9 @@ export interface AssetField {
   filename: string;
   alt?: string;
   title?: string;
+  id?: number;
+  width?: number;
+  height?: number;
 }
 
 /**
@@ -158,6 +163,8 @@ export interface VideoBlok extends StoryblokBlok {
   loop?: boolean;
   muted?: boolean;
   controls?: boolean;
+  title?: string;
+  video_custom_styles?: string;
 }
 
 /**
@@ -241,7 +248,7 @@ export type SectionMaxWidth = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 /**
  * Text alignment options
  */
-export type TextAlign = 'left' | 'center' | 'right';
+export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 
 /**
  * Section component - container for grouping components with styling
@@ -346,6 +353,10 @@ export interface HeaderButtonBlok {
   link: LinkField;
   custom_styles?: string;
   show_dropdown?: boolean;
+  /** Intentionally ignored by Header; header layout owns these dimensions. */
+  size?: ButtonSize;
+  /** Intentionally ignored by Header; header buttons must fit the nav row. */
+  full_width?: boolean;
 }
 
 /**
@@ -354,4 +365,12 @@ export interface HeaderButtonBlok {
 export interface HeaderBlok extends StoryblokBlok {
   component: 'header';
   buttons?: HeaderButtonBlok[];
+}
+
+/** Site-wide content stored in the reserved Storyblok `config` story. */
+export interface ConfigBlok extends StoryblokBlok {
+  component: 'config';
+  header?: HeaderBlok[];
+  footer?: FooterBlok[];
+  custom_global_css?: string;
 }
