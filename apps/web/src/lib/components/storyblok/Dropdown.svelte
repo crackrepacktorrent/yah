@@ -232,7 +232,7 @@
     min-width: 100%;
     width: max-content;
     z-index: 50;
-    filter: drop-shadow(var(--shadow-md));
+    box-shadow: var(--shadow-md);
   }
 
   .dropdown-menu.align-right {
