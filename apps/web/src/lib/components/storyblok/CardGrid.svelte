@@ -13,7 +13,7 @@
   let gap = $derived(blok.gap ?? "24px");
   let equalHeightRows = $derived(blok.equal_height_rows ?? false);
   let fullWidthCards = $derived(blok.full_width_cards ?? false);
-  let gridStyles = $derived(`grid-template-columns: repeat(${columns}, 1fr); gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''} ${blok.custom_styles ?? ''}`);
+  let gridStyles = $derived(`grid-template-columns: repeat(${columns}, 1fr); gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''}`);
   let searchPlaceholder = $derived(blok.search_placeholder?.trim() || (lang === 'es' ? 'Buscar…' : 'Search…'));
   let sortOptions = $derived(blok.sort_options ?? []);
   let enableSearch = $derived(blok.enable_search ?? false);
@@ -70,7 +70,11 @@
   });
 </script>
 
-<div use:storyblokEditable={blok} class="grid-container">
+<div
+  use:storyblokEditable={blok}
+  class="grid-container"
+  style={blok.custom_styles ?? ''}
+>
   {#if enableSearch || enableSort}
     <div class="grid-controls">
       {#if enableSearch}

@@ -7,6 +7,7 @@ import type { SbBlokData, StoryblokRichTextNode } from '@storyblok/svelte';
 export interface StoryblokBlok extends SbBlokData {
   _uid: string;
   component: string;
+  /** CSS declarations applied only to the block's outer container. */
   custom_styles?: string;
 }
 
@@ -60,7 +61,7 @@ export interface PageBlok extends StoryblokBlok {
 /**
  * Text size options for TextSection
  */
-export type TextSize = 'sm' | 'base' | 'lg' | 'xl' | '2xl';
+export type TextSize = 'default' | 'sm' | 'base' | 'lg' | 'xl' | '2xl';
 
 /**
  * Text Section component
