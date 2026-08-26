@@ -27,7 +27,6 @@ export interface LinkField {
   target?: string;
   story?: {
     id?: number;
-    uuid?: string;
     slug: string;
     name: string;
     full_slug?: string;
@@ -259,7 +258,7 @@ export interface SeparatorBlok extends StoryblokBlok {
   size?: SeparatorSize;
   custom_size?: string;
   line_style?: SeparatorLineStyle;
-  line_color?: SeparatorLineColor | string;
+  line_color?: SeparatorLineColor;
   line_width?: string;
 }
 
