@@ -71,6 +71,7 @@
 
   .text-section :global(a) {
     color: var(--color-link, currentColor);
+    font-weight: 600;
   }
 
   .text-section :global(a:hover) {
