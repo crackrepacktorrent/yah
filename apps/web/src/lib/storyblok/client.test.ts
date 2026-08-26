@@ -92,19 +92,27 @@ describe('withStoryblokEditorParams', () => {
 		'&utm_source=editor'
 	);
 
-	test('preserves only the signed editor request and an authorized release', () => {
+	test('preserves draft authorization and sets the destination editor context', () => {
 		expect(
 			withStoryblokEditorParams(
 				'/press?category=news&_storyblok_lang=es#coverage',
 				signedEditorUrl,
-				true
+				true,
+				456
 			)
 		).toBe(
 			'/press?category=news' +
+			'&_storyblok=456' +
 			'&_storyblok_tk%5Bspace_id%5D=789' +
 			'&_storyblok_tk%5Btimestamp%5D=1700000000' +
 			'&_storyblok_tk%5Btoken%5D=0123456789abcdef0123456789abcdef01234567' +
 			'&_storyblok_release=42#coverage'
+		);
+	});
+
+	test('does not carry the source story context without a destination ID', () => {
+		expect(withStoryblokEditorParams('/press', signedEditorUrl, true)).not.toContain(
+			'_storyblok=123'
 		);
 	});
 

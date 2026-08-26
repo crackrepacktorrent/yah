@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { renderRichText } from '@storyblok/svelte';
-import { createLinkResolver, highlightResolver, textStyleResolver } from './rich-text';
+import { createLinkRenderer } from './rich-text';
 
 function renderText(marks: Array<{ type: string; attrs?: Record<string, unknown> }>) {
   return renderRichText({
@@ -10,15 +10,13 @@ function renderText(marks: Array<{ type: string; attrs?: Record<string, unknown>
       content: [{ type: 'text', text: 'Press', marks }]
     }]
   } as never, {
-    resolvers: {
-      highlight: highlightResolver,
-      link: createLinkResolver('es'),
-      textStyle: textStyleResolver
+    renderers: {
+      link: createLinkRenderer('es')
     }
   });
 }
 
-describe('Storyblok rich-text resolvers', () => {
+describe('Storyblok rich-text renderers', () => {
   test('preserves paragraph alignment from the rich-text editor', () => {
     const html = renderRichText({
       type: 'doc',
@@ -43,10 +41,10 @@ describe('Storyblok rich-text resolvers', () => {
     const html = renderText([{ type: 'link', attrs: { linktype: 'story', href: 'press' } }]);
 
     expect(html).toContain('<a href="/es/press">Press</a>');
-    expect(html).not.toContain('data-rich-text-color');
+    expect(html).not.toContain('style=');
   });
 
-  test('marks linked text that has an explicit editor text color', () => {
+  test('preserves an explicit editor text color inside links', () => {
     const outerStyleHtml = renderText([
       { type: 'link', attrs: { linktype: 'story', href: 'press' } },
       { type: 'textStyle', attrs: { color: '#FFFDFD' } }
@@ -56,11 +54,10 @@ describe('Storyblok rich-text resolvers', () => {
       { type: 'link', attrs: { linktype: 'story', href: 'press' } }
     ]);
 
-    expect(outerStyleHtml).toContain('data-rich-text-color="true"');
-    expect(outerStyleHtml).toContain('style="color: #FFFDFD"');
-    expect(outerStyleHtml).toContain('<a href="/es/press">Press</a>');
+    expect(outerStyleHtml).toContain('color: #FFFDFD');
+    expect(outerStyleHtml).toContain('<a href="/es/press"><span');
     expect(innerStyleHtml).toContain('<a href="/es/press"><span');
-    expect(innerStyleHtml).toContain('data-rich-text-color="true"');
+    expect(innerStyleHtml).toContain('color: #FFFDFD');
   });
 
   test('escapes link attributes emitted through the SDK HTML renderer', () => {

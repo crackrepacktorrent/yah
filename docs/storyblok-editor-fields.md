@@ -160,12 +160,13 @@ remain advanced options.
 
 ## Preview reliability
 
-- Published Storyblok cache-version state is refreshed at least every 60
-  seconds, so a missed webhook cannot pin the preview process to an old content
-  snapshot indefinitely.
-- Internal Header navigation preserves only the signed Storyblok editor request
-  parameters, keeping page, dropdown, logo, and language navigation in draft
-  mode without forwarding editor UI state.
+- The current Storyblok SDK runs server requests without a response cache and
+  without automatically reusing its last content-version (`cv`) parameter, so
+  published requests always ask Storyblok for the latest available snapshot.
+- Internal Header navigation preserves the signed Storyblok editor request and
+  supplies the destination story ID. Header links bypass block selection so
+  page, dropdown, logo, and language navigation work on the first click while
+  non-link Header clicks can still select Config.
 - Config has a live Header/Footer bridge. Global CSS continues to update only
   through a reload because it must pass server-side validation.
 
@@ -211,7 +212,7 @@ Storyblok configuration permits it. Styling fields should not be translatable.
   accessible title, accessible Carousel dots, Page SEO fields, and Separator.
 - Standardized advanced-style labels/help and added schema bounds matching
   frontend clamps.
-- Fixed stale preview snapshots, signed draft navigation, and Config
-  Header/Footer live updates.
+- Fixed stale preview snapshots, destination-aware signed draft navigation, and
+  Config Header/Footer live updates.
 - Broader frontend verification: `svelte-check`, ESLint, 43 web tests,
   production build, and `git diff --check` passed.

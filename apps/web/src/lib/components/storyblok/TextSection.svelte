@@ -2,7 +2,7 @@
   import { storyblokEditable, renderRichText } from "@storyblok/svelte";
   import { page } from "$app/state";
   import { getLanguage } from "$lib/lang";
-  import { createLinkResolver, highlightResolver, textStyleResolver } from "$lib/storyblok/rich-text";
+  import { createLinkRenderer } from "$lib/storyblok/rich-text";
   import {
     getEditorToken,
     lineHeightValues,
@@ -37,10 +37,8 @@
   const renderedContent = $derived(
     (blok.content
       ? renderRichText(blok.content, {
-          resolvers: {
-            highlight: highlightResolver,
-            link: createLinkResolver(lang),
-            textStyle: textStyleResolver
+          renderers: {
+            link: createLinkRenderer(lang)
           }
         })
       : "") || ""
@@ -78,7 +76,7 @@
     color: var(--color-link-hover, var(--color-link, currentColor));
   }
 
-  .text-section :global([data-rich-text-color] a) {
+  .text-section :global(mark) {
     color: inherit;
   }
 

@@ -26,6 +26,8 @@ export interface LinkField {
   linktype?: string;
   target?: string;
   story?: {
+    id?: number;
+    uuid?: string;
     slug: string;
     name: string;
     full_slug?: string;
