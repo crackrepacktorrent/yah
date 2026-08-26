@@ -123,6 +123,7 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 		footer: config.footer ?? [],
 		customCSSStyle,
 		dropdownCards,
-		isDraft
+		isDraft,
+		configStoryId: isDraft ? dataConfig.story?.id ?? null : null
 	};
 };

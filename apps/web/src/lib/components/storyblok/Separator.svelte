@@ -12,10 +12,17 @@
     xl: '6rem',
   };
 
+  const lineColorMap: Record<string, string> = {
+    default: 'var(--color-border)',
+    light: 'var(--color-border-light)',
+    primary: 'var(--color-primary)',
+    foreground: 'var(--color-foreground)'
+  };
+
   let type = $derived(blok.type ?? 'space');
   let size = $derived(sizeMap[blok.size ?? 'md'] ?? blok.custom_size ?? '1rem');
   let lineStyle = $derived(blok.line_style ?? 'solid');
-  let lineColor = $derived(blok.line_color ?? 'var(--color-border)');
+  let lineColor = $derived(lineColorMap[blok.line_color ?? 'default'] ?? blok.line_color ?? 'var(--color-border)');
   let lineWidth = $derived(blok.line_width ?? '1px');
 
   let spaceStyle = $derived(`height: ${size}; width: 100%;`);

@@ -17,6 +17,7 @@
   let lang = $derived(getLanguage(page.params.lang));
   let slides = $derived(blok.slides ?? []);
   let showArrows = $derived((blok.show_arrows ?? true) && slides.length > 1);
+  let showDots = $derived((blok.show_dots ?? false) && slides.length > 1);
   let autoplayDelay = $derived(Math.max(1000, Number(blok.autoplay_delay) || 3000));
   let loop = $derived(blok.loop ?? true);
   let align = $derived(blok.align ?? 'center');
@@ -139,6 +140,23 @@
       <CarouselPrimitive.Next aria-label={lang === 'es' ? 'Diapositiva siguiente' : 'Next slide'} />
     {/if}
 
+    {#if showDots}
+      <div class="carousel-dots" role="group" aria-label={lang === 'es' ? 'Elegir diapositiva' : 'Choose slide'}>
+        {#each slides as slide, index (slide._uid)}
+          <button
+            type="button"
+            class="carousel-dot"
+            class:active={selectedIndex === index}
+            aria-label={lang === 'es'
+              ? `Ir a la diapositiva ${index + 1}`
+              : `Go to slide ${index + 1}`}
+            aria-current={selectedIndex === index ? 'true' : undefined}
+            onclick={() => carouselApi?.scrollTo(index)}
+          ></button>
+        {/each}
+      </div>
+    {/if}
+
   </CarouselPrimitive.Root>
 </div>
 
@@ -146,6 +164,33 @@
   .carousel-wrapper {
     position: relative;
     width: 100%;
+  }
+
+  .carousel-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .carousel-dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    padding: 0;
+    border: 2px solid var(--color-primary-foreground);
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .carousel-dot.active {
+    background: var(--color-primary-foreground);
+  }
+
+  .carousel-dot:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
   }
 
   .carousel-wrapper.image-gallery :global(.carousel-item) {

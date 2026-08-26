@@ -8,6 +8,7 @@
   import { lightbox, type LightboxImage } from "$lib/stores/lightbox.svelte";
   import { CAROUSEL_GALLERY_KEY, type CarouselGalleryContext } from "$lib/stores/carousel-gallery";
   import { getStoryblokImageDimensions } from "$lib/storyblok/helpers";
+  import { getEditorToken, radiusValues } from "$lib/storyblok/editor-options";
 
   let { blok }: { blok: ImageBlok } = $props();
 
@@ -52,6 +53,7 @@
   let aspectRatio = $derived(blok.aspect_ratio ?? 'natural');
   let objectFit = $derived(blok.object_fit ?? (aspectRatio === 'natural' ? 'none' : 'cover'));
   let objectPosition = $derived(blok.object_position ?? 'center');
+  let cornerRadius = $derived(getEditorToken(radiusValues, blok.corner_radius));
   let objectFitStyle = $derived(objectFit !== 'none' ? `object-fit: ${objectFit};` : '');
   let imgStyles = $derived(objectFitStyle + `object-position: ${objectPosition};` + (blok.img_custom_styles ? ` ${blok.img_custom_styles}` : ''));
 
@@ -75,7 +77,9 @@
   <div
     class="image-frame"
     class:has-aspect-ratio={aspectRatio !== 'natural'}
+    class:has-corner-radius={cornerRadius !== undefined}
     style:aspect-ratio={aspectRatio !== 'natural' ? aspectRatio : undefined}
+    style:border-radius={cornerRadius}
   >
     {#if originalUrl && clickable}
       <button type="button" class="image-link" onclick={openLightbox} aria-label={lightboxLabel}>
@@ -124,7 +128,8 @@
   }
 
   /* The ratio belongs to the media frame so captions remain outside it. */
-  .image-frame.has-aspect-ratio {
+  .image-frame.has-aspect-ratio,
+  .image-frame.has-corner-radius {
     overflow: hidden;
   }
 

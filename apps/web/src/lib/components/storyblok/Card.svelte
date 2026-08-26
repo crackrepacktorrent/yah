@@ -4,6 +4,7 @@
   import { getLanguage } from "$lib/lang";
   import type { CardBlok } from "$lib/storyblok/types";
   import { getLocalizedLinkUrl } from "$lib/storyblok/client";
+  import { normalizeCardTags } from "$lib/storyblok/card-grid";
 
   let { blok }: { blok: CardBlok } = $props();
 
@@ -26,11 +27,15 @@
   let openInNewTab = $derived(blok.link?.target === '_blank');
   let linkText = $derived(blok.link_text?.trim() || (lang === 'es' ? 'Más información' : 'Learn more'));
   let formattedDate = $derived(blok.date ? formatDate(blok.date, locale) : '');
+  let density = $derived(blok.density ?? 'default');
+  let tags = $derived(normalizeCardTags(blok.tags));
 </script>
 
 <div
   use:storyblokEditable={blok}
   class="card"
+  class:card-compact={density === 'compact'}
+  class:card-spacious={density === 'spacious'}
   style={blok.custom_styles ?? ""}
 >
   {#if blok.image && blok.image.length > 0}
@@ -63,9 +68,9 @@
       <p class="card-description">{blok.description}</p>
     {/if}
 
-    {#if blok.tags && blok.tags.length > 0}
+    {#if tags.length > 0}
       <div class="card-tags">
-        {#each blok.tags as tag}
+        {#each tags as tag}
           <span class="tag">{tag}</span>
         {/each}
       </div>
@@ -117,6 +122,16 @@
     flex-direction: column;
     gap: 0.75rem;
     flex: 1;
+  }
+
+  .card.card-compact .card-content {
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+
+  .card.card-spacious .card-content {
+    padding: 2rem;
+    gap: 1rem;
   }
 
   .card-title {
