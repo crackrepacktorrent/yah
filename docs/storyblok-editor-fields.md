@@ -64,12 +64,11 @@ other rich-text elements belongs in global frontend CSS, not in editor fields.
 | Editor field | Technical name | Status | Values | Recommendation |
 | --- | --- | --- | --- | --- |
 | Body Text Size | `text_size` | **Live + working** | `default`, `sm`, `base`, `lg`, `xl`, `2xl` | **Use Site Typography** preserves the standard element-specific paragraph/list/blockquote sizes. Explicit sizes apply uniformly to all body copy; headings retain their rich-text level. |
-| Default Alignment | `text_align` | **Frontend-ready** | `left`, `center`, `right`, `justify` | Expose after confirming editors want one block-wide default in addition to per-paragraph alignment. |
-| Default Text Color | `text_color` | **Frontend-ready** | Color | Prefer curated accessible theme choices over unrestricted colors. Selected rich-text colors still win. |
-| Content Width | `max_width` | **Frontend-ready** | `sm`, `md`, `lg`, `xl`, `full` | Useful and low-risk; expose as a Layout field. |
-| Body Line Height | `line_height` | **Proposed** | `tight`, `normal`, `relaxed`, `loose` | Implement with unitless token values before adding the schema field. |
-| Paragraph Spacing | `paragraph_spacing` | **Proposed** | `none`, `sm`, `md`, `lg`, `xl` | Implement with spacing tokens before adding the schema field. |
-| Content Density | `content_density` | **Proposed** | `compact`, `normal`, `spacious` | Consider this single preset before separate Heading spacing and List spacing controls. |
+| Content Width | `max_width` | **Live + working** | `default`, `sm`, `md`, `lg`, `xl`, `full` | Constrained widths are centered; **Use Site Layout** is a compatibility no-op. |
+| Body Line Height | `line_height` | **Live + working** | `default`, `tight`, `normal`, `relaxed`, `loose` | Explicit choices use unitless shared tokens across paragraphs, lists, and blockquotes. |
+| Paragraph Spacing | `paragraph_spacing` | **Live + working** | `default`, `none`, `xs`, `sm`, `md`, `lg`, `xl` | Controls paragraph margins without adding space after the final paragraph. |
+| Default Alignment | `text_align` | **Frontend-ready** | `left`, `center`, `right` | Intentionally not exposed because individual paragraph alignment already exists in rich text. |
+| Default Text Color | `text_color` | **Frontend-ready** | Color | Do not expose an unrestricted picker; use a future curated accessible tone field if needed. |
 
 Do not expose arbitrary font families by default. Typography is part of the site
 identity. Add Letter spacing or Text transform only for a recurring content
@@ -86,32 +85,34 @@ behavior does not depend on ambiguous references to the "current" design.
 
 ### Section
 
-Priority fields:
+**Live + working:** Child Gap, Content Width, Space Above, Space Below, and
+Vertical Padding use shared tokens. Defaults preserve the former hard-coded
+1rem child gap and add no width, margin, or padding constraints.
 
-- Child gap (`gap`): currently hard-coded to `1rem` in the frontend.
-- Space above/below and vertical padding using shared spacing tokens.
-- Maximum width.
-- A curated surface/theme variant instead of independent background and text
-  colors, which can create inaccessible contrast.
+Defer a surface/theme variant until paired background and foreground choices are
+tested with every nested component.
 
 Do not copy every container field onto Page. Section is the intended layout
 primitive, and Page-wide width/padding would create unclear precedence.
 
 ### Grid and Card Grid
 
-**Live + working:** desktop column count/template, gap, equal-height rows; Card
-Grid also has search, sorting, and card-width controls.
+**Live + working:** desktop/tablet/mobile columns, gap, and equal-height rows;
+Card Grid also has search, sorting, and card-width controls. Responsive columns
+now use CSS variables instead of `!important`. Grid tablet layout may inherit its
+desktop template; compatibility defaults retain the former breakpoints.
 
-**Proposed:** explicit desktop/tablet/mobile columns plus separate row and column
-gaps. Replace the current responsive `!important` overrides only after those
-fields and migrations exist. Define whether alignment affects the grid itself or
-its children; do not add an ambiguous shared `horizontal_align` field.
+The historical Card Grid `category` sort value is retained as a compatibility
+alias for Tags. Cards accept comma-separated Tags / Categories, and search and
+sorting normalize both the historical array shape and the editor text shape.
+Do not add ambiguous grid/child alignment controls.
 
 ### Card
 
-Prefer a small Appearance variant and Density preset over independent title
-size, description size, surface, border, and padding knobs. Add image ratio or
-position only where Card needs to override the nested Image block.
+**Live + working:** Tags / Categories and Content Density (`default`, `compact`,
+`spacious`). Prefer a future curated Appearance variant over independent title
+size, description size, surface, border, and padding knobs. Image ratio and
+position remain owned by the nested Image block.
 
 If a border-width preset is ever added, a nonzero value must imply a solid border
 style; width and color alone do not guarantee a visible border.
@@ -122,17 +123,15 @@ style; width and color alone do not guarantee a visible border.
 separate container/media advanced fields; Video aspect ratio and playback
 controls; PDF viewer size and viewing controls.
 
-**Proposed:** media width/max width, alignment, corner radius, and accessible
-caption size/spacing. Prefer a curated appearance preset to arbitrary border and
-color combinations. Add PDF media-level styles only for a demonstrated iframe
-use case.
+**Live + working:** tokenized Corner Radius for Image, Video, and PDF. Video also
+exposes its translatable Accessible Title. Media width/alignment remain deferred
+until nested Card and Carousel behavior is designed and tested. Add PDF
+media-level styles only for a demonstrated iframe use case.
 
 ### Button
 
-**Live + working:** Size, Alignment, Full width, and Container Styles.
-
-**Frontend-ready:** Variant (`primary`, `secondary`, `text`) is implemented but
-not exposed in the current Storyblok schema.
+**Live + working:** Appearance (`primary`, `secondary`, `text`), Size, Alignment,
+Full Width, and Container Styles.
 
 Add icon placement and gap only if designs require them. Container Styles
 correctly targets the visible button/link.
@@ -145,21 +144,40 @@ different structures.
 
 ### Carousel
 
-`show_dots` is a **frontend gap**: it is declared in TypeScript but neither read
-nor rendered, and it is not in the live schema. Implement the UI before exposing
-that field, or remove the dead type.
+**Live + working:** optional localized, keyboard-accessible slide dots report the
+current slide and jump through the existing carousel API. The compatibility
+default is off.
+
+### Page and Separator
+
+Page exposes translatable SEO Title and Description plus an optional Social
+Sharing Image; existing frontend fallbacks remain unchanged. Page-wide layout
+fields stay intentionally absent because Section owns layout.
+
+Separator is now an available nestable component with typed spacer/divider
+controls. Its line colors use site design tokens; custom size and container CSS
+remain advanced options.
+
+## Preview reliability
+
+- Published Storyblok cache-version state is refreshed at least every 60
+  seconds, so a missed webhook cannot pin the preview process to an old content
+  snapshot indefinitely.
+- Internal Header navigation preserves only the signed Storyblok editor request
+  parameters, keeping page, dropdown, logo, and language navigation in draft
+  mode without forwarding editor UI state.
+- Config has a live Header/Footer bridge. Global CSS continues to update only
+  through a reload because it must pass server-side validation.
 
 ## Rollout order
 
-1. **Done:** Add Body Text Size and clarify Text Section Container Styles.
-2. Implement and test Body Line Height and Paragraph Spacing; then expose them.
-3. Expose the already-supported Text Section Content Width and, if desired,
-   block-wide Alignment and curated Text Color.
-4. Add Section child gap and tokenized vertical spacing.
-5. Add responsive Grid/Card Grid fields and migrate away from `!important`
-   breakpoint overrides.
-6. Add curated Card/media appearance variants based on actual editor requests.
-7. Add validated scoped CSS only after typed fields fail a demonstrated use case.
+1. **Done:** Text body size, width, line height, and paragraph spacing.
+2. **Done:** Section spacing/width and responsive Grid/Card Grid columns.
+3. **Done:** Card tags/density, Button appearance, media radius, Carousel dots,
+   Page SEO, Video accessible title, and Separator.
+4. Design paired accessible surface/text themes before adding color controls.
+5. Design and test nested media width/alignment before exposing those controls.
+6. Add validated scoped CSS only after typed fields fail a demonstrated use case.
 
 Group schema fields into Content, Layout, Appearance, and Advanced sections when
 Storyblok configuration permits it. Styling fields should not be translatable.
@@ -184,3 +202,16 @@ Storyblok configuration permits it. Styling fields should not be translatable.
   compatibility, accessibility, and rollout recommendations.
 - Frontend verification: `svelte-check` reported zero errors/warnings; 23 related
   tests and the production build passed.
+- Added a shared, whitelisted editor-token layer. Added Text Section width/line
+  height/paragraph spacing and Section gap/margin/padding/width with no-op
+  compatibility defaults.
+- Added responsive Grid and Card Grid columns without `!important`; made the
+  stored `category` Card Grid sort value a working Tags alias.
+- Added Card tags/density, Button appearance, Image/Video/PDF radius, Video
+  accessible title, accessible Carousel dots, Page SEO fields, and Separator.
+- Standardized advanced-style labels/help and added schema bounds matching
+  frontend clamps.
+- Fixed stale preview snapshots, signed draft navigation, and Config
+  Header/Footer live updates.
+- Broader frontend verification: `svelte-check`, ESLint, 43 web tests,
+  production build, and `git diff --check` passed.

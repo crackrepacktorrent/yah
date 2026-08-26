@@ -2,6 +2,7 @@
   import { storyblokEditable } from "@storyblok/svelte";
   import type { PDFBlok } from "$lib/storyblok/types";
   import { getSafeHttpUrl } from "$lib/storyblok/client";
+  import { getEditorToken, radiusValues } from "$lib/storyblok/editor-options";
 
   let { blok }: { blok: PDFBlok } = $props();
 
@@ -44,10 +45,12 @@
 
   let height = $derived(blok.height ?? '75vh');
   let minHeight = $derived(blok.min_height ?? '400px');
+  let cornerRadius = $derived(getEditorToken(radiusValues, blok.corner_radius));
 
   let containerStyles = $derived(`
     height: ${height};
     ${minHeight ? `min-height: ${minHeight};` : ''}
+    ${cornerRadius !== undefined ? `border-radius: ${cornerRadius}; overflow: hidden;` : ''}
     ${blok.custom_styles ?? ''}
   `.trim());
 </script>

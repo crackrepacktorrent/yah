@@ -63,6 +63,16 @@ export interface PageBlok extends StoryblokBlok {
  */
 export type TextSize = 'default' | 'sm' | 'base' | 'lg' | 'xl' | '2xl';
 
+/** Shared editor spacing tokens. */
+export type EditorSpacing = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+
+/** Tokenized width choices. `default` leaves the site's existing layout alone. */
+export type SectionMaxWidth = 'default' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
+
+export type TextLineHeight = 'default' | 'tight' | 'normal' | 'relaxed' | 'loose';
+export type ParagraphSpacing = 'default' | EditorSpacing;
+export type MediaCornerRadius = 'none' | 'sm' | 'md' | 'lg';
+
 /**
  * Text Section component
  */
@@ -73,6 +83,8 @@ export interface TextSectionBlok extends StoryblokBlok {
   text_size?: TextSize;
   text_color?: string;
   max_width?: SectionMaxWidth;
+  line_height?: TextLineHeight;
+  paragraph_spacing?: ParagraphSpacing;
 }
 
 /**
@@ -119,6 +131,7 @@ export interface ImageBlok extends StoryblokBlok {
   aspect_ratio?: AspectRatio;
   object_fit?: ObjectFitMode;
   object_position?: ObjectPosition;
+  corner_radius?: MediaCornerRadius;
   img_custom_styles?: string;
 }
 
@@ -145,6 +158,7 @@ export interface PDFBlok extends StoryblokBlok {
   initial_page?: number;
   height?: string;
   min_height?: string;
+  corner_radius?: MediaCornerRadius;
 }
 
 /**
@@ -166,6 +180,7 @@ export interface VideoBlok extends StoryblokBlok {
   muted?: boolean;
   controls?: boolean;
   title?: string;
+  corner_radius?: MediaCornerRadius;
   video_custom_styles?: string;
 }
 
@@ -198,6 +213,8 @@ export interface GridBlok extends StoryblokBlok {
   custom_template?: string;
   gap?: string;
   equal_height_rows?: boolean;
+  tablet_columns?: 'inherit' | 1 | 2 | 3 | 4 | '1' | '2' | '3' | '4';
+  mobile_columns?: 1 | 2 | 3 | 4 | '1' | '2' | '3' | '4';
 }
 
 /**
@@ -209,6 +226,8 @@ export interface CardGridBlok extends StoryblokBlok {
   columns?: number;
   gap?: string;
   equal_height_rows?: boolean;
+  tablet_columns?: 1 | 2 | 3 | 4 | 5 | 6 | '1' | '2' | '3' | '4' | '5' | '6';
+  mobile_columns?: 1 | 2 | 3 | 4 | 5 | 6 | '1' | '2' | '3' | '4' | '5' | '6';
   full_width_cards?: boolean;
   enable_search?: boolean;
   search_placeholder?: string;
@@ -227,6 +246,7 @@ export type SeparatorSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'custom';
  * Separator line styles
  */
 export type SeparatorLineStyle = 'solid' | 'dashed' | 'dotted';
+export type SeparatorLineColor = 'default' | 'light' | 'primary' | 'foreground';
 
 /**
  * Separator component - unified spacer and divider
@@ -237,20 +257,15 @@ export interface SeparatorBlok extends StoryblokBlok {
   size?: SeparatorSize;
   custom_size?: string;
   line_style?: SeparatorLineStyle;
-  line_color?: string;
+  line_color?: SeparatorLineColor | string;
   line_width?: string;
 }
 
 
 /**
- * Section max-width sizes
- */
-export type SectionMaxWidth = 'sm' | 'md' | 'lg' | 'xl' | 'full';
-
-/**
  * Text alignment options
  */
-export type TextAlign = 'left' | 'center' | 'right' | 'justify';
+export type TextAlign = 'default' | 'left' | 'center' | 'right' | 'justify';
 
 /**
  * Section component - container for grouping components with styling
@@ -258,6 +273,11 @@ export type TextAlign = 'left' | 'center' | 'right' | 'justify';
 export interface SectionBlok extends StoryblokBlok {
   component: 'section';
   blocks: StoryblokBlok[];
+  gap?: 'default' | EditorSpacing;
+  margin_top?: EditorSpacing;
+  margin_bottom?: EditorSpacing;
+  padding_y?: EditorSpacing;
+  max_width?: SectionMaxWidth;
 }
 
 
@@ -288,7 +308,8 @@ export interface CardBlok extends StoryblokBlok {
   metadata?: CardMetadataItem[];
 
   // Visual elements
-  tags?: string[];
+  tags?: string[] | string;
+  density?: 'default' | 'compact' | 'spacious';
 
   // Link
   link_text?: string;

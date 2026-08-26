@@ -1,14 +1,37 @@
 <script lang="ts">
-  import { StoryblokComponent } from "@storyblok/svelte";
+  import { StoryblokComponent, useStoryblokBridge } from "@storyblok/svelte";
   import Header from "$lib/components/storyblok/Header.svelte";
   import Lightbox from "$lib/components/Lightbox.svelte";
   import type { LayoutData } from "./$types";
+  import type { ConfigBlok } from "$lib/storyblok/types";
+  import { isPreviewMode } from "$lib/storyblok/helpers";
   import type { Snippet } from "svelte";
+  import { onMount } from "svelte";
   import { SITE_URL } from '$lib/config';
   const umamiUrl = import.meta.env.VITE_UMAMI_URL;
   const umamiId = import.meta.env.VITE_UMAMI_WEBSITE_ID;
 
   let { data, children }: { data: LayoutData; children: Snippet } = $props();
+  let configOverride = $state<ConfigBlok | null>(null);
+  let header = $derived(configOverride?.header?.[0] ?? data.header);
+  let footer = $derived(configOverride?.footer ?? data.footer);
+
+  $effect(() => {
+    void data.configStoryId;
+    configOverride = null;
+  });
+
+  onMount(() => {
+    if (data.configStoryId && data.isDraft && isPreviewMode()) {
+      useStoryblokBridge(data.configStoryId, (newStory) => {
+        const nextConfig = newStory.content as ConfigBlok | undefined;
+        if (nextConfig?.component === 'config') configOverride = nextConfig;
+      }, {
+        preventClicks: true,
+        resolveLinks: "story"
+      });
+    }
+  });
 
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
@@ -32,6 +55,7 @@
     <script async defer data-website-id={umamiId} src="{umamiUrl}/t"></script>
   {/if}
   {#if data.customCSSStyle}
+    <!-- Custom CSS remains the server-validated version until a full reload. -->
     {@html data.customCSSStyle}
   {/if}
 </svelte:head>
@@ -41,16 +65,17 @@
 <div class="layout-container" data-sveltekit-reload={data.isDraft ? '' : undefined}>
   <header>
     <Header
-      blok={data.header}
+      blok={header}
       lang={data.lang}
       dropdownCards={data.dropdownCards}
+      isDraft={data.isDraft}
     />
   </header>
   <main id="main-content" class="layout-main" tabindex="-1">
     {@render children()}
   </main>
-  {#each data.footer ?? [] as footer (footer._uid)}
-    <StoryblokComponent blok={footer} />
+  {#each footer ?? [] as footerBlok (footerBlok._uid)}
+    <StoryblokComponent blok={footerBlok} />
   {/each}
 </div>
 

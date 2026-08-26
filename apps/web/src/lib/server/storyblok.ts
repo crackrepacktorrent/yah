@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private';
-import { getStoryblokClient } from './storyblok-client';
+import { getStoryblokClient, refreshPublishedCacheVersion } from './storyblok-client';
 import { validateStoryblokEditorRequest } from './storyblok-preview';
 
 export type StoryblokRequestContext = {
@@ -66,13 +66,17 @@ export function getStoryblokRequestContext(url: URL): StoryblokRequestContext {
 		};
 	}
 
+	const api = getPublishedStoryblokApi();
+
 	return {
-		api: getStoryblokClient(configuredPublicToken()),
+		api,
 		version: 'published',
 		isDraft: false
 	};
 }
 
 export function getPublishedStoryblokApi() {
-	return getStoryblokClient(configuredPublicToken());
+	const api = getStoryblokClient(configuredPublicToken());
+	refreshPublishedCacheVersion(api);
+	return api;
 }

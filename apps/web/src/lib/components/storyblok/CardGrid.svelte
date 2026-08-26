@@ -2,6 +2,7 @@
   import { storyblokEditable, StoryblokComponent } from "@storyblok/svelte";
   import { page } from "$app/state";
   import { getLanguage } from "$lib/lang";
+  import { filterAndSortCards } from "$lib/storyblok/card-grid";
   import type { CardGridBlok } from "$lib/storyblok/types";
   import Dropdown from "./Dropdown.svelte";
   import ChevronDown from "@lucide/svelte/icons/chevron-down";
@@ -10,10 +11,18 @@
   let lang = $derived(getLanguage(page.params.lang));
 
   let columns = $derived(Math.min(6, Math.max(1, Math.trunc(Number(blok.columns) || 3))));
+  let tabletColumns = $derived(Math.min(6, Math.max(1, Math.trunc(Number(blok.tablet_columns) || 2))));
+  let mobileColumns = $derived(Math.min(6, Math.max(1, Math.trunc(Number(blok.mobile_columns) || 1))));
   let gap = $derived(blok.gap ?? "24px");
   let equalHeightRows = $derived(blok.equal_height_rows ?? false);
   let fullWidthCards = $derived(blok.full_width_cards ?? false);
-  let gridStyles = $derived(`grid-template-columns: repeat(${columns}, 1fr); gap: ${gap};${equalHeightRows ? ' grid-auto-rows: 1fr;' : ''}`);
+  let gridStyles = $derived(`
+    --card-grid-desktop-columns: ${columns};
+    --card-grid-tablet-columns: ${tabletColumns};
+    --card-grid-mobile-columns: ${mobileColumns};
+    gap: ${gap};
+    ${equalHeightRows ? 'grid-auto-rows: 1fr;' : ''}
+  `);
   let searchPlaceholder = $derived(blok.search_placeholder?.trim() || (lang === 'es' ? 'Buscar…' : 'Search…'));
   let sortOptions = $derived(blok.sort_options ?? []);
   let enableSearch = $derived(blok.enable_search ?? false);
@@ -27,46 +36,18 @@
     const labels: Record<string, [string, string]> = {
       title: ['Title', 'Título'],
       date: ['Date', 'Fecha'],
-      tags: ['Tags', 'Etiquetas']
+      tags: ['Tags', 'Etiquetas'],
+      category: ['Tags', 'Etiquetas']
     };
     return labels[option]?.[lang === 'es' ? 1 : 0]
       ?? `${option.charAt(0).toLocaleUpperCase()}${option.slice(1)}`;
   }
 
   const filteredAndSortedItems = $derived.by(() => {
-    let items = blok.cards ?? [];
-
-    if (enableSearch && searchQuery) {
-      items = items.filter((item) => {
-        if (!item) return false;
-        const searchableFields = [item.title, item.description, item.tags?.join(" ")];
-        const searchText = searchableFields.filter(Boolean).join(" ").toLowerCase();
-        return searchText.includes(searchQuery.toLowerCase());
-      });
-    }
-
-    if (enableSort && sortBy) {
-      items = [...items].sort((a, b) => {
-        if (sortBy === 'title') {
-          const aTitle = a.title || '';
-          const bTitle = b.title || '';
-          return aTitle.localeCompare(bTitle);
-        } else if (sortBy === 'tags') {
-          const aTag = a.tags?.[0] || '';
-          const bTag = b.tags?.[0] || '';
-          return aTag.localeCompare(bTag);
-        } else if (sortBy === 'date') {
-          const parsedADate = a.date ? new Date(a.date).getTime() : 0;
-          const parsedBDate = b.date ? new Date(b.date).getTime() : 0;
-          const aDate = Number.isFinite(parsedADate) ? parsedADate : 0;
-          const bDate = Number.isFinite(parsedBDate) ? parsedBDate : 0;
-          return bDate - aDate;
-        }
-        return 0;
-      });
-    }
-
-    return items;
+    return filterAndSortCards(blok.cards, {
+      query: enableSearch ? searchQuery : '',
+      sortBy: enableSort ? sortBy : ''
+    });
   });
 </script>
 
@@ -184,17 +165,18 @@
 
   .grid {
     display: grid;
+    grid-template-columns: repeat(var(--card-grid-desktop-columns), 1fr);
   }
 
   @media (max-width: 1024px) {
     .grid {
-      grid-template-columns: repeat(2, 1fr) !important;
+      grid-template-columns: repeat(var(--card-grid-tablet-columns), 1fr);
     }
   }
 
   @media (max-width: 640px) {
     .grid {
-      grid-template-columns: 1fr !important;
+      grid-template-columns: repeat(var(--card-grid-mobile-columns), 1fr);
     }
   }
 

@@ -4,7 +4,8 @@ import {
 	getLocalizedLinkUrl,
 	getSafeHttpUrl,
 	getSafeUrl,
-	isExternalLink
+	isExternalLink,
+	withStoryblokEditorParams
 } from './client';
 
 describe('getSafeUrl', () => {
@@ -76,5 +77,50 @@ describe('localized links', () => {
 		const link = { linktype: 'url', url: 'https://example.com/es' };
 		expect(getLocalizedLinkUrl(link, 'es')).toBe(link.url);
 		expect(isExternalLink(link)).toBe(true);
+	});
+});
+
+describe('withStoryblokEditorParams', () => {
+	const signedEditorUrl = new URL(
+		'https://preview.example.test/about' +
+		'?_storyblok=123' +
+		'&_storyblok_c=456' +
+		'&_storyblok_tk%5Bspace_id%5D=789' +
+		'&_storyblok_tk%5Btimestamp%5D=1700000000' +
+		'&_storyblok_tk%5Btoken%5D=0123456789abcdef0123456789abcdef01234567' +
+		'&_storyblok_release=42' +
+		'&utm_source=editor'
+	);
+
+	test('preserves only the signed editor request and an authorized release', () => {
+		expect(
+			withStoryblokEditorParams(
+				'/press?category=news&_storyblok_lang=es#coverage',
+				signedEditorUrl,
+				true
+			)
+		).toBe(
+			'/press?category=news' +
+			'&_storyblok_tk%5Bspace_id%5D=789' +
+			'&_storyblok_tk%5Btimestamp%5D=1700000000' +
+			'&_storyblok_tk%5Btoken%5D=0123456789abcdef0123456789abcdef01234567' +
+			'&_storyblok_release=42#coverage'
+		);
+	});
+
+	test('does not modify links outside authenticated draft navigation', () => {
+		expect(withStoryblokEditorParams('/press', signedEditorUrl, false)).toBe('/press');
+		expect(withStoryblokEditorParams('https://example.com/', signedEditorUrl, true)).toBe(
+			'https://example.com/'
+		);
+	});
+
+	test('does not forward incomplete signatures or CMS-supplied editor parameters', () => {
+		const incomplete = new URL(
+			'https://preview.example.test/?_storyblok_tk%5Bspace_id%5D=789'
+		);
+		expect(
+			withStoryblokEditorParams('/press?keep=1&_storyblok_release=99', incomplete, true)
+		).toBe('/press?keep=1');
 	});
 });

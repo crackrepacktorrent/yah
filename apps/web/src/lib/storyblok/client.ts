@@ -1,6 +1,12 @@
 import type { LinkField } from "$lib/storyblok/types";
 
 const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+const STORYBLOK_EDITOR_SIGNATURE_KEYS = [
+  '_storyblok_tk[space_id]',
+  '_storyblok_tk[timestamp]',
+  '_storyblok_tk[token]'
+] as const;
+const STORYBLOK_RELEASE_KEY = '_storyblok_release';
 
 /**
  * Returns a URL that is safe to use in a public href/src attribute.
@@ -23,6 +29,48 @@ export function getSafeHttpUrl(url?: string): string {
 
   const protocol = value.match(/^([a-z][a-z\d+.-]*):/i)?.[1]?.toLowerCase();
   return !protocol || protocol === 'http' || protocol === 'https' ? value : '';
+}
+
+/**
+ * Keep an authenticated Storyblok Visual Editor request in draft mode while
+ * navigating to another internal page. Editor UI state, campaign parameters,
+ * and any Storyblok-looking values supplied by CMS content are not forwarded.
+ */
+export function withStoryblokEditorParams(
+  href: string,
+  currentUrl: URL,
+  isDraft: boolean
+): string {
+  if (!isDraft || !href.startsWith('/') || href.startsWith('//')) return href;
+
+  const target = new URL(href, 'https://storyblok-preview.invalid');
+  for (const key of [...target.searchParams.keys()]) {
+    if (key.startsWith('_storyblok')) target.searchParams.delete(key);
+  }
+
+  const [spaceId, timestamp, signature] = STORYBLOK_EDITOR_SIGNATURE_KEYS.map((key) =>
+    currentUrl.searchParams.get(key)
+  );
+  if (
+    !spaceId || !/^\d+$/.test(spaceId) ||
+    !timestamp || !/^\d+$/.test(timestamp) ||
+    !signature || !/^[a-f\d]{40}$/i.test(signature)
+  ) {
+    return `${target.pathname}${target.search}${target.hash}`;
+  }
+
+  for (const [key, value] of STORYBLOK_EDITOR_SIGNATURE_KEYS.map((key, index) =>
+    [key, [spaceId, timestamp, signature][index]] as const
+  )) {
+    target.searchParams.set(key, value);
+  }
+
+  const release = currentUrl.searchParams.get(STORYBLOK_RELEASE_KEY);
+  if (release && /^\d+$/.test(release) && release !== '0') {
+    target.searchParams.set(STORYBLOK_RELEASE_KEY, release);
+  }
+
+  return `${target.pathname}${target.search}${target.hash}`;
 }
 
 /**

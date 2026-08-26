@@ -4,6 +4,7 @@
   import { getLanguage } from '$lib/lang';
   import { getSafeHttpUrl } from '$lib/storyblok/client';
   import type { VideoBlok } from '$lib/storyblok/types';
+  import { getEditorToken, radiusValues } from '$lib/storyblok/editor-options';
 
   let { blok }: { blok: VideoBlok } = $props();
   let lang = $derived(getLanguage(page.params.lang));
@@ -83,11 +84,12 @@
     ? `Reproductor de video${embedVideo ? ` de ${embedVideo.provider}` : ''}`
     : `${embedVideo?.provider ? `${embedVideo.provider} ` : ''}video player`));
   let mediaStyles = $derived(blok.video_custom_styles ?? '');
+  let cornerRadius = $derived(getEditorToken(radiusValues, blok.corner_radius));
 </script>
 
 <div use:storyblokEditable={blok} class="video-container" style={blok.custom_styles ?? ''}>
   {#if embedVideo}
-    <div class:video-aspect-wrapper={!!aspectRatio} class="video-player" style:aspect-ratio={aspectRatio}>
+    <div class:video-aspect-wrapper={!!aspectRatio} class:has-corner-radius={cornerRadius !== undefined} class="video-player" style:aspect-ratio={aspectRatio} style:border-radius={cornerRadius}>
       <iframe
         src={embedVideo.src}
         title={playerTitle}
@@ -99,7 +101,7 @@
       ></iframe>
     </div>
   {:else if safeVideoUrl}
-    <div class:video-aspect-wrapper={!!aspectRatio} class="video-player" style:aspect-ratio={aspectRatio}>
+    <div class:video-aspect-wrapper={!!aspectRatio} class:has-corner-radius={cornerRadius !== undefined} class="video-player" style:aspect-ratio={aspectRatio} style:border-radius={cornerRadius}>
       <video
         src={safeVideoUrl}
         poster={posterUrl || undefined}
@@ -125,6 +127,10 @@
   }
 
   .video-aspect-wrapper {
+    overflow: hidden;
+  }
+
+  .video-player.has-corner-radius {
     overflow: hidden;
   }
 

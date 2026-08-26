@@ -3,7 +3,7 @@
   import { storyblokEditable } from "@storyblok/svelte";
   import { languages, type Language } from "$lib/lang";
   import type { HeaderBlok, HeaderButtonBlok, CardBlok } from "$lib/storyblok/types";
-  import { getLocalizedLinkUrl } from "$lib/storyblok/client";
+  import { getLocalizedLinkUrl, withStoryblokEditorParams } from "$lib/storyblok/client";
   import { Dialog } from "bits-ui";
   import Dropdown from "./Dropdown.svelte";
   import logo from "$lib/assets/logo.png";
@@ -17,11 +17,13 @@
   let {
     blok,
     lang,
-    dropdownCards = {}
+    dropdownCards = {},
+    isDraft = false
   }: {
     blok: HeaderBlok;
     lang: Language;
     dropdownCards?: Record<string, CardBlok[]>;
+    isDraft?: boolean;
   } = $props();
 
   const buttons = $derived(blok.buttons ?? []);
@@ -43,13 +45,16 @@
 
   function getLanguageLink(targetLang: Language): string {
     const pathWithoutLang = getPathWithoutLang(page.url.pathname);
+    const localizedPath = targetLang === "en"
+      ? (pathWithoutLang === "/" ? "/" : pathWithoutLang)
+      : (pathWithoutLang === "/" ? `/${targetLang}` : `/${targetLang}${pathWithoutLang}`);
+    const query = page.url.search;
 
-    if (targetLang === "en") {
-      return `${pathWithoutLang === "/" ? "/" : pathWithoutLang}${page.url.search}${page.url.hash}`;
-    } else {
-      const localizedPath = pathWithoutLang === "/" ? `/${targetLang}` : `/${targetLang}${pathWithoutLang}`;
-      return `${localizedPath}${page.url.search}${page.url.hash}`;
-    }
+    return withStoryblokEditorParams(
+      `${localizedPath}${query}${page.url.hash}`,
+      page.url,
+      isDraft
+    );
   }
 
   function currentLanguageLabel(name: string): string {
@@ -61,7 +66,7 @@
   }
 
   function localizeHref(link?: CardBlok['link'] | HeaderButtonBlok['link']): string {
-    return getLocalizedLinkUrl(link, lang);
+    return withStoryblokEditorParams(getLocalizedLinkUrl(link, lang), page.url, isDraft);
   }
 
   function getCards(button: HeaderButtonBlok): CardBlok[] {
@@ -85,7 +90,10 @@
   style={blok.custom_styles ?? ""}
   aria-label={lang === 'es' ? 'Navegación principal' : 'Main navigation'}
 >
-  <a href={lang === "en" ? "/" : `/${lang}`} class="logo">
+  <a
+    href={withStoryblokEditorParams(lang === "en" ? "/" : `/${lang}`, page.url, isDraft)}
+    class="logo"
+  >
     <img src={logo} width="600" height="323" alt="Youth Alliance for Housing" />
   </a>
 
