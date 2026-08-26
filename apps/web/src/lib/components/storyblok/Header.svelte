@@ -18,12 +18,14 @@
     blok,
     lang,
     dropdownCards = {},
-    isDraft = false
+    isDraft = false,
+    homeStoryId = null
   }: {
     blok: HeaderBlok;
     lang: Language;
     dropdownCards?: Record<string, CardBlok[]>;
     isDraft?: boolean;
+    homeStoryId?: number | null;
   } = $props();
 
   const buttons = $derived(blok.buttons ?? []);
@@ -53,8 +55,32 @@
     return withStoryblokEditorParams(
       `${localizedPath}${query}${page.url.hash}`,
       page.url,
-      isDraft
+      isDraft,
+      currentPageStoryId()
     );
+  }
+
+  function currentPageStoryId(): number | undefined {
+    const id = (page.data as { story?: { id?: unknown } }).story?.id;
+    return typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? id : undefined;
+  }
+
+  function destinationStoryId(link?: CardBlok['link'] | HeaderButtonBlok['link']): number | undefined {
+    const id = link?.story?.id;
+    return typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? id : undefined;
+  }
+
+  function allowEditorLinkNavigation(node: HTMLElement) {
+    const handleClick = (event: MouseEvent) => {
+      if (isDraft && event.target instanceof Element && event.target.closest('a[href]')) {
+        // Storyblok listens on window. Stop only its editor-selection listener;
+        // preserving the default action keeps normal and modified link clicks.
+        event.stopPropagation();
+      }
+    };
+
+    node.addEventListener('click', handleClick);
+    return { destroy: () => node.removeEventListener('click', handleClick) };
   }
 
   function currentLanguageLabel(name: string): string {
@@ -66,7 +92,12 @@
   }
 
   function localizeHref(link?: CardBlok['link'] | HeaderButtonBlok['link']): string {
-    return withStoryblokEditorParams(getLocalizedLinkUrl(link, lang), page.url, isDraft);
+    return withStoryblokEditorParams(
+      getLocalizedLinkUrl(link, lang),
+      page.url,
+      isDraft,
+      destinationStoryId(link)
+    );
   }
 
   function getCards(button: HeaderButtonBlok): CardBlok[] {
@@ -86,12 +117,18 @@
 
 <nav
   use:storyblokEditable={blok}
+  use:allowEditorLinkNavigation
   class="header"
   style={blok.custom_styles ?? ""}
   aria-label={lang === 'es' ? 'Navegación principal' : 'Main navigation'}
 >
   <a
-    href={withStoryblokEditorParams(lang === "en" ? "/" : `/${lang}`, page.url, isDraft)}
+    href={withStoryblokEditorParams(
+      lang === "en" ? "/" : `/${lang}`,
+      page.url,
+      isDraft,
+      homeStoryId ?? undefined
+    )}
     class="logo"
   >
     <img src={logo} width="600" height="323" alt="Youth Alliance for Housing" />
@@ -217,7 +254,11 @@
             <X aria-hidden="true" />
           </Dialog.Close>
 
-          <nav class="mobile-nav" aria-label={lang === 'es' ? 'Navegación móvil' : 'Mobile navigation'}>
+          <nav
+            use:allowEditorLinkNavigation
+            class="mobile-nav"
+            aria-label={lang === 'es' ? 'Navegación móvil' : 'Mobile navigation'}
+          >
             <!-- Language switcher -->
             <div class="mobile-lang-switcher">
               {#each Object.entries(languages) as [code, name]}

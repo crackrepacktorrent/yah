@@ -39,7 +39,8 @@ export function getSafeHttpUrl(url?: string): string {
 export function withStoryblokEditorParams(
   href: string,
   currentUrl: URL,
-  isDraft: boolean
+  isDraft: boolean,
+  destinationStoryId?: number
 ): string {
   if (!isDraft || !href.startsWith('/') || href.startsWith('//')) return href;
 
@@ -57,6 +58,10 @@ export function withStoryblokEditorParams(
     !signature || !/^[a-f\d]{40}$/i.test(signature)
   ) {
     return `${target.pathname}${target.search}${target.hash}`;
+  }
+
+  if (Number.isSafeInteger(destinationStoryId) && (destinationStoryId ?? 0) > 0) {
+    target.searchParams.set('_storyblok', String(destinationStoryId));
   }
 
   for (const [key, value] of STORYBLOK_EDITOR_SIGNATURE_KEYS.map((key, index) =>

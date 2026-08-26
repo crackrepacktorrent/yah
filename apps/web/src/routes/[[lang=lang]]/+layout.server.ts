@@ -57,10 +57,14 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 	const context = getStoryblokRequestContext(url);
 	const { api, isDraft } = context;
 	const requestOptions = getStoryblokRequestOptions(context, lang);
+	const editorLinkOptions = isDraft ? { resolve_links: 'url' as const } : {};
 
 	let dataConfig: { story?: ISbStoryData<ConfigBlok> };
 	try {
-		({ data: dataConfig } = await api.get('cdn/stories/config', requestOptions));
+		({ data: dataConfig } = await api.get('cdn/stories/config', {
+			...requestOptions,
+			...editorLinkOptions
+		}));
 	} catch (reason) {
 		console.error('Storyblok config request failed', { status: getStoryblokErrorStatus(reason) });
 		throw error(502, { message: 'Site configuration is temporarily unavailable.' });
@@ -73,6 +77,20 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 	}
 
 	const header = config.header?.[0] ?? EMPTY_HEADER;
+	let homeStoryId: number | null = null;
+	if (isDraft) {
+		try {
+			const { data } = await api.get('cdn/stories/home', requestOptions);
+			homeStoryId = typeof data.story?.id === 'number' ? data.story.id : null;
+		} catch (reason) {
+			// Navigation still works in draft mode without an editor-context ID;
+			// only the destination bridge handoff for the logo is unavailable.
+			console.error('Storyblok home editor context request failed', {
+				status: getStoryblokErrorStatus(reason)
+			});
+		}
+	}
+
 	const buttons = (header.buttons ?? []) as HeaderButtonBlok[];
 	const dropdownButtons = buttons
 		.filter(
@@ -90,6 +108,7 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 		try {
 			const { data } = await api.get('cdn/stories', {
 				...requestOptions,
+				...editorLinkOptions,
 				by_uuids: storyIds.join(',')
 			});
 			stories = data.stories ?? [];
@@ -124,6 +143,7 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 		customCSSStyle,
 		dropdownCards,
 		isDraft,
+		homeStoryId,
 		configStoryId: isDraft ? dataConfig.story?.id ?? null : null
 	};
 };

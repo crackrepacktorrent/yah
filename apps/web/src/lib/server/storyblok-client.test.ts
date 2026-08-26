@@ -1,41 +1,24 @@
 import { describe, expect, test } from 'bun:test';
-import {
-	PUBLISHED_CACHE_VERSION_TTL_MS,
-	refreshPublishedCacheVersion
-} from './storyblok-client';
+import { StoryblokClient } from '@storyblok/js';
+import { STORYBLOK_CACHE_OPTIONS } from './storyblok-client';
 
-function cacheVersionClient() {
-	let clears = 0;
-	return {
-		client: {
-			clearCacheVersion() {
-				clears += 1;
-			}
-		},
-		clears: () => clears
-	};
-}
+describe('Storyblok cache configuration', () => {
+	test('does not pin later requests to a previously observed content version', async () => {
+		const requests: URL[] = [];
+		const mockFetch = (async (input: URL | RequestInfo) => {
+			requests.push(new URL(String(input)));
+			return Response.json({ story: { id: 1, content: {} }, cv: 123 });
+		}) as typeof fetch;
+		const client = new StoryblokClient({
+			accessToken: 'test-token',
+			cache: STORYBLOK_CACHE_OPTIONS,
+			fetch: mockFetch
+		});
 
-describe('refreshPublishedCacheVersion', () => {
-	test('clears the SDK cache version immediately and once per freshness window', () => {
-		const { client, clears } = cacheVersionClient();
+		await client.get('cdn/stories/home', { version: 'published' });
+		await client.get('cdn/stories/home', { version: 'published' });
 
-		refreshPublishedCacheVersion(client, 1_000);
-		refreshPublishedCacheVersion(client, 1_000 + PUBLISHED_CACHE_VERSION_TTL_MS - 1);
-		expect(clears()).toBe(1);
-
-		refreshPublishedCacheVersion(client, 1_000 + PUBLISHED_CACHE_VERSION_TTL_MS);
-		expect(clears()).toBe(2);
-	});
-
-	test('tracks clients independently', () => {
-		const first = cacheVersionClient();
-		const second = cacheVersionClient();
-
-		refreshPublishedCacheVersion(first.client, 5_000);
-		refreshPublishedCacheVersion(second.client, 5_000);
-
-		expect(first.clears()).toBe(1);
-		expect(second.clears()).toBe(1);
+		expect(requests).toHaveLength(2);
+		expect(requests.every((url) => !url.searchParams.has('cv'))).toBe(true);
 	});
 });

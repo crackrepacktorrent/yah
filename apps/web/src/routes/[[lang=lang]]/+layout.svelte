@@ -27,8 +27,8 @@
         const nextConfig = newStory.content as ConfigBlok | undefined;
         if (nextConfig?.component === 'config') configOverride = nextConfig;
       }, {
-        preventClicks: true,
-        resolveLinks: "story"
+        preventClicks: false,
+        resolveLinks: "url"
       });
     }
   });
@@ -69,6 +69,7 @@
       lang={data.lang}
       dropdownCards={data.dropdownCards}
       isDraft={data.isDraft}
+      homeStoryId={data.homeStoryId}
     />
   </header>
   <main id="main-content" class="layout-main" tabindex="-1">

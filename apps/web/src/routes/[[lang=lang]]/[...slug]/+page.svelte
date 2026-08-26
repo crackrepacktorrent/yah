@@ -58,7 +58,7 @@
       // The SDK does not expose an unsubscribe handle. Draft links force a full
       // navigation from the parent layout, keeping this to one listener per page.
       useStoryblokBridge(data.story.id, (newStory) => (bridgeOverride = newStory), {
-        preventClicks: true,
+        preventClicks: false,
         resolveLinks: "story",
       });
     }
