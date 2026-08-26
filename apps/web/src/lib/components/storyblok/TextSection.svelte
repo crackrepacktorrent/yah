@@ -56,6 +56,16 @@
 </div>
 
 <style>
+  /*
+   * The section is the typography context for its body copy. Keeping the
+   * defaults here lets editor-authored, inheritable CSS declarations work as
+   * normal CSS instead of requiring a property-by-property forwarding list.
+   */
+  .text-section {
+    font-size: 1.125rem;
+    line-height: 2rem;
+  }
+
   .text-section :global(a) {
     color: var(--color-link, currentColor);
   }
@@ -68,9 +78,22 @@
     color: inherit;
   }
 
-  .text-section.has-text-size :global(p),
+  .text-section :global(p) {
+    font-size: inherit;
+    line-height: inherit;
+  }
+
   .text-section.has-text-size :global(li),
   .text-section.has-text-size :global(blockquote) {
     font-size: inherit;
+  }
+
+  .text-section:not(.has-text-size) :global(li),
+  .text-section:not(.has-text-size) :global(blockquote) {
+    font-size: 1rem;
+  }
+
+  .text-section :global(blockquote) {
+    line-height: normal;
   }
 </style>
