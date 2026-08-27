@@ -1,5 +1,6 @@
 import { type Component, For, Show, createMemo } from 'solid-js';
 import { Combobox } from '@kobalte/core/combobox';
+import './ChipInput.css';
 import './MultiSelect.css';
 
 export type MultiSelectOption = {
@@ -17,9 +18,7 @@ type MultiSelectProps = {
 };
 
 export const MultiSelect: Component<MultiSelectProps> = (props) => {
-	const selectedOptions = createMemo(() =>
-		props.options.filter((o) => props.selected.includes(o.value)),
-	);
+	const selectedOptions = createMemo(() => props.options.filter((o) => props.selected.includes(o.value)));
 
 	return (
 		<Combobox<MultiSelectOption>
@@ -35,9 +34,7 @@ export const MultiSelect: Component<MultiSelectProps> = (props) => {
 			triggerMode="focus"
 			itemComponent={(itemProps) => (
 				<Combobox.Item item={itemProps.item} class="ms-item">
-					<Combobox.ItemLabel class="ms-item-label">
-						{itemProps.item.rawValue.label}
-					</Combobox.ItemLabel>
+					<Combobox.ItemLabel class="ms-item-label">{itemProps.item.rawValue.label}</Combobox.ItemLabel>
 					<Show when={itemProps.item.rawValue.detail}>
 						<span class="ms-item-detail">{itemProps.item.rawValue.detail}</span>
 					</Show>
@@ -45,7 +42,7 @@ export const MultiSelect: Component<MultiSelectProps> = (props) => {
 				</Combobox.Item>
 			)}
 		>
-			<Combobox.Control<MultiSelectOption> class="chip-input-wrap">
+			<Combobox.Control<MultiSelectOption> class={`chip-input-wrap${props.disabled ? ' disabled' : ''}`}>
 				{(state) => (
 					<>
 						<For each={state.selectedOptions()}>
@@ -55,7 +52,11 @@ export const MultiSelect: Component<MultiSelectProps> = (props) => {
 									<button
 										type="button"
 										class="chip-remove"
-										onPointerDown={(e) => { e.stopPropagation(); state.remove(option); }}
+										onPointerDown={(e) => {
+											e.stopPropagation();
+											if (!props.disabled) state.remove(option);
+										}}
+										disabled={props.disabled}
 										aria-label={`Remove ${option.label}`}
 									>
 										×
@@ -63,13 +64,19 @@ export const MultiSelect: Component<MultiSelectProps> = (props) => {
 								</span>
 							)}
 						</For>
-						<Combobox.Input
-							class="chip-text-input"
-							placeholder={props.selected.length === 0 ? (props.placeholder ?? 'Select…') : ''}
-						/>
+						<Combobox.Input class="chip-text-input" placeholder={props.selected.length === 0 ? (props.placeholder ?? 'Select…') : ''} />
 						<Combobox.Trigger class="ms-trigger" aria-label="Open">
 							<Combobox.Icon class="ms-icon">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
 									<polyline points="6 9 12 15 18 9" />
 								</svg>
 							</Combobox.Icon>

@@ -1,14 +1,31 @@
 import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
 import { For, Show, createMemo, createSignal } from 'solid-js';
-import { createSolidTable, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, getSortedRowModel, createColumnHelper, type SortingState, type ColumnFiltersState } from '@tanstack/solid-table';
-import { toast } from 'solid-sonner';
 import {
-	Badge, Button, AlertDialog, DataTable, PageHeader,
-	createSelectColumn, multiSelectFilter, type RowSelectionState,
+	createSolidTable,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getFacetedRowModel,
+	getFacetedUniqueValues,
+	getSortedRowModel,
+	createColumnHelper,
+	type SortingState,
+	type ColumnFiltersState,
+} from '@tanstack/solid-table';
+import { toast, toastError } from '~/lib/toast';
+import {
+	Badge,
+	Button,
+	AlertDialog,
+	DataTable,
+	PageHeader,
+	createSelectColumn,
+	multiSelectFilter,
+	type RowSelectionState,
 } from '~/components';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { subscriberStatusVariant, toastError } from '~/lib/utils';
+import { canAccessFeature } from '~/lib/feature-policy';
+import { subscriberStatusVariant } from '~/lib/utils';
 import { listSubscribers, deleteSubscribers, blocklistSubscribers } from '../subscribers.server';
 import { listLists } from '../lists.server';
 import { SubscriberEditor } from './SubscriberEditor';
@@ -17,7 +34,6 @@ import './index.css';
 export const route: RouteDefinition = {
 	preload: () => {
 		void listSubscribers();
-		void listLists();
 	},
 };
 
@@ -31,7 +47,7 @@ type ListmonkSubscriber = {
 	id: number;
 	email: string;
 	name: string;
-	status: string;
+	status: 'enabled' | 'disabled' | 'blocklisted';
 	lists: SubscriberList[];
 	created_at: string;
 	updated_at: string;
@@ -42,7 +58,7 @@ const columnHelper = createColumnHelper<ListmonkSubscriber>();
 export default function SubscribersPage() {
 	const session = createAsync(() => requireSession());
 	const data = createAsync(() => listSubscribers());
-	const listsData = createAsync(() => listLists());
+	const listsData = createAsync(() => (can(session(), 'list', 'view') ? listLists() : Promise.resolve({ lists: [] })));
 
 	// ─── State ───────────────────────────────────────────────────────────────────
 
@@ -104,7 +120,9 @@ export default function SubscribersPage() {
 			header: 'Email',
 			enableColumnFilter: false,
 			cell: (info) => (
-				<button class="cell-link" onClick={() => openEdit(info.row.original)}>{info.getValue()}</button>
+				<button class="cell-link" onClick={() => openEdit(info.row.original)}>
+					{info.getValue()}
+				</button>
 			),
 		}),
 		columnHelper.accessor('name', {
@@ -123,19 +141,20 @@ export default function SubscribersPage() {
 			enableColumnFilter: false,
 			cell: (info) => {
 				const lists = info.getValue();
-				return lists.length === 0
-					? <span class="cell-muted">—</span>
-					: (
+				return (
+					<Show when={lists.length > 0} fallback={<span class="cell-muted">—</span>}>
 						<div class="cell-badges">
 							<For each={lists}>
 								{(list) => (
 									<Badge variant={list.subscription_status === 'unconfirmed' ? 'warning' : 'default'}>
-										{list.name}{list.subscription_status === 'unconfirmed' ? ' (unconfirmed)' : ''}
+										{list.name}
+										{list.subscription_status === 'unconfirmed' ? ' (unconfirmed)' : ''}
 									</Badge>
 								)}
 							</For>
 						</div>
-					);
+					</Show>
+				);
 			},
 		}),
 		columnHelper.accessor('created_at', {
@@ -153,19 +172,29 @@ export default function SubscribersPage() {
 	// ─── Table ───────────────────────────────────────────────────────────────────
 
 	const table = createSolidTable({
-		get data() { return (data()?.subscribers ?? []) as ListmonkSubscriber[]; },
+		get data() {
+			return (data()?.subscribers ?? []) as ListmonkSubscriber[];
+		},
 		columns,
 		state: {
-			get globalFilter() { return globalFilter(); },
-			get columnFilters() { return columnFilters(); },
-			get rowSelection() { return rowSelection(); },
-			get sorting() { return sorting(); },
+			get globalFilter() {
+				return globalFilter();
+			},
+			get columnFilters() {
+				return columnFilters();
+			},
+			get rowSelection() {
+				return rowSelection();
+			},
+			get sorting() {
+				return sorting();
+			},
 		},
 		onGlobalFilterChange: setGlobalFilter,
 		onColumnFiltersChange: setColumnFilters,
 		onRowSelectionChange: setRowSelection,
 		onSortingChange: setSorting,
-		enableRowSelection: () => can(session(), 'subscriber', 'delete'),
+		enableRowSelection: () => canAccessFeature(session(), 'subscriberSelect'),
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getFacetedRowModel: getFacetedRowModel(),
@@ -175,16 +204,15 @@ export default function SubscribersPage() {
 
 	const selectedRows = createMemo(() => table.getSelectedRowModel().rows.map((r) => r.original));
 
-	const canBlocklist = createMemo(() =>
-		can(session(), 'subscriber', 'blocklist') &&
-		selectedRows().some((s) => s.status !== 'blocklisted'),
+	const canBlocklist = createMemo(
+		() => can(session(), 'subscriber', 'blocklist') && selectedRows().some((s) => s.status !== 'blocklisted'),
 	);
 
 	// ─── Toolbar ──────────────────────────────────────────────────────────────────
 
 	const toolbar = () => (
 		<Show
-			when={selectedRows().length > 0 && can(session(), 'subscriber', 'delete')}
+			when={selectedRows().length > 0}
 			fallback={
 				<div class="dt-toolbar-search">
 					<input
@@ -202,10 +230,18 @@ export default function SubscribersPage() {
 		>
 			<span class="dt-selection-count">{selectedRows().length} selected</span>
 			<Show when={canBlocklist()}>
-				<Button variant="danger-outline" onClick={() => setConfirmBlocklist(true)}>Blocklist</Button>
+				<Button variant="danger-outline" onClick={() => setConfirmBlocklist(true)}>
+					Blocklist
+				</Button>
 			</Show>
-			<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>Delete</Button>
-			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>Clear</button>
+			<Show when={can(session(), 'subscriber', 'delete')}>
+				<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>
+					Delete
+				</Button>
+			</Show>
+			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>
+				Clear
+			</button>
 		</Show>
 	);
 
@@ -238,7 +274,9 @@ export default function SubscribersPage() {
 				onOpenChange={setEditorOpen}
 				subscriber={editorSubscriber()}
 				allLists={listsData()?.lists ?? []}
+				canCreate={can(session(), 'subscriber', 'create')}
 				canEdit={can(session(), 'subscriber', 'edit')}
+				canClearBounces={can(session(), 'bounce', 'delete')}
 				onSaved={handleEditorSaved}
 			/>
 		</>

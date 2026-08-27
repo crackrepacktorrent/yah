@@ -1,7 +1,7 @@
 import { Router } from '@solidjs/router';
 import { FileRoutes } from '@solidjs/start/router';
 import { Suspense, type ParentProps } from 'solid-js';
-import { Toaster } from 'solid-sonner';
+import { Toaster } from '~/lib/toast';
 import './app.css';
 import './admin.css';
 

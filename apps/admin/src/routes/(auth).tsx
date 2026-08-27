@@ -7,7 +7,7 @@ export default function AuthLayout(props: { children: JSX.Element }) {
 
 	return (
 		<Suspense>
-			<Show when={!session()} fallback={<Navigate href="/" />}>
+			<Show when={!session()?.authorized} fallback={<Navigate href="/" />}>
 				{props.children}
 			</Show>
 		</Suspense>

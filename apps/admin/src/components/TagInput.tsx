@@ -1,6 +1,6 @@
 import type { Component } from 'solid-js';
 import { For, createSignal } from 'solid-js';
-import './TagInput.css';
+import './ChipInput.css';
 
 type TagInputProps = {
 	tags: string[];
@@ -40,13 +40,7 @@ export const TagInput: Component<TagInputProps> = (props) => {
 				{(tag) => (
 					<span class="chip">
 						{tag}
-						<button
-							type="button"
-							class="chip-remove"
-							onClick={() => removeTag(tag)}
-							disabled={props.disabled}
-							aria-label={`Remove ${tag}`}
-						>
+						<button type="button" class="chip-remove" onClick={() => removeTag(tag)} disabled={props.disabled} aria-label={`Remove ${tag}`}>
 							×
 						</button>
 					</span>
@@ -58,7 +52,9 @@ export const TagInput: Component<TagInputProps> = (props) => {
 				value={input()}
 				onInput={(e) => setInput(e.currentTarget.value)}
 				onKeyDown={handleKeyDown}
-				onBlur={(e) => { if (e.currentTarget.value) addTag(e.currentTarget.value); }}
+				onBlur={(e) => {
+					if (e.currentTarget.value) addTag(e.currentTarget.value);
+				}}
 				placeholder={props.tags.length === 0 ? (props.placeholder ?? 'Add tag…') : ''}
 				disabled={props.disabled}
 			/>

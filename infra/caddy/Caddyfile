@@ -17,6 +17,14 @@ y4h.org, www.y4h.org {
 	import same_origin_frames
 	encode gzip
 
+	# The public subscription form is intentionally embeddable. Limit the frame
+	# exception to this unauthenticated route; all other pages remain same-origin.
+	@subscription_page path /subscribe
+	header @subscription_page {
+		-X-Frame-Options
+		Content-Security-Policy "frame-ancestors *"
+	}
+
 	@www host www.y4h.org
 	redir @www https://y4h.org{uri} permanent
 
@@ -58,17 +66,26 @@ mail.y4h.org {
 	import same_origin_frames
 	encode gzip
 
-	# Only expose Listmonk's public pages (subscription, unsubscribe, archive)
+	# Expose only links generated for email recipients. The web service reaches
+	# Listmonk over Docker's private network and owns subscription forms/API use.
+	# In particular, do not expose /subscription/form or /api/public/* here.
 	# Admin UI is accessed via SSH tunnel: ssh -L 9000:localhost:9000 deploy@vps
-	@public {
-		path /subscription/*
+	@recipient_subscription path_regexp recipient_subscription ^/subscription/[^/]+/[^/]+/?$
+	@recipient_content {
+		path /archive
+		path /archive/*
+		path /archive.xml
+		path /campaign/*
+		path /link/*
 		path /public/*
-		path /api/public/*
 	}
-	reverse_proxy @public listmonk:9000
-
-	# Block everything else
-	respond 404
+	# `route` preserves this order. Without it, Caddy's directive sorter places
+	# the fallback `respond` before `reverse_proxy` and every path returns 404.
+	route {
+		reverse_proxy @recipient_subscription listmonk:9000
+		reverse_proxy @recipient_content listmonk:9000
+		respond 404
+	}
 }
 
 preview.y4h.org {

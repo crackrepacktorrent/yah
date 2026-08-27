@@ -78,5 +78,28 @@ export default [
       ...solid.rules,
     },
   },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/toast.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "solid-sonner",
+              message: "Import from ~/lib/toast so the notification adapter stays replaceable.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["scripts/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
   prettier,
 ];

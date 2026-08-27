@@ -1,16 +1,3 @@
-import { toast } from 'solid-sonner';
-
-/** Show a toast with the error message, falling back to the provided default. */
-export function toastError(err: unknown, fallback: string): void {
-	if (err instanceof Error) {
-		toast.error(err.message);
-	} else if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
-		toast.error((err as { message: string }).message);
-	} else {
-		toast.error(fallback);
-	}
-}
-
 /** Format seconds as "Xm Ys" or "Xs". */
 export function formatDuration(seconds: number): string {
 	if (seconds < 60) return `${seconds}s`;

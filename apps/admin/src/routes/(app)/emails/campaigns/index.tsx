@@ -1,19 +1,36 @@
 import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
 import { For, Show, createMemo, createSignal } from 'solid-js';
-import { createSolidTable, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, createColumnHelper, type ColumnFiltersState } from '@tanstack/solid-table';
-import { toast } from 'solid-sonner';
 import {
-	Badge, Button, AlertDialog, DataTable, PageHeader,
-	createSelectColumn, multiSelectFilter, type RowSelectionState,
+	createSolidTable,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getFacetedRowModel,
+	getFacetedUniqueValues,
+	createColumnHelper,
+	type ColumnFiltersState,
+} from '@tanstack/solid-table';
+import { toast, toastError } from '~/lib/toast';
+import {
+	Badge,
+	Button,
+	AlertDialog,
+	DataTable,
+	PageHeader,
+	createSelectColumn,
+	multiSelectFilter,
+	type RowSelectionState,
 } from '~/components';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { campaignStatusVariant, toastError } from '~/lib/utils';
+import { canAccessFeature } from '~/lib/feature-policy';
+import { campaignStatusVariant } from '~/lib/utils';
 import { listCampaigns, deleteCampaigns, updateCampaignStatus } from '../campaigns.server';
 import './index.css';
 
 export const route: RouteDefinition = {
-	preload: () => { void listCampaigns(); },
+	preload: () => {
+		void listCampaigns();
+	},
 };
 
 type Campaign = {
@@ -99,7 +116,9 @@ export default function CampaignsPage() {
 			enableColumnFilter: false,
 			cell: (info) => (
 				<div class="name-col">
-					<a href={`/emails/campaigns/${info.row.original.id}`} class="cell-link">{info.getValue()}</a>
+					<a href={`/emails/campaigns/${info.row.original.id}`} class="cell-link">
+						{info.getValue()}
+					</a>
 					<span class="subject-text">{info.row.original.subject}</span>
 				</div>
 			),
@@ -115,9 +134,13 @@ export default function CampaignsPage() {
 			enableColumnFilter: false,
 			cell: (info) => {
 				const lists = info.getValue();
-				return lists.length === 0
-					? <span class="cell-muted">—</span>
-					: <div class="cell-badges"><For each={lists}>{(list) => <Badge>{list.name}</Badge>}</For></div>;
+				return (
+					<Show when={lists.length > 0} fallback={<span class="cell-muted">—</span>}>
+						<div class="cell-badges">
+							<For each={lists}>{(list) => <Badge>{list.name}</Badge>}</For>
+						</div>
+					</Show>
+				);
 			},
 		}),
 		columnHelper.display({
@@ -144,18 +167,23 @@ export default function CampaignsPage() {
 		columnHelper.accessor('started_at', {
 			header: 'Started',
 			enableColumnFilter: false,
-			cell: (info) => info.getValue()
-				? <span class="cell-date">{new Date(info.getValue()!).toLocaleDateString()}</span>
-				: <span class="cell-muted">—</span>,
+			cell: (info) =>
+				info.getValue() ? (
+					<span class="cell-date">{new Date(info.getValue()!).toLocaleDateString()}</span>
+				) : (
+					<span class="cell-muted">—</span>
+				),
 		}),
 		columnHelper.display({
 			id: 'ended',
 			header: 'Ended',
 			cell: (info) => {
 				const c = info.row.original;
-				return c.status === 'finished'
-					? <span class="cell-date">{new Date(c.updated_at).toLocaleDateString()}</span>
-					: <span class="cell-muted">—</span>;
+				return (
+					<Show when={c.status === 'finished'} fallback={<span class="cell-muted">—</span>}>
+						<span class="cell-date">{new Date(c.updated_at).toLocaleDateString()}</span>
+					</Show>
+				);
 			},
 		}),
 		columnHelper.display({
@@ -166,17 +194,33 @@ export default function CampaignsPage() {
 				return (
 					<div class="actions-col">
 						<Show when={c.status === 'draft' && can(session(), 'campaign', 'send')}>
-							<button class="action-btn send" onClick={() => { setSendTarget(c); setConfirmSend(true); }}>Send</button>
+							<button
+								class="action-btn send"
+								onClick={() => {
+									setSendTarget(c);
+									setConfirmSend(true);
+								}}
+							>
+								Send
+							</button>
 						</Show>
 						<Show when={c.status === 'running' && can(session(), 'campaign', 'send')}>
-							<button class="action-btn" onClick={() => handleStatusChange(c, 'paused')}>Pause</button>
+							<button class="action-btn" onClick={() => handleStatusChange(c, 'paused')}>
+								Pause
+							</button>
 						</Show>
 						<Show when={c.status === 'paused' && can(session(), 'campaign', 'send')}>
-							<button class="action-btn send" onClick={() => handleStatusChange(c, 'running')}>Resume</button>
-							<button class="action-btn danger" onClick={() => handleStatusChange(c, 'cancelled')}>Cancel</button>
+							<button class="action-btn send" onClick={() => handleStatusChange(c, 'running')}>
+								Resume
+							</button>
+							<button class="action-btn danger" onClick={() => handleStatusChange(c, 'cancelled')}>
+								Cancel
+							</button>
 						</Show>
 						<Show when={c.status === 'scheduled' && can(session(), 'campaign', 'send')}>
-							<button class="action-btn danger" onClick={() => handleStatusChange(c, 'cancelled')}>Cancel</button>
+							<button class="action-btn danger" onClick={() => handleStatusChange(c, 'cancelled')}>
+								Cancel
+							</button>
 						</Show>
 					</div>
 				);
@@ -187,18 +231,25 @@ export default function CampaignsPage() {
 	// ─── Table ───────────────────────────────────────────────────────────────────
 
 	const table = createSolidTable({
-		get data() { return (data()?.campaigns ?? []) as Campaign[]; },
+		get data() {
+			return (data()?.campaigns ?? []) as Campaign[];
+		},
 		columns,
 		state: {
-			get globalFilter() { return globalFilter(); },
-			get columnFilters() { return columnFilters(); },
-			get rowSelection() { return rowSelection(); },
+			get globalFilter() {
+				return globalFilter();
+			},
+			get columnFilters() {
+				return columnFilters();
+			},
+			get rowSelection() {
+				return rowSelection();
+			},
 		},
 		onGlobalFilterChange: setGlobalFilter,
 		onColumnFiltersChange: setColumnFilters,
 		onRowSelectionChange: setRowSelection,
-		enableRowSelection: (row) =>
-			can(session(), 'campaign', 'delete') && row.original.status === 'draft',
+		enableRowSelection: (row) => can(session(), 'campaign', 'delete') && row.original.status === 'draft',
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getFacetedRowModel: getFacetedRowModel(),
@@ -222,7 +273,7 @@ export default function CampaignsPage() {
 						value={globalFilter()}
 						onInput={(e) => setGlobalFilter(e.currentTarget.value)}
 					/>
-					<Show when={can(session(), 'campaign', 'create')}>
+					<Show when={canAccessFeature(session(), 'campaignCreate')}>
 						<Button href="/emails/campaigns/new">+ New Campaign</Button>
 					</Show>
 				</div>
@@ -230,9 +281,13 @@ export default function CampaignsPage() {
 		>
 			<span class="dt-selection-count">{selectedRows().length} selected</span>
 			<Show when={can(session(), 'campaign', 'delete') && allSelectedAreDraft()}>
-				<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>Delete</Button>
+				<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>
+					Delete
+				</Button>
 			</Show>
-			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>Clear</button>
+			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>
+				Clear
+			</button>
 		</Show>
 	);
 

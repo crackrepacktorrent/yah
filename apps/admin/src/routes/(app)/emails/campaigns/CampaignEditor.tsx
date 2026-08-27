@@ -1,29 +1,36 @@
 import { type Component, For, Show, batch, createMemo, createSignal, lazy, untrack } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { createAsync } from '@solidjs/router';
-import { toast } from 'solid-sonner';
+import { toast, toastError } from '~/lib/toast';
 import * as v from 'valibot';
 import {
-	Badge, Breadcrumb, Button, Card, AlertDialog, Dialog,
-	FormField, Input, Select, Spinner, Tabs, TabContent, TagInput,
+	Badge,
+	Breadcrumb,
+	Button,
+	Card,
+	AlertDialog,
+	Dialog,
+	FormField,
+	Input,
+	Select,
+	Spinner,
+	Tabs,
+	TabContent,
+	TagInput,
 } from '~/components';
 import { MultiSelect } from '~/components';
-import { DatePicker } from '~/components';
+import { DatePicker } from '~/components/DatePicker';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { campaignStatusVariant, toastError } from '~/lib/utils';
+import { canAccessFeature } from '~/lib/feature-policy';
+import { campaignStatusVariant } from '~/lib/utils';
 import { createForm } from '~/lib/use-form';
-import {
-	createCampaign, updateCampaign, deleteCampaigns,
-	updateCampaignStatus, previewCampaign, testCampaign,
-} from '../campaigns.server';
+import { createCampaign, updateCampaign, deleteCampaigns, updateCampaignStatus, previewCampaign, testCampaign } from '../campaigns.server';
 import { listLists } from '../lists.server';
 import { listTemplates } from '../emails.server';
 
 // Lazy-load the RichTextEditor to keep the initial bundle small
-const RichTextEditor = lazy(() =>
-	import('~/components/RichTextEditor').then((m) => ({ default: m.RichTextEditor })),
-);
+const RichTextEditor = lazy(() => import('~/components/RichTextEditor').then((m) => ({ default: m.RichTextEditor })));
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -70,8 +77,8 @@ const CampaignSchema = v.object({
 export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 	const navigate = useNavigate();
 	const session = createAsync(() => requireSession());
-	const listsQuery = createAsync(() => listLists());
-	const templatesQuery = createAsync(() => listTemplates());
+	const listsQuery = createAsync(() => (can(session(), 'list', 'view') ? listLists() : Promise.resolve({ lists: [] })));
+	const templatesQuery = createAsync(() => (can(session(), 'template', 'view') ? listTemplates() : Promise.resolve({ templates: [] })));
 
 	// Capture initial campaign value without reactive tracking
 	const c = untrack(() => props.campaign);
@@ -108,7 +115,10 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 	const [confirmSend, setConfirmSend] = createSignal(false);
 
 	const isDraft = createMemo(() => props.mode === 'create' || props.campaign?.status === 'draft');
-	const canEdit = createMemo(() => isDraft() && can(session(), 'campaign', 'edit'));
+	const canEdit = createMemo(
+		() =>
+			isDraft() && (props.mode === 'create' ? canAccessFeature(session(), 'campaignCreate') : canAccessFeature(session(), 'campaignEdit')),
+	);
 
 	const campaignTemplates = createMemo(() =>
 		(templatesQuery()?.templates ?? []).filter((t) => t.type === 'campaign' || t.type === 'campaign_visual'),
@@ -223,21 +233,23 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 
 	return (
 		<>
-			<Breadcrumb items={[
-				{ label: 'Campaigns', href: '/emails/campaigns' },
-				{ label: props.mode === 'create' ? 'New Campaign' : form.values.name || 'Campaign' },
-			]} />
+			<Breadcrumb
+				items={[
+					{ label: 'Campaigns', href: '/emails/campaigns' },
+					{ label: props.mode === 'create' ? 'New Campaign' : form.values.name || 'Campaign' },
+				]}
+			/>
 
 			<div class="campaign-header">
 				<div class="campaign-title">
 					<h1>{props.mode === 'create' ? 'New Campaign' : form.values.name}</h1>
-					<Show when={props.campaign}>
-						{(c) => <Badge variant={campaignStatusVariant(c().status)}>{c().status}</Badge>}
-					</Show>
+					<Show when={props.campaign}>{(c) => <Badge variant={campaignStatusVariant(c().status)}>{c().status}</Badge>}</Show>
 				</div>
 				<div class="campaign-actions">
 					<Show when={props.campaign && can(session(), 'campaign', 'send')}>
-						<Button variant="ghost" onClick={() => setTestOpen(true)}>Test</Button>
+						<Button variant="ghost" onClick={() => setTestOpen(true)}>
+							Test
+						</Button>
 					</Show>
 					<Show when={props.campaign && props.campaign.status === 'draft' && can(session(), 'campaign', 'send')}>
 						<Button onClick={() => setConfirmSend(true)}>Send Campaign</Button>
@@ -248,7 +260,9 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 						</Button>
 					</Show>
 					<Show when={props.campaign && props.campaign.status === 'draft' && can(session(), 'campaign', 'delete')}>
-						<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>Delete</Button>
+						<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>
+							Delete
+						</Button>
 					</Show>
 				</div>
 			</div>
@@ -258,33 +272,23 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 					<Tabs
 						value={activeTab()}
 						onChange={setActiveTab}
-						tabs={[{ value: 'campaign', label: 'Campaign' }, { value: 'content', label: 'Content' }]}
+						tabs={[
+							{ value: 'campaign', label: 'Campaign' },
+							{ value: 'content', label: 'Content' },
+						]}
 					>
 						<TabContent value="campaign">
 							<div class="form-fields">
 								<FormField label="Name" required error={canEdit() ? form.fieldError('name') : undefined}>
-									<Input
-										placeholder="My Campaign"
-										{...form.field('name')}
-										disabled={!canEdit()}
-									/>
+									<Input placeholder="My Campaign" {...form.field('name')} disabled={!canEdit()} />
 								</FormField>
 
 								<FormField label="Subject" required error={canEdit() ? form.fieldError('subject') : undefined}>
-									<Input
-										placeholder="Email subject line"
-										{...form.field('subject')}
-										disabled={!canEdit()}
-									/>
+									<Input placeholder="Email subject line" {...form.field('subject')} disabled={!canEdit()} />
 								</FormField>
 
 								<FormField label="From Email" hint="Leave blank for default">
-									<Input
-										type="email"
-										placeholder="noreply@example.com"
-										{...form.field('fromEmail')}
-										disabled={!canEdit()}
-									/>
+									<Input type="email" placeholder="noreply@example.com" {...form.field('fromEmail')} disabled={!canEdit()} />
 								</FormField>
 
 								<FormField label="Lists" required error={canEdit() ? form.fieldError('listIds') : undefined}>
@@ -317,11 +321,7 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 											<span>Schedule for later</span>
 										</label>
 										<Show when={form.values.sendLater}>
-											<DatePicker
-												value={form.values.sendAt}
-												onChange={(v) => form.setValue('sendAt', v)}
-												granularity="minute"
-											/>
+											<DatePicker value={form.values.sendAt} onChange={(v) => form.setValue('sendAt', v)} granularity="minute" />
 										</Show>
 									</div>
 								</Show>
@@ -359,7 +359,9 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 
 									<Show when={props.campaign}>
 										<div class="preview-btn-wrap">
-											<Button variant="ghost" onClick={handlePreview}>Preview</Button>
+											<Button variant="ghost" onClick={handlePreview}>
+												Preview
+											</Button>
 										</div>
 									</Show>
 								</div>
@@ -380,11 +382,7 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 									}
 								>
 									<FormField label="Body">
-										<RichTextEditor
-											value={form.values.body}
-											onChange={(v) => form.setValue('body', v)}
-											disabled={!canEdit()}
-										/>
+										<RichTextEditor value={form.values.body} onChange={(v) => form.setValue('body', v)} disabled={!canEdit()} />
 									</FormField>
 								</Show>
 
@@ -401,10 +399,22 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 
 				<Show when={props.campaign && props.campaign.status !== 'draft'}>
 					<div class="stats-row">
-						<div class="stat"><span class="stat-value">{props.campaign!.sent}</span><span class="stat-label">Sent</span></div>
-						<div class="stat"><span class="stat-value">{props.campaign!.views}</span><span class="stat-label">Views</span></div>
-						<div class="stat"><span class="stat-value">{props.campaign!.clicks}</span><span class="stat-label">Clicks</span></div>
-						<div class="stat"><span class="stat-value">{props.campaign!.bounces}</span><span class="stat-label">Bounces</span></div>
+						<div class="stat">
+							<span class="stat-value">{props.campaign!.sent}</span>
+							<span class="stat-label">Sent</span>
+						</div>
+						<div class="stat">
+							<span class="stat-value">{props.campaign!.views}</span>
+							<span class="stat-label">Views</span>
+						</div>
+						<div class="stat">
+							<span class="stat-value">{props.campaign!.clicks}</span>
+							<span class="stat-label">Clicks</span>
+						</div>
+						<div class="stat">
+							<span class="stat-value">{props.campaign!.bounces}</span>
+							<span class="stat-label">Bounces</span>
+						</div>
 					</div>
 				</Show>
 			</div>
@@ -435,12 +445,16 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 				onOpenChange={setTestOpen}
 				title="Send Test Email"
 				maxWidth="480px"
-				footer={<>
-					<Button variant="ghost" onClick={() => setTestOpen(false)}>Cancel</Button>
-					<Button onClick={handleTestSend} disabled={testPending()}>
-						{testPending() ? 'Sending…' : 'Send Test'}
-					</Button>
-				</>}
+				footer={
+					<>
+						<Button variant="ghost" onClick={() => setTestOpen(false)}>
+							Cancel
+						</Button>
+						<Button onClick={handleTestSend} disabled={testPending()}>
+							{testPending() ? 'Sending…' : 'Send Test'}
+						</Button>
+					</>
+				}
 			>
 				<div class="form-fields">
 					<FormField label="Recipients" hint="Press Enter to add. Must be existing subscribers.">
@@ -451,16 +465,8 @@ export const CampaignEditor: Component<CampaignEditorProps> = (props) => {
 
 			{/* Preview dialog */}
 			<Dialog open={previewOpen()} onOpenChange={setPreviewOpen} title="Campaign Preview" maxWidth="800px">
-				<Show
-					when={!previewLoading()}
-					fallback={<Spinner size={32} centered />}
-				>
-					<iframe
-						class="preview-frame"
-						srcdoc={previewHtml()}
-						sandbox=""
-						title="Campaign preview"
-					/>
+				<Show when={!previewLoading()} fallback={<Spinner size={32} centered />}>
+					<iframe class="preview-frame" srcdoc={previewHtml()} sandbox="" title="Campaign preview" />
 				</Show>
 			</Dialog>
 		</>

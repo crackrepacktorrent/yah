@@ -1,14 +1,13 @@
 import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
 import { Show, createMemo, createSignal } from 'solid-js';
 import { createSolidTable, getCoreRowModel, getFilteredRowModel, createColumnHelper } from '@tanstack/solid-table';
-import { toast } from 'solid-sonner';
+import { toast, toastError } from '~/lib/toast';
 import {
 	Badge, Button, AlertDialog, DataTable, PageHeader,
 	createSelectColumn, type RowSelectionState,
 } from '~/components';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { toastError } from '~/lib/utils';
 import { listBounces, deleteBounces, deleteAllBounces } from '../bounces.server';
 import './index.css';
 

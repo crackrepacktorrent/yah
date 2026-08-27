@@ -1,8 +1,7 @@
 import { For, Show, createMemo, createSignal, untrack } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { toast } from 'solid-sonner';
+import { toast, toastError } from '~/lib/toast';
 import { Badge, Button, Card, Dialog, AlertDialog, FormField, Input, Select, Switch } from '~/components';
-import { toastError } from '~/lib/utils';
 import type { ListmonkSmtpConfig } from '~/server/listmonk';
 import { testSmtpConnection } from '../../settings.server';
 import type { TabProps } from '../email';

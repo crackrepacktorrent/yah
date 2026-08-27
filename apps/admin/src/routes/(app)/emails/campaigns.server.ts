@@ -1,6 +1,22 @@
 import { query } from '@solidjs/router';
+import pLimit from 'p-limit';
 import { getListmonk, type ListmonkCampaign } from '~/server/listmonk';
 import { withPermissions } from '~/server/auth-helpers';
+import {
+	CampaignAnalyticsInputSchema,
+	CampaignStatusInputSchema,
+	CreateCampaignInputSchema,
+	TestCampaignInputSchema,
+	UpdateCampaignInputSchema,
+	type CampaignAnalyticsInput,
+	type CampaignStatusInput,
+	type CreateCampaignInput,
+	type TestCampaignInput,
+	type UpdateCampaignInput,
+} from '~/lib/admin-contracts';
+import { parseInput, positiveIntegerSchema, idListSchema } from '~/server/validation';
+
+const ANALYTICS_CONCURRENCY = 8;
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
@@ -15,28 +31,25 @@ export const listCampaigns = query(async (): Promise<{ campaigns: ListmonkCampai
 export const getCampaign = query(async (id: number) => {
 	'use server';
 	return withPermissions({ campaign: ['view'] }, async () => {
-		return getListmonk().getCampaign(id);
+		return getListmonk().getCampaign(parseInput(positiveIntegerSchema, id));
 	});
 }, 'getCampaign');
 
 export const previewCampaign = query(async (id: number) => {
 	'use server';
 	return withPermissions({ campaign: ['view'] }, async () => {
-		return getListmonk().previewCampaign(id);
+		return getListmonk().previewCampaign(parseInput(positiveIntegerSchema, id));
 	});
 }, 'previewCampaign');
 
-export const getCampaignAnalytics = query(async (params: {
-	campaignIds: number[];
-	type: 'views' | 'clicks';
-	from: string;
-	to: string;
-}) => {
+export const getCampaignAnalytics = query(async (params: CampaignAnalyticsInput) => {
 	'use server';
 	return withPermissions({ campaign: ['view'] }, async () => {
+		const input = parseInput(CampaignAnalyticsInputSchema, params);
 		const lm = getListmonk();
+		const limit = pLimit(ANALYTICS_CONCURRENCY);
 		const results = await Promise.all(
-			params.campaignIds.map((id) => lm.getAnalytics({ id, type: params.type, from: params.from, to: params.to })),
+			input.campaignIds.map((id) => limit(() => lm.getAnalytics({ id, type: input.type, from: input.from, to: input.to }))),
 		);
 		return results.flat();
 	});
@@ -44,48 +57,28 @@ export const getCampaignAnalytics = query(async (params: {
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
-export async function createCampaign(params: {
-	name: string;
-	subject: string;
-	fromEmail?: string;
-	lists: number[];
-	body?: string;
-	contentType?: 'richtext' | 'html' | 'markdown' | 'plain';
-	templateId?: number;
-	tags?: string[];
-	sendAt?: string;
-}) {
+export async function createCampaign(params: CreateCampaignInput) {
 	'use server';
 	return withPermissions({ campaign: ['create'] }, async () => {
+		const input = parseInput(CreateCampaignInputSchema, params);
 		return getListmonk().createCampaign({
-			name: params.name,
-			subject: params.subject,
-			from_email: params.fromEmail,
-			lists: params.lists,
-			body: params.body ?? '',
-			content_type: params.contentType,
-			template_id: params.templateId,
-			tags: params.tags,
-			send_at: params.sendAt,
+			name: input.name,
+			subject: input.subject,
+			from_email: input.fromEmail,
+			lists: input.lists,
+			body: input.body ?? '',
+			content_type: input.contentType,
+			template_id: input.templateId,
+			tags: input.tags,
+			send_at: input.sendAt,
 		});
 	});
 }
 
-export async function updateCampaign(params: {
-	id: number;
-	name?: string;
-	subject?: string;
-	fromEmail?: string;
-	lists: number[];
-	body?: string;
-	contentType?: 'richtext' | 'html' | 'markdown' | 'plain';
-	templateId?: number;
-	tags?: string[];
-	sendAt?: string | null;
-}) {
+export async function updateCampaign(params: UpdateCampaignInput) {
 	'use server';
 	return withPermissions({ campaign: ['edit'] }, async () => {
-		const { id, fromEmail, contentType, templateId, sendAt, ...rest } = params;
+		const { id, fromEmail, contentType, templateId, sendAt, ...rest } = parseInput(UpdateCampaignInputSchema, params);
 		return getListmonk().updateCampaign(id, {
 			...rest,
 			from_email: fromEmail,
@@ -99,23 +92,22 @@ export async function updateCampaign(params: {
 export async function deleteCampaigns(ids: number[]): Promise<void> {
 	'use server';
 	return withPermissions({ campaign: ['delete'] }, async () => {
-		await getListmonk().deleteCampaigns(ids);
+		await getListmonk().deleteCampaigns(parseInput(idListSchema, ids));
 	});
 }
 
-export async function updateCampaignStatus(params: {
-	id: number;
-	status: 'running' | 'paused' | 'cancelled' | 'scheduled';
-}) {
+export async function updateCampaignStatus(params: CampaignStatusInput) {
 	'use server';
 	return withPermissions({ campaign: ['send'] }, async () => {
-		return getListmonk().updateCampaignStatus(params.id, params.status);
+		const input = parseInput(CampaignStatusInputSchema, params);
+		return getListmonk().updateCampaignStatus(input.id, input.status);
 	});
 }
 
-export async function testCampaign(params: { id: number; subscribers: string[] }): Promise<void> {
+export async function testCampaign(params: TestCampaignInput): Promise<void> {
 	'use server';
 	return withPermissions({ campaign: ['send'] }, async () => {
-		await getListmonk().testCampaign(params.id, params.subscribers);
+		const input = parseInput(TestCampaignInputSchema, params);
+		await getListmonk().testCampaign(input.id, input.subscribers);
 	});
 }

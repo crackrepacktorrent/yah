@@ -1,20 +1,41 @@
 import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
 import { Show, batch, createMemo, createSignal } from 'solid-js';
-import { createSolidTable, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, getSortedRowModel, createColumnHelper, type SortingState, type ColumnFiltersState } from '@tanstack/solid-table';
-import { toast } from 'solid-sonner';
 import {
-	Badge, Button, Input, AlertDialog, Dialog, DataTable, PageHeader,
-	FormField, Select,
-	createSelectColumn, multiSelectFilter, type RowSelectionState,
+	createSolidTable,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getFacetedRowModel,
+	getFacetedUniqueValues,
+	getSortedRowModel,
+	createColumnHelper,
+	type SortingState,
+	type ColumnFiltersState,
+} from '@tanstack/solid-table';
+import { toast, toastError } from '~/lib/toast';
+import {
+	Badge,
+	Button,
+	Input,
+	AlertDialog,
+	Dialog,
+	DataTable,
+	PageHeader,
+	FormField,
+	Select,
+	createSelectColumn,
+	multiSelectFilter,
+	type RowSelectionState,
 } from '~/components';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { toastError } from '~/lib/utils';
+import { canAccessFeature } from '~/lib/feature-policy';
 import { listLists, createList, updateList, deleteLists, sendOptinCampaign } from '../lists.server';
 import './index.css';
 
 export const route: RouteDefinition = {
-	preload: () => { void listLists(); },
+	preload: () => {
+		void listLists();
+	},
 };
 
 type ListItem = {
@@ -34,6 +55,7 @@ const columnHelper = createColumnHelper<ListItem>();
 export default function ListsPage() {
 	const session = createAsync(() => requireSession());
 	const data = createAsync(() => listLists());
+	const canEditList = createMemo(() => canAccessFeature(session(), 'listEdit'));
 
 	// ─── Table state ────────────────────────────────────────────────────────────
 
@@ -64,8 +86,14 @@ export default function ListsPage() {
 	// ─── Confirm dialogs ─────────────────────────────────────────────────────────
 
 	const [confirmDelete, setConfirmDelete] = createSignal(false);
-	const [confirmOptin, setConfirmOptin] = createSignal<{ open: boolean; listId: number; listName: string }>({
-		open: false, listId: 0, listName: '',
+	const [confirmOptin, setConfirmOptin] = createSignal<{
+		open: boolean;
+		listId: number;
+		listName: string;
+	}>({
+		open: false,
+		listId: 0,
+		listName: '',
 	});
 
 	// ─── Columns ─────────────────────────────────────────────────────────────────
@@ -76,7 +104,9 @@ export default function ListsPage() {
 			header: 'Name',
 			enableColumnFilter: false,
 			cell: (info) => (
-				<button class="cell-link" onClick={() => openEdit(info.row.original)}>{info.getValue()}</button>
+				<button class="cell-link" onClick={() => openEdit(info.row.original)}>
+					{info.getValue()}
+				</button>
 			),
 		}),
 		columnHelper.accessor('type', {
@@ -102,10 +132,7 @@ export default function ListsPage() {
 							<span class="unconfirmed">
 								{unconfirmed} unconfirmed
 								<Show when={list.optin === 'double' && can(session(), 'list', 'edit')}>
-									<button
-										class="optin-btn"
-										onClick={() => setConfirmOptin({ open: true, listId: list.id, listName: list.name })}
-									>
+									<button class="optin-btn" onClick={() => setConfirmOptin({ open: true, listId: list.id, listName: list.name })}>
 										Send opt-in
 									</button>
 								</Show>
@@ -128,13 +155,23 @@ export default function ListsPage() {
 	];
 
 	const table = createSolidTable({
-		get data() { return data()?.lists ?? []; },
+		get data() {
+			return data()?.lists ?? [];
+		},
 		columns,
 		state: {
-			get globalFilter() { return globalFilter(); },
-			get columnFilters() { return columnFilters(); },
-			get rowSelection() { return rowSelection(); },
-			get sorting() { return sorting(); },
+			get globalFilter() {
+				return globalFilter();
+			},
+			get columnFilters() {
+				return columnFilters();
+			},
+			get rowSelection() {
+				return rowSelection();
+			},
+			get sorting() {
+				return sorting();
+			},
 		},
 		onGlobalFilterChange: setGlobalFilter,
 		onColumnFiltersChange: setColumnFilters,
@@ -255,8 +292,12 @@ export default function ListsPage() {
 			}
 		>
 			<span class="dt-selection-count">{selectedRows().length} selected</span>
-			<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>Delete</Button>
-			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>Clear</button>
+			<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>
+				Delete
+			</Button>
+			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>
+				Clear
+			</button>
 		</Show>
 	);
 
@@ -290,20 +331,20 @@ export default function ListsPage() {
 				open={createOpen()}
 				onOpenChange={setCreateOpen}
 				title="New List"
-				footer={<>
-					<Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
-					<Button onClick={handleCreate} disabled={createPending() || !createName().trim()}>
-						{createPending() ? 'Creating…' : 'Create'}
-					</Button>
-				</>}
+				footer={
+					<>
+						<Button variant="ghost" onClick={() => setCreateOpen(false)}>
+							Cancel
+						</Button>
+						<Button onClick={handleCreate} disabled={createPending() || !createName().trim()}>
+							{createPending() ? 'Creating…' : 'Create'}
+						</Button>
+					</>
+				}
 			>
 				<div class="form-fields">
 					<FormField label="Name" required>
-						<Input
-							placeholder="Newsletter"
-							value={createName()}
-							onInput={(e) => setCreateName(e.currentTarget.value)}
-						/>
+						<Input placeholder="Newsletter" value={createName()} onInput={(e) => setCreateName(e.currentTarget.value)} />
 					</FormField>
 
 					<div class="form-row">
@@ -311,14 +352,20 @@ export default function ListsPage() {
 							<Select
 								value={createType()}
 								onValueChange={(v) => setCreateType(v as 'public' | 'private')}
-								options={[{ value: 'public', label: 'Public' }, { value: 'private', label: 'Private' }]}
+								options={[
+									{ value: 'public', label: 'Public' },
+									{ value: 'private', label: 'Private' },
+								]}
 							/>
 						</FormField>
 						<FormField label="Opt-in" hint="Double opt-in sends a confirmation email. Campaigns are only sent to confirmed subscribers.">
 							<Select
 								value={createOptin()}
 								onValueChange={(v) => setCreateOptin(v as 'single' | 'double')}
-								options={[{ value: 'single', label: 'Single' }, { value: 'double', label: 'Double' }]}
+								options={[
+									{ value: 'single', label: 'Single' },
+									{ value: 'double', label: 'Double' },
+								]}
 							/>
 						</FormField>
 					</div>
@@ -339,20 +386,23 @@ export default function ListsPage() {
 			<Dialog
 				open={editOpen()}
 				onOpenChange={setEditOpen}
-				title="Edit List"
-				footer={<>
-					<Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
-					<Button onClick={handleEdit} disabled={editPending() || !editName().trim()}>
-						{editPending() ? 'Saving…' : 'Save'}
-					</Button>
-				</>}
+				title={canEditList() ? 'Edit List' : 'View List'}
+				footer={
+					<>
+						<Button variant="ghost" onClick={() => setEditOpen(false)}>
+							{canEditList() ? 'Cancel' : 'Close'}
+						</Button>
+						<Show when={canEditList()}>
+							<Button onClick={handleEdit} disabled={editPending() || !editName().trim()}>
+								{editPending() ? 'Saving…' : 'Save'}
+							</Button>
+						</Show>
+					</>
+				}
 			>
 				<div class="form-fields">
 					<FormField label="Name" required>
-						<Input
-							value={editName()}
-							onInput={(e) => setEditName(e.currentTarget.value)}
-						/>
+						<Input value={editName()} onInput={(e) => setEditName(e.currentTarget.value)} disabled={!canEditList()} />
 					</FormField>
 
 					<div class="form-row">
@@ -360,14 +410,22 @@ export default function ListsPage() {
 							<Select
 								value={editType()}
 								onValueChange={(v) => setEditType(v as 'public' | 'private')}
-								options={[{ value: 'public', label: 'Public' }, { value: 'private', label: 'Private' }]}
+								options={[
+									{ value: 'public', label: 'Public' },
+									{ value: 'private', label: 'Private' },
+								]}
+								disabled={!canEditList()}
 							/>
 						</FormField>
 						<FormField label="Opt-in" hint="Double opt-in sends a confirmation email. Campaigns are only sent to confirmed subscribers.">
 							<Select
 								value={editOptin()}
 								onValueChange={(v) => setEditOptin(v as 'single' | 'double')}
-								options={[{ value: 'single', label: 'Single' }, { value: 'double', label: 'Double' }]}
+								options={[
+									{ value: 'single', label: 'Single' },
+									{ value: 'double', label: 'Double' },
+								]}
+								disabled={!canEditList()}
 							/>
 						</FormField>
 					</div>
@@ -378,6 +436,7 @@ export default function ListsPage() {
 							rows="3"
 							value={editDescription()}
 							onInput={(e) => setEditDescription(e.currentTarget.value)}
+							disabled={!canEditList()}
 						/>
 					</FormField>
 				</div>

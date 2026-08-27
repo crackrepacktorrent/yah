@@ -1,23 +1,42 @@
 import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
 import { Show, batch, createMemo, createSignal } from 'solid-js';
-import { createSolidTable, getCoreRowModel, getFilteredRowModel, getFacetedRowModel, getFacetedUniqueValues, getSortedRowModel, createColumnHelper, type SortingState, type ColumnFiltersState } from '@tanstack/solid-table';
-import { toast } from 'solid-sonner';
 import {
-	Badge, Button, Input, AlertDialog, Dialog, DataTable, PageHeader,
-	FormField, Select, Spinner,
-	createSelectColumn, multiSelectFilter, type RowSelectionState,
+	createSolidTable,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getFacetedRowModel,
+	getFacetedUniqueValues,
+	getSortedRowModel,
+	createColumnHelper,
+	type SortingState,
+	type ColumnFiltersState,
+} from '@tanstack/solid-table';
+import { toast, toastError } from '~/lib/toast';
+import {
+	Badge,
+	Button,
+	Input,
+	AlertDialog,
+	Dialog,
+	DataTable,
+	PageHeader,
+	FormField,
+	Select,
+	Spinner,
+	createSelectColumn,
+	multiSelectFilter,
+	type RowSelectionState,
 } from '~/components';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { toastError } from '~/lib/utils';
-import {
-	listTemplates, getTemplate, createTemplate, updateTemplate,
-	deleteTemplate, setDefaultTemplate,
-} from './emails.server';
+import { canAccessFeature } from '~/lib/feature-policy';
+import { listTemplates, getTemplate, createTemplate, updateTemplate, deleteTemplate, setDefaultTemplate } from './emails.server';
 import './index.css';
 
 export const route: RouteDefinition = {
-	preload: () => { void listTemplates(); },
+	preload: () => {
+		void listTemplates();
+	},
 };
 
 type Template = {
@@ -32,19 +51,27 @@ type Template = {
 
 function typeLabel(type: string) {
 	switch (type) {
-		case 'tx': return 'Transactional';
-		case 'campaign': return 'Campaign / HTML';
-		case 'campaign_visual': return 'Campaign / Visual';
-		default: return type;
+		case 'tx':
+			return 'Transactional';
+		case 'campaign':
+			return 'Campaign / HTML';
+		case 'campaign_visual':
+			return 'Campaign / Visual';
+		default:
+			return type;
 	}
 }
 
 function typeBadgeVariant(type: string): 'default' | 'success' | 'error' | 'warning' | 'info' {
 	switch (type) {
-		case 'tx': return 'info';
-		case 'campaign': return 'default';
-		case 'campaign_visual': return 'warning';
-		default: return 'default';
+		case 'tx':
+			return 'info';
+		case 'campaign':
+			return 'default';
+		case 'campaign_visual':
+			return 'warning';
+		default:
+			return 'default';
 	}
 }
 
@@ -60,6 +87,8 @@ const columnHelper = createColumnHelper<Template>();
 export default function TemplatesPage() {
 	const session = createAsync(() => requireSession());
 	const data = createAsync(() => listTemplates());
+	const canEditTemplate = createMemo(() => can(session(), 'template', 'edit'));
+	const canSetDefaultTemplate = createMemo(() => canAccessFeature(session(), 'templateSetDefault'));
 
 	// ─── State ───────────────────────────────────────────────────────────────────
 
@@ -72,7 +101,7 @@ export default function TemplatesPage() {
 	const [createOpen, setCreateOpen] = createSignal(false);
 	const [createPending, setCreatePending] = createSignal(false);
 	const [createName, setCreateName] = createSignal('');
-	const [createType, setCreateType] = createSignal('tx');
+	const [createType, setCreateType] = createSignal<'tx' | 'campaign' | 'campaign_visual'>('tx');
 	const [createSubject, setCreateSubject] = createSignal('');
 	const [createBody, setCreateBody] = createSignal('');
 
@@ -132,7 +161,9 @@ export default function TemplatesPage() {
 			enableSorting: true,
 			enableColumnFilter: false,
 			cell: (info) => (
-				<button class="cell-link" onClick={() => openEdit(info.row.original.id)}>{info.getValue()}</button>
+				<button class="cell-link" onClick={() => openEdit(info.row.original.id)}>
+					{info.getValue()}
+				</button>
 			),
 		}),
 		columnHelper.accessor('type', {
@@ -142,7 +173,8 @@ export default function TemplatesPage() {
 				<>
 					<Badge variant={typeBadgeVariant(info.getValue())}>{typeLabel(info.getValue())}</Badge>
 					<Show when={info.row.original.is_default}>
-						{' '}<Badge variant="warning">Default</Badge>
+						{' '}
+						<Badge variant="warning">Default</Badge>
 					</Show>
 				</>
 			),
@@ -162,13 +194,23 @@ export default function TemplatesPage() {
 	// ─── Table ───────────────────────────────────────────────────────────────────
 
 	const table = createSolidTable({
-		get data() { return data()?.templates ?? []; },
+		get data() {
+			return data()?.templates ?? [];
+		},
 		columns,
 		state: {
-			get globalFilter() { return globalFilter(); },
-			get columnFilters() { return columnFilters(); },
-			get rowSelection() { return rowSelection(); },
-			get sorting() { return sorting(); },
+			get globalFilter() {
+				return globalFilter();
+			},
+			get columnFilters() {
+				return columnFilters();
+			},
+			get rowSelection() {
+				return rowSelection();
+			},
+			get sorting() {
+				return sorting();
+			},
 		},
 		onGlobalFilterChange: setGlobalFilter,
 		onColumnFiltersChange: setColumnFilters,
@@ -265,8 +307,12 @@ export default function TemplatesPage() {
 			}
 		>
 			<span class="dt-selection-count">{selectedRows().length} selected</span>
-			<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>Delete</Button>
-			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>Clear</button>
+			<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>
+				Delete
+			</Button>
+			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>
+				Clear
+			</button>
 		</Show>
 	);
 
@@ -274,11 +320,7 @@ export default function TemplatesPage() {
 		<>
 			<PageHeader title="Email Templates" />
 
-			<DataTable
-				table={table}
-				toolbar={toolbar}
-				emptyMessage="No email templates found."
-			/>
+			<DataTable table={table} toolbar={toolbar} emptyMessage="No email templates found." />
 
 			<AlertDialog
 				open={confirmDelete()}
@@ -295,26 +337,26 @@ export default function TemplatesPage() {
 				onOpenChange={setCreateOpen}
 				title="New Template"
 				maxWidth="700px"
-				footer={<>
-					<Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
-					<Button onClick={handleCreate} disabled={createPending()}>
-						{createPending() ? 'Creating…' : 'Create'}
-					</Button>
-				</>}
+				footer={
+					<>
+						<Button variant="ghost" onClick={() => setCreateOpen(false)}>
+							Cancel
+						</Button>
+						<Button onClick={handleCreate} disabled={createPending()}>
+							{createPending() ? 'Creating…' : 'Create'}
+						</Button>
+					</>
+				}
 			>
 				<div class="edit-form">
 					<FormField label="Name" required>
-						<Input
-							placeholder="Template name"
-							value={createName()}
-							onInput={(e) => setCreateName(e.currentTarget.value)}
-						/>
+						<Input placeholder="Template name" value={createName()} onInput={(e) => setCreateName(e.currentTarget.value)} />
 					</FormField>
 
 					<FormField label="Type">
 						<Select
 							value={createType()}
-							onValueChange={setCreateType}
+							onValueChange={(value) => setCreateType(value as 'tx' | 'campaign' | 'campaign_visual')}
 							options={[
 								{ value: 'tx', label: 'Transactional' },
 								{ value: 'campaign', label: 'Campaign / HTML' },
@@ -324,11 +366,7 @@ export default function TemplatesPage() {
 					</FormField>
 
 					<FormField label="Subject" hint={`Use {{ .Tx.Data.field }} for template variables`}>
-						<Input
-							placeholder="Email subject"
-							value={createSubject()}
-							onInput={(e) => setCreateSubject(e.currentTarget.value)}
-						/>
+						<Input placeholder="Email subject" value={createSubject()} onInput={(e) => setCreateSubject(e.currentTarget.value)} />
 					</FormField>
 
 					<div class="body-field">
@@ -349,39 +387,36 @@ export default function TemplatesPage() {
 			<Dialog
 				open={editOpen()}
 				onOpenChange={setEditOpen}
-				title={can(session(), 'template', 'edit') ? 'Edit Template' : 'View Template'}
+				title={canEditTemplate() ? 'Edit Template' : 'View Template'}
 				maxWidth="700px"
-				footer={can(session(), 'template', 'edit') ? (
-					<>
-						<Show when={!editIsDefault() && editType() === 'campaign'}>
-							<Button variant="ghost" class="mr-auto" onClick={handleSetDefault}>Set as Default</Button>
-						</Show>
-						<Button variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
-						<Button onClick={handleSave} disabled={savePending()}>
-							{savePending() ? 'Saving…' : 'Save'}
-						</Button>
-					</>
-				) : undefined}
+				footer={
+					canEditTemplate() || canSetDefaultTemplate() ? (
+						<>
+							<Show when={canSetDefaultTemplate() && !editIsDefault() && editType() === 'campaign'}>
+								<Button variant="ghost" class="mr-auto" onClick={handleSetDefault}>
+									Set as Default
+								</Button>
+							</Show>
+							<Button variant="ghost" onClick={() => setEditOpen(false)}>
+								Cancel
+							</Button>
+							<Show when={canEditTemplate()}>
+								<Button onClick={handleSave} disabled={savePending()}>
+									{savePending() ? 'Saving…' : 'Save'}
+								</Button>
+							</Show>
+						</>
+					) : undefined
+				}
 			>
-				<Show
-					when={!editLoading()}
-					fallback={<Spinner size={32} centered />}
-				>
+				<Show when={!editLoading()} fallback={<Spinner size={32} centered />}>
 					<div class="edit-form">
 						<FormField label="Name">
-							<Input
-								value={editName()}
-								onInput={(e) => setEditName(e.currentTarget.value)}
-								disabled={!can(session(), 'template', 'edit')}
-							/>
+							<Input value={editName()} onInput={(e) => setEditName(e.currentTarget.value)} disabled={!canEditTemplate()} />
 						</FormField>
 
 						<FormField label="Subject" hint={`Use {{ .Tx.Data.field }} for template variables`}>
-							<Input
-								value={editSubject()}
-								onInput={(e) => setEditSubject(e.currentTarget.value)}
-								disabled={!can(session(), 'template', 'edit')}
-							/>
+							<Input value={editSubject()} onInput={(e) => setEditSubject(e.currentTarget.value)} disabled={!canEditTemplate()} />
 						</FormField>
 
 						<div class="body-field">
@@ -399,16 +434,11 @@ export default function TemplatesPage() {
 										rows="16"
 										value={editBody()}
 										onInput={(e) => setEditBody(e.currentTarget.value)}
-										disabled={!can(session(), 'template', 'edit')}
+										disabled={!canEditTemplate()}
 									/>
 								}
 							>
-								<iframe
-									class="preview-frame"
-									srcdoc={previewHtml(editBody())}
-									sandbox=""
-									title="Template preview"
-								/>
+								<iframe class="preview-frame" srcdoc={previewHtml(editBody())} sandbox="" title="Template preview" />
 							</Show>
 							<p class="body-hint">The placeholder {'{{ template "content" . }}'} should appear exactly once in the template.</p>
 						</div>

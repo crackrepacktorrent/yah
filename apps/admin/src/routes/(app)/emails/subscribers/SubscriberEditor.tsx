@@ -1,14 +1,15 @@
 import { type Component, For, Show, batch, createEffect, createMemo, createSignal, on } from 'solid-js';
-import { toast } from 'solid-sonner';
-import {
-	Badge, Button, Dialog, EmptyState, FormField, Input, Select, Spinner, Switch, Tabs, TabContent,
-} from '~/components';
+import { toast, toastError } from '~/lib/toast';
+import { Badge, Button, Dialog, EmptyState, FormField, Input, Select, Spinner, Switch, Tabs, TabContent } from '~/components';
 import { MultiSelect } from '~/components';
-import { subscriberStatusVariant, toastError } from '~/lib/utils';
+import { subscriberStatusVariant } from '~/lib/utils';
 import {
-	createSubscriber, updateSubscriber,
-	getSubscriberBounces, getSubscriberExport,
-	deleteSubscriberBounces, sendOptinConfirmation,
+	createSubscriber,
+	updateSubscriber,
+	getSubscriberBounces,
+	getSubscriberExport,
+	deleteSubscriberBounces,
+	sendOptinConfirmation,
 } from '../subscribers.server';
 import './SubscriberEditor.css';
 
@@ -31,7 +32,7 @@ type ListmonkSubscriber = {
 	id: number;
 	email: string;
 	name: string;
-	status: string;
+	status: 'enabled' | 'disabled' | 'blocklisted';
 	lists: SubscriberList[];
 	created_at: string;
 };
@@ -53,17 +54,20 @@ type SubscriberEditorProps = {
 	onOpenChange: (open: boolean) => void;
 	subscriber?: ListmonkSubscriber | null;
 	allLists: ListmonkList[];
+	canCreate: boolean;
 	canEdit: boolean;
+	canClearBounces: boolean;
 	onSaved: () => void;
 };
 
 export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 	const isCreate = () => !props.subscriber;
+	const canModify = () => (isCreate() ? props.canCreate : props.canEdit);
 
 	const [activeTab, setActiveTab] = createSignal('details');
 	const [email, setEmail] = createSignal('');
 	const [name, setName] = createSignal('');
-	const [status, setStatus] = createSignal('enabled');
+	const [status, setStatus] = createSignal<'enabled' | 'disabled' | 'blocklisted'>('enabled');
 	const [listIds, setListIds] = createSignal<string[]>([]);
 	const [preconfirm, setPreconfirm] = createSignal(false);
 	const [saving, setSaving] = createSignal(false);
@@ -90,47 +94,54 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 
 	const tabs = createMemo(() =>
 		isCreate()
-			? [{ value: 'details', label: 'Details' }, { value: 'lists', label: 'Lists' }]
+			? [
+					{ value: 'details', label: 'Details' },
+					{ value: 'lists', label: 'Lists' },
+				]
 			: [
-				{ value: 'details', label: 'Details' },
-				{ value: 'lists', label: `Lists (${props.subscriber!.lists.length})` },
-				{ value: 'subscriptions', label: `Subscriptions (${props.subscriber!.lists.length})` },
-				{ value: 'bounces', label: 'Bounces' },
-				{ value: 'activity', label: 'Activity' },
-			],
+					{ value: 'details', label: 'Details' },
+					{ value: 'lists', label: `Lists (${props.subscriber!.lists.length})` },
+					{ value: 'subscriptions', label: `Subscriptions (${props.subscriber!.lists.length})` },
+					{ value: 'bounces', label: 'Bounces' },
+					{ value: 'activity', label: 'Activity' },
+				],
 	);
 
-	const hasUnconfirmed = createMemo(() =>
-		props.subscriber?.status === 'enabled' &&
-		props.subscriber.lists.some((l) => l.subscription_status === 'unconfirmed'),
+	const hasUnconfirmed = createMemo(
+		() => props.subscriber?.status === 'enabled' && props.subscriber.lists.some((l) => l.subscription_status === 'unconfirmed'),
 	);
 
 	// Initialize form fields when dialog opens.
 	// Kobalte only fires onOpenChange for user-initiated close actions — not when
 	// open={true} is set programmatically — so initialization must live here.
-	createEffect(on(() => props.open, (open) => {
-		if (!open) return;
-		const sub = props.subscriber;
-		batch(() => {
-			setActiveTab('details');
-			setBouncesLoaded(false);
-			setBounces([]);
-			setActivityLoaded(false);
-			setActivity(null);
-			setPreconfirm(false);
-			if (sub) {
-				setEmail(sub.email);
-				setName(sub.name);
-				setStatus(sub.status);
-				setListIds(sub.lists.map((l) => String(l.id)));
-			} else {
-				setEmail('');
-				setName('');
-				setStatus('enabled');
-				setListIds([]);
-			}
-		});
-	}));
+	createEffect(
+		on(
+			() => props.open,
+			(open) => {
+				if (!open) return;
+				const sub = props.subscriber;
+				batch(() => {
+					setActiveTab('details');
+					setBouncesLoaded(false);
+					setBounces([]);
+					setActivityLoaded(false);
+					setActivity(null);
+					setPreconfirm(false);
+					if (sub) {
+						setEmail(sub.email);
+						setName(sub.name);
+						setStatus(sub.status);
+						setListIds(sub.lists.map((l) => String(l.id)));
+					} else {
+						setEmail('');
+						setName('');
+						setStatus('enabled');
+						setListIds([]);
+					}
+				});
+			},
+		),
+	);
 
 	function handleOpenChange(open: boolean) {
 		props.onOpenChange(open);
@@ -233,16 +244,18 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 			onOpenChange={handleOpenChange}
 			title={isCreate() ? 'New Subscriber' : props.subscriber!.email}
 			maxWidth="800px"
-			footer={<>
-				<Button variant="ghost" onClick={() => props.onOpenChange(false)}>Cancel</Button>
-				<Show when={props.canEdit}>
-					<Button onClick={handleSave} disabled={saving()}>
-						{saving()
-							? (isCreate() ? 'Creating…' : 'Saving…')
-							: (isCreate() ? 'Create' : 'Save')}
+			footer={
+				<>
+					<Button variant="ghost" onClick={() => props.onOpenChange(false)}>
+						Cancel
 					</Button>
-				</Show>
-			</>}
+					<Show when={canModify()}>
+						<Button onClick={handleSave} disabled={saving()}>
+							{saving() ? (isCreate() ? 'Creating…' : 'Saving…') : isCreate() ? 'Create' : 'Save'}
+						</Button>
+					</Show>
+				</>
+			}
 		>
 			<Show when={!isCreate() && props.subscriber}>
 				{(sub) => (
@@ -263,28 +276,26 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 								placeholder="subscriber@example.com"
 								value={email()}
 								onInput={(e) => setEmail(e.currentTarget.value)}
-								disabled={!props.canEdit}
+								disabled={!canModify()}
 							/>
 						</FormField>
 						<div class="form-row">
 							<FormField label="Name">
-								<Input
-									placeholder="Full name"
-									value={name()}
-									onInput={(e) => setName(e.currentTarget.value)}
-									disabled={!props.canEdit}
-								/>
+								<Input placeholder="Full name" value={name()} onInput={(e) => setName(e.currentTarget.value)} disabled={!canModify()} />
 							</FormField>
-							<FormField label="Status" hint="Disabled subscribers won't receive emails until re-enabled. Blocklisted subscribers are permanently excluded.">
+							<FormField
+								label="Status"
+								hint="Disabled subscribers won't receive emails until re-enabled. Blocklisted subscribers are permanently excluded."
+							>
 								<Select
 									value={status()}
-									onValueChange={setStatus}
+									onValueChange={(value) => setStatus(value as 'enabled' | 'disabled' | 'blocklisted')}
 									options={[
 										{ value: 'enabled', label: 'Enabled' },
 										{ value: 'disabled', label: 'Disabled' },
 										{ value: 'blocklisted', label: 'Blocklisted' },
 									]}
-									disabled={!props.canEdit}
+									disabled={!canModify()}
 								/>
 							</FormField>
 						</div>
@@ -299,7 +310,7 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 								onChange={setListIds}
 								options={listOptions()}
 								placeholder="Search lists…"
-								disabled={!props.canEdit}
+								disabled={!canModify()}
 							/>
 						</FormField>
 						<div class="list-footer">
@@ -308,10 +319,12 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 								hint="Don't send opt-in e-mails and mark all list subscriptions as 'subscribed'."
 								checked={preconfirm()}
 								onChange={setPreconfirm}
-								disabled={!props.canEdit}
+								disabled={!canModify()}
 							/>
 							<Show when={hasUnconfirmed() && props.canEdit}>
-								<Button variant="ghost" onClick={handleResendOptin}>Send opt-in confirmation</Button>
+								<Button variant="ghost" onClick={handleResendOptin}>
+									Send opt-in confirmation
+								</Button>
 							</Show>
 						</div>
 					</div>
@@ -319,10 +332,7 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 
 				<Show when={!isCreate()}>
 					<TabContent value="subscriptions">
-						<Show
-							when={props.subscriber!.lists.length > 0}
-							fallback={<EmptyState message="Not subscribed to any lists." />}
-						>
+						<Show when={props.subscriber!.lists.length > 0} fallback={<EmptyState message="Not subscribed to any lists." />}>
 							<table class="sub-table">
 								<thead>
 									<tr>
@@ -349,8 +359,22 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 														{list.subscription_status}
 													</Badge>
 												</td>
-												<td class="cell-date">{list.subscription_created_at ? new Date(list.subscription_created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</td>
-												<td class="cell-date">{list.subscription_updated_at ? new Date(list.subscription_updated_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</td>
+												<td class="cell-date">
+													{list.subscription_created_at
+														? new Date(list.subscription_created_at).toLocaleString([], {
+																dateStyle: 'medium',
+																timeStyle: 'short',
+															})
+														: '—'}
+												</td>
+												<td class="cell-date">
+													{list.subscription_updated_at
+														? new Date(list.subscription_updated_at).toLocaleString([], {
+																dateStyle: 'medium',
+																timeStyle: 'short',
+															})
+														: '—'}
+												</td>
 											</tr>
 										)}
 									</For>
@@ -360,28 +384,26 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 					</TabContent>
 
 					<TabContent value="bounces">
-						<Show
-							when={!bouncesLoading()}
-							fallback={<Spinner centered />}
-						>
-							<Show
-								when={bounces().length > 0}
-								fallback={<EmptyState message="No bounces recorded." />}
-							>
+						<Show when={!bouncesLoading()} fallback={<Spinner centered />}>
+							<Show when={bounces().length > 0} fallback={<EmptyState message="No bounces recorded." />}>
 								<div class="bounce-list">
 									<For each={bounces()}>
 										{(bounce) => (
 											<div class="bounce-item">
-												<Badge variant={bounce.type === 'hard' ? 'error' : bounce.type === 'soft' ? 'warning' : 'info'}>{bounce.type}</Badge>
+												<Badge variant={bounce.type === 'hard' ? 'error' : bounce.type === 'soft' ? 'warning' : 'info'}>
+													{bounce.type}
+												</Badge>
 												<span class="bounce-source">{bounce.source || '—'}</span>
 												<span class="bounce-date">{new Date(bounce.created_at).toLocaleDateString()}</span>
 											</div>
 										)}
 									</For>
 								</div>
-								<Show when={props.canEdit}>
+								<Show when={props.canClearBounces}>
 									<div class="section-actions">
-										<Button variant="danger-outline" onClick={handleClearBounces}>Clear bounces</Button>
+										<Button variant="danger-outline" onClick={handleClearBounces}>
+											Clear bounces
+										</Button>
 									</div>
 								</Show>
 							</Show>
@@ -389,10 +411,7 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 					</TabContent>
 
 					<TabContent value="activity">
-						<Show
-							when={!activityLoading()}
-							fallback={<Spinner centered />}
-						>
+						<Show when={!activityLoading()} fallback={<Spinner centered />}>
 							<Show when={activity()} fallback={<EmptyState message="No activity data." />}>
 								{(act) => (
 									<div class="activity-sections">
@@ -405,7 +424,9 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 															<div class="activity-item">
 																<span class="activity-name">{view.name}</span>
 																<span class="activity-subject">{view.subject}</span>
-																<Badge>{view.count} view{view.count !== 1 ? 's' : ''}</Badge>
+																<Badge>
+																	{view.count} view{view.count !== 1 ? 's' : ''}
+																</Badge>
 															</div>
 														)}
 													</For>
@@ -420,7 +441,9 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 														{(click) => (
 															<div class="activity-item">
 																<span class="activity-url">{click.url}</span>
-																<Badge>{click.count} click{click.count !== 1 ? 's' : ''}</Badge>
+																<Badge>
+																	{click.count} click{click.count !== 1 ? 's' : ''}
+																</Badge>
 															</div>
 														)}
 													</For>
@@ -437,7 +460,6 @@ export const SubscriberEditor: Component<SubscriberEditorProps> = (props) => {
 					</TabContent>
 				</Show>
 			</Tabs>
-
 		</Dialog>
 	);
 };

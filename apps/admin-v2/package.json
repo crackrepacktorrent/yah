@@ -1,0 +1,55 @@
+{
+	"name": "yah-admin-v2",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"engines": {
+		"node": ">=22.12"
+	},
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"start": "srvx --prod --entry server.mjs",
+		"preview": "vite preview",
+		"check": "tsc --noEmit",
+		"lint": "oxlint -c oxlint.config.mjs src e2e vite.config.ts playwright.config.ts playwright.production.config.ts env.ts server.mjs",
+		"test": "vitest run",
+		"test:auth-integration": "vitest run src/platform/auth/production-auth.integration.test.ts",
+		"test:listmonk-integration": "vitest run src/integrations/listmonk/*.integration.test.ts",
+		"install:e2e": "playwright install --with-deps chromium",
+		"test:e2e": "env ADMIN_V2_RUNTIME=compatibility-lab ADMIN_V2_COMPATIBILITY_AUTH_SECRET=solid-2-compatibility-e2e-secret bun run build && playwright test",
+		"test:e2e:production": "env ADMIN_V2_RUNTIME=production bun run build && playwright test --config playwright.production.config.ts"
+	},
+	"dependencies": {
+		"@fontsource-variable/rubik": "5.2.8",
+		"@yah/admin-core": "workspace:*",
+		"@lexical/html": "0.42.0",
+		"@lexical/link": "0.42.0",
+		"@lexical/list": "0.42.0",
+		"@lexical/rich-text": "0.42.0",
+		"@solidjs/router": "2.0.0-next.17",
+		"@solidjs/web": "2.0.0-rc.2",
+		"better-auth": "1.6.30",
+		"lexical": "0.42.0",
+		"lucide": "1.7.0",
+		"pg": "8.20.0",
+		"qr-code-styling": "1.9.2",
+		"solid-js": "2.0.0-rc.2",
+		"srvx": "0.12.7",
+		"valibot": "1.4.2"
+	},
+	"devDependencies": {
+		"@axe-core/playwright": "4.13.0",
+		"@playwright/test": "^1.62.1",
+		"@solidjs/vite-plugin": "3.0.0-next.33",
+		"@types/node": "^22.20.1",
+		"@types/pg": "^8.20.0",
+		"eslint-plugin-solid": "~0.16.0",
+		"filesystem-routing": "0.2.1",
+		"jsdom": "^25.0.1",
+		"oxlint": "~1.79.0",
+		"typescript": "^5.9.2",
+		"vite": "^8.1.5",
+		"vitest": "^4.0.0"
+	}
+}
