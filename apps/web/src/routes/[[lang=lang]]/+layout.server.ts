@@ -54,7 +54,7 @@ export const load: LayoutServerLoad = async ({ params, url }) => {
 	}
 
 	const lang = getLanguage(params.lang);
-	const context = getStoryblokRequestContext(url);
+	const context = await getStoryblokRequestContext(url);
 	const { api, isDraft } = context;
 	const requestOptions = getStoryblokRequestOptions(context, lang);
 	const editorLinkOptions = isDraft ? { resolve_links: 'url' as const } : {};

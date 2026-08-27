@@ -1,6 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { flushPublishedStoryblokCaches } from '$lib/server/storyblok-client';
+import { getPublishedStoryblokApi } from '$lib/server/storyblok';
 
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 const PURGE_TIMEOUT_MS = 8_000;
@@ -15,6 +17,16 @@ function secretMatches(provided: string | undefined, expected: string): boolean 
 export const POST: RequestHandler = async ({ params }) => {
 	if (!secretMatches(params.secret, env.STORYBLOK_WEBHOOK_SECRET ?? '')) {
 		return json({ error: 'Unauthorized' }, { status: 401, headers: NO_STORE });
+	}
+
+	try {
+		// Initialize a cold process, then invalidate application content before the
+		// HTML edge so newly-started renders use fresh config, navigation, and pages.
+		await getPublishedStoryblokApi();
+		await flushPublishedStoryblokCaches();
+	} catch (reason) {
+		console.error('Failed to flush the published Storyblok cache', reason);
+		return json({ error: 'Storyblok cache flush failed' }, { status: 502, headers: NO_STORE });
 	}
 
 	const zoneId = env.CLOUDFLARE_ZONE_ID ?? '';

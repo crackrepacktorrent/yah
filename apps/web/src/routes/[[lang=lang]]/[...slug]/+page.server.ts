@@ -29,7 +29,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	// Do not await parent(): this lets the page and layout Storyblok calls run in
 	// parallel while deriving the same language directly from the route.
 	const lang = getLanguage(params.lang);
-	const context = getStoryblokRequestContext(url);
+	const context = await getStoryblokRequestContext(url);
 	const { api, isDraft } = context;
 
 	let data: { story?: ISbStoryData<PageBlok> };
