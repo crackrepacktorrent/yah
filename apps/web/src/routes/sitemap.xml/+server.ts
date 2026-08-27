@@ -39,7 +39,8 @@ function absolute(path: string, lang: 'en' | 'es'): string {
 export const GET: RequestHandler = async () => {
 	let stories: SitemapStory[];
 	try {
-		stories = await getPublishedStoryblokApi().getAll('cdn/stories', {
+		const api = await getPublishedStoryblokApi();
+		stories = await api.getAll('cdn/stories', {
 			version: 'published',
 			content_type: 'page',
 			excluding_fields: 'body',

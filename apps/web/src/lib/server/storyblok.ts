@@ -1,9 +1,14 @@
 import { env } from '$env/dynamic/private';
-import { getStoryblokClient } from './storyblok-client';
+import {
+	DEFAULT_STORYBLOK_CACHE_REFRESH_MS,
+	getDraftStoryblokClient,
+	getPublishedStoryblokClient,
+	type StoryblokApi
+} from './storyblok-client';
 import { validateStoryblokEditorRequest } from './storyblok-preview';
 
 export type StoryblokRequestContext = {
-	api: ReturnType<typeof getStoryblokClient>;
+	api: StoryblokApi;
 	version: 'draft' | 'published';
 	isDraft: boolean;
 	fromRelease?: string;
@@ -45,12 +50,22 @@ function configuredPublicToken(): string {
 	return token;
 }
 
+function configuredCacheRefreshMs(): number {
+	const configured = env.STORYBLOK_CACHE_REFRESH_MS;
+	if (!configured) return DEFAULT_STORYBLOK_CACHE_REFRESH_MS;
+
+	const parsed = Number(configured);
+	return Number.isSafeInteger(parsed) && parsed >= 60_000
+		? parsed
+		: DEFAULT_STORYBLOK_CACHE_REFRESH_MS;
+}
+
 export function isAuthorizedStoryblokEditorRequest(url: URL): boolean {
 	return validateStoryblokEditorRequest(url, configuredPreviewTokens()) !== null;
 }
 
 /** Choose published or draft access for this exact request. */
-export function getStoryblokRequestContext(url: URL): StoryblokRequestContext {
+export async function getStoryblokRequestContext(url: URL): Promise<StoryblokRequestContext> {
 	const previewToken = validateStoryblokEditorRequest(url, configuredPreviewTokens());
 	const release = url.searchParams.get('_storyblok_release');
 	const fromRelease = previewToken && release && /^\d+$/.test(release) && release !== '0'
@@ -59,14 +74,14 @@ export function getStoryblokRequestContext(url: URL): StoryblokRequestContext {
 
 	if (previewToken) {
 		return {
-			api: getStoryblokClient(previewToken),
+			api: getDraftStoryblokClient(previewToken),
 			version: 'draft',
 			isDraft: true,
 			fromRelease
 		};
 	}
 
-	const api = getPublishedStoryblokApi();
+	const api = await getPublishedStoryblokApi();
 
 	return {
 		api,
@@ -75,6 +90,6 @@ export function getStoryblokRequestContext(url: URL): StoryblokRequestContext {
 	};
 }
 
-export function getPublishedStoryblokApi() {
-	return getStoryblokClient(configuredPublicToken());
+export function getPublishedStoryblokApi(): Promise<StoryblokApi> {
+	return getPublishedStoryblokClient(configuredPublicToken(), configuredCacheRefreshMs());
 }
