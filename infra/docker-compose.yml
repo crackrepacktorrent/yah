@@ -99,6 +99,9 @@ services:
     env_file: ../apps/admin/.env.production
     environment:
       PORT: 3002
+      # Keep the runtime mode explicit; the Solid 2 server bundle validates
+      # the complete production contract only in this mode.
+      ADMIN_V2_RUNTIME: production
     expose:
       - "3002"
     depends_on:
