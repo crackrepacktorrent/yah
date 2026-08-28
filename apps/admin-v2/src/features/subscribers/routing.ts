@@ -1,9 +1,8 @@
 import { MAX_SUBSCRIBER_PAGE } from './contracts';
+import { decodePositiveIntegerRouteSegment } from '~/platform/positive-integer-route-segment';
 
 export function decodeSubscriberRouteId(segment: string): number {
-	if (!/^[1-9]\d*$/.test(segment)) return 0;
-	const id = Number(segment);
-	return Number.isSafeInteger(id) ? id : 0;
+	return decodePositiveIntegerRouteSegment(segment);
 }
 
 export function subscriberHref(id: number): string {

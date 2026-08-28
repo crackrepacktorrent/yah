@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, untrack } from 'solid-js';
 import type { MailingList } from '~/features/mailing-lists/contracts';
 import type { SubscriberMembershipState, SubscriberProfile, SubscriberStatus } from './contracts';
 
@@ -97,19 +97,27 @@ export function SubscriberCreateForm(props: {
 
 export function SubscriberProfileForm(props: {
 	subscriber: SubscriberProfile;
+	resetVersion: number;
 	pending: boolean;
 	error: string;
 	onSubmit: (values: SubscriberProfileFormValues) => void;
 }) {
-	const [email, setEmail] = createSignal('');
-	const [name, setName] = createSignal('');
-	const [status, setStatus] = createSignal<SubscriberStatus>('enabled');
+	const initial = untrack(() => props.subscriber);
+	const [email, setEmail] = createSignal(initial.email);
+	const [name, setName] = createSignal(initial.name);
+	const [status, setStatus] = createSignal<SubscriberStatus>(initial.status);
+	const [dirty, setDirty] = createSignal(false);
+	let appliedResetVersion = untrack(() => props.resetVersion);
 	createEffect(
-		() => props.subscriber,
-		(subscriber) => {
-			setEmail(subscriber.email);
-			setName(subscriber.name);
-			setStatus(subscriber.status);
+		() => ({ subscriber: props.subscriber, resetVersion: props.resetVersion }),
+		({ subscriber, resetVersion }) => {
+			if (resetVersion !== appliedResetVersion || !untrack(dirty)) {
+				setEmail(subscriber.email);
+				setName(subscriber.name);
+				setStatus(subscriber.status);
+				setDirty(false);
+				appliedResetVersion = resetVersion;
+			}
 		},
 	);
 
@@ -121,17 +129,17 @@ export function SubscriberProfileForm(props: {
 			<Show when={props.error}>{(message) => <p class="field-error form-field--wide" role="alert">{message()}</p>}</Show>
 			<label class="form-field">
 				<span>Email <span aria-hidden="true">*</span></span>
-				<input type="email" name="email" value={email()} onInput={(event) => setEmail(event.currentTarget.value)} maxlength={254} required disabled={props.pending} />
+				<input type="email" name="email" value={email()} onInput={(event) => { setEmail(event.currentTarget.value); setDirty(true); }} maxlength={254} required disabled={props.pending} />
 			</label>
 			<label class="form-field">
 				<span>Name</span>
-				<input name="name" value={name()} onInput={(event) => setName(event.currentTarget.value)} maxlength={2_000} disabled={props.pending} />
+				<input name="name" value={name()} onInput={(event) => { setName(event.currentTarget.value); setDirty(true); }} maxlength={2_000} disabled={props.pending} />
 				<Show when={props.subscriber.name !== ''}><small>Listmonk 6 cannot clear an existing name; replace it instead.</small></Show>
 			</label>
 			<label class="form-field">
 				<span>Status</span>
 				<Show when={props.subscriber.status !== 'blocklisted'} fallback={<input value="Blocklisted" disabled />}>
-					<select name="status" value={status()} onChange={(event) => setStatus(event.currentTarget.value as 'enabled' | 'disabled')} disabled={props.pending}>
+					<select name="status" value={status()} onChange={(event) => { setStatus(event.currentTarget.value as 'enabled' | 'disabled'); setDirty(true); }} disabled={props.pending}>
 						<option value="enabled">Enabled</option>
 						<option value="disabled">Disabled</option>
 					</select>
@@ -150,23 +158,35 @@ function membershipIsProtected(membership: SubscriberMembershipState['membership
 export function SubscriberMembershipForm(props: {
 	subscriber: SubscriberMembershipState;
 	lists: MailingList[];
+	resetVersion: number;
 	pending: boolean;
 	error: string;
 	onSubmit: (listIds: number[]) => void;
 }) {
 	const currentById = createMemo(() => new Map(props.subscriber.memberships.map((membership) => [membership.id, membership])));
-	const editableLists = createMemo(() => props.lists.filter((list) => {
-		const membership = currentById().get(list.id);
-		return (list.status === 'active' && list.kind !== 'temporary' && (!membership || !membershipIsProtected(membership)));
-	}));
+	const editableLists = createMemo(() => {
+		const editable: MailingList[] = [];
+		for (const list of props.lists) {
+			const membership = currentById().get(list.id);
+			if (list.status === 'active' && list.kind !== 'temporary' && (!membership || !membershipIsProtected(membership))) editable.push(list);
+		}
+		return editable;
+	});
 	const protectedMemberships = createMemo(() => props.subscriber.memberships.filter(membershipIsProtected));
-	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
+	const membershipIds = (subscriber: SubscriberMembershipState) =>
+		subscriber.memberships.filter((membership) => !membershipIsProtected(membership)).map(({ id }) => id);
+	const initial = untrack(() => props.subscriber);
+	const [selectedIds, setSelectedIds] = createSignal<number[]>(membershipIds(initial));
+	const [dirty, setDirty] = createSignal(false);
+	let appliedResetVersion = untrack(() => props.resetVersion);
 	createEffect(
-		() => props.subscriber,
-		(subscriber) => {
-			setSelectedIds(
-				subscriber.memberships.filter((membership) => !membershipIsProtected(membership)).map(({ id }) => id),
-			);
+		() => ({ subscriber: props.subscriber, resetVersion: props.resetVersion }),
+		({ subscriber, resetVersion }) => {
+			if (resetVersion !== appliedResetVersion || !untrack(dirty)) {
+				setSelectedIds(membershipIds(subscriber));
+				setDirty(false);
+				appliedResetVersion = resetVersion;
+			}
 		},
 	);
 
@@ -179,7 +199,7 @@ export function SubscriberMembershipForm(props: {
 				<Show when={editableLists().length > 0} fallback={<p>No active authorable mailing lists are available.</p>}>
 					<For each={editableLists()}>{(list) => (
 						<label>
-							<input type="checkbox" name="listId" value={list.id} checked={selectedIds().includes(list.id)} onChange={(event) => setSelectedIds((current) => toggleId(current, list.id, event.currentTarget.checked))} />
+							<input type="checkbox" name="listId" value={list.id} checked={selectedIds().includes(list.id)} onChange={(event) => { setSelectedIds((current) => toggleId(current, list.id, event.currentTarget.checked)); setDirty(true); }} />
 							<span>{list.name}</span><small>{list.optIn === 'double' ? 'Double opt-in' : 'Single opt-in'} · {currentById().get(list.id)?.status ?? 'Not a member'}</small>
 						</label>
 					)}</For>

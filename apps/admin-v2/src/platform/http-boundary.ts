@@ -18,41 +18,43 @@ function isAuthApi(pathname: string): boolean {
 }
 
 function isShortlinkManagementPage(pathname: string): boolean {
-	const match = pathname.match(/^\/shortlinks\/([^/]+)\/(?:details|edit)\/?$/);
+	const match = pathname.match(/^\/shortlinks\/([^/]+)\/(?:details|edit)$/);
 	return !!match?.[1] && decodeShortlinkRouteCode(match[1]) !== '';
 }
 
 function isRoleManagementPage(pathname: string): boolean {
-	const match = pathname.match(/^\/roles\/([^/]+)\/(?:edit|clone)\/?$/);
+	const match = pathname.match(/^\/roles\/([^/]+)\/(?:edit|clone)$/);
 	return !!match?.[1] && decodeRoleRouteId(match[1]) !== '';
 }
 
 function isMemberRolePage(pathname: string): boolean {
-	const match = pathname.match(/^\/members\/([^/]+)\/roles\/?$/);
+	const match = pathname.match(/^\/members\/([^/]+)\/roles$/);
 	return !!match?.[1] && decodeMemberRouteId(match[1]) !== '';
 }
 
 function isEmailTemplatePage(pathname: string): boolean {
-	const match = pathname.match(/^\/emails\/templates\/([^/]+)\/?$/);
+	const match = pathname.match(/^\/emails\/templates\/([^/]+)$/);
 	return !!match?.[1] && decodeEmailTemplateRouteId(match[1]) > 0;
 }
 
 function isMailingListPage(pathname: string): boolean {
-	const match = pathname.match(/^\/emails\/lists\/([^/]+)\/?$/);
+	const match = pathname.match(/^\/emails\/lists\/([^/]+)$/);
 	return !!match?.[1] && decodeMailingListRouteId(match[1]) > 0;
 }
 
 function isCampaignPage(pathname: string): boolean {
-	const match = pathname.match(/^\/emails\/campaigns\/([^/]+)\/?$/);
+	const match = pathname.match(/^\/emails\/campaigns\/([^/]+)$/);
 	return !!match?.[1] && decodeCampaignRouteId(match[1]) > 0;
 }
 
 function isSubscriberPage(pathname: string): boolean {
-	const match = pathname.match(/^\/emails\/subscribers\/([^/]+)\/?$/);
+	const match = pathname.match(/^\/emails\/subscribers\/([^/]+)$/);
 	return !!match?.[1] && decodeSubscriberRouteId(match[1]) > 0;
 }
 
 function isProductPage(pathname: string): boolean {
+	// Solid Router ignores one trailing slash when matching direct loads.
+	if (pathname.length > 1 && pathname.endsWith('/')) pathname = pathname.slice(0, -1);
 	return (
 		pathname === '/' ||
 		pathname === '/analytics' ||
@@ -74,6 +76,13 @@ function isProductPage(pathname: string): boolean {
 		pathname === '/emails/subscribers/new' ||
 		isSubscriberPage(pathname) ||
 		pathname === '/emails/bounces' ||
+		pathname === '/emails/logs' ||
+		pathname === '/settings/email' ||
+		pathname === '/settings/email/general' ||
+		pathname === '/settings/email/performance' ||
+		pathname === '/settings/email/bounces' ||
+		pathname === '/settings/email/privacy' ||
+		pathname === '/settings/email/provider' ||
 		pathname === '/roles' ||
 		pathname === '/roles/new' ||
 		isRoleManagementPage(pathname) ||
@@ -83,7 +92,7 @@ function isProductPage(pathname: string): boolean {
 		pathname === '/login' ||
 		pathname === '/forgot-password' ||
 		pathname === '/reset-password' ||
-		/^\/members\/accept\/[^/]+\/?$/.test(pathname)
+		/^\/members\/accept\/[^/]+$/.test(pathname)
 	);
 }
 

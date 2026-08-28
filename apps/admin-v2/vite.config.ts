@@ -14,7 +14,6 @@ export default defineConfig(({ command }) => ({
 			// Re-evaluate SSR only after the Solid 2 router and feature slices are stable.
 			ssr: false,
 			serverFunctions: { configure: './src/server-config.ts' },
-			extensions: ['.jsx', '.tsx'],
 		}),
 		fileRoutes({ httpMethods: true, types: true }),
 	],

@@ -16,6 +16,7 @@ describe('custom role permission boundary', () => {
 			'campaign',
 			'analytics',
 			'settings',
+			'provider',
 		]);
 		for (const resource of ['organization', 'member', 'invitation', 'team', 'ac', 'constructor', '__proto__']) {
 			expect(isCustomRolePermissionResource(resource)).toBe(false);

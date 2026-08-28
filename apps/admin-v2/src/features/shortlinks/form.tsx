@@ -1,4 +1,4 @@
-import { Show, createSignal } from 'solid-js';
+import { Show, createSignal, untrack } from 'solid-js';
 import type { CreateShortlinkCommand } from './contracts';
 
 export type ShortlinkFormValues = Omit<CreateShortlinkCommand, 'customSlug'> & { customSlug?: string };
@@ -27,14 +27,15 @@ export function ShortlinkForm(props: {
 	cancelHref: string;
 	onSubmit: (values: ShortlinkFormValues) => void;
 }) {
-	const [longUrl, setLongUrl] = createSignal(props.initial?.longUrl ?? '');
-	const [customSlug, setCustomSlug] = createSignal(props.initial?.customSlug ?? '');
-	const [title, setTitle] = createSignal(props.initial?.title ?? '');
-	const [tagText, setTagText] = createSignal((props.initial?.tags ?? []).join(', '));
-	const [maxVisits, setMaxVisits] = createSignal(props.initial?.maxVisits?.toString() ?? '');
-	const [validUntil, setValidUntil] = createSignal(toLocalDateTimeValue(props.initial?.validUntil));
-	const [crawlable, setCrawlable] = createSignal(props.initial?.crawlable ?? false);
-	const [forwardQuery, setForwardQuery] = createSignal(props.initial?.forwardQuery ?? true);
+	const initial = untrack(() => props.initial);
+	const [longUrl, setLongUrl] = createSignal(initial?.longUrl ?? '');
+	const [customSlug, setCustomSlug] = createSignal(initial?.customSlug ?? '');
+	const [title, setTitle] = createSignal(initial?.title ?? '');
+	const [tagText, setTagText] = createSignal((initial?.tags ?? []).join(', '));
+	const [maxVisits, setMaxVisits] = createSignal(initial?.maxVisits?.toString() ?? '');
+	const [validUntil, setValidUntil] = createSignal(toLocalDateTimeValue(initial?.validUntil));
+	const [crawlable, setCrawlable] = createSignal(initial?.crawlable ?? false);
+	const [forwardQuery, setForwardQuery] = createSignal(initial?.forwardQuery ?? true);
 
 	function submit(event: SubmitEvent): void {
 		event.preventDefault();

@@ -174,9 +174,11 @@ describe.skipIf(!enabled)('production auth and canonical authorization', () => {
 			roles: ['member', fixture.role],
 		});
 		expect(projected?.permissions['settings']).toContain('edit');
+		expect(projected?.permissions['provider']).toBeUndefined();
 		expect(projected?.permissions['analytics']).toContain('view');
 
 		await expect(authorization.enforcePermissions(headers, { settings: ['edit'] })).resolves.toBeUndefined();
+		await expect(authorization.enforcePermissions(headers, { provider: ['manage'] })).rejects.toMatchObject({ status: 403 });
 		await expect(authorization.enforcePermissions(headers, { settings: ['edit'], analytics: ['view'] })).resolves.toBeUndefined();
 		await expect(authorization.enforcePermissions(headers, { member: ['delete'] })).rejects.toMatchObject({ status: 403 });
 	});

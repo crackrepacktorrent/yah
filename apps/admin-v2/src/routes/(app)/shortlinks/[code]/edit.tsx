@@ -11,12 +11,18 @@ import { visibleError } from '~/ui/visible-error';
 import '../shortlinks.css';
 
 export const route = defineFileRoute('/shortlinks/:code/edit', {
+	matchFilters: { code: (segment) => decodeShortlinkRouteCode(segment) !== '' },
 	preload: ({ params }) => void getEditableShortlink(decodeShortlinkRouteCode(params.code)),
 });
 
 export default function EditShortlinkPage(props: RouteProps<typeof route>) {
+	const shortCode = createMemo(() => decodeShortlinkRouteCode(props.params.code));
+	return <Show when={shortCode()} keyed>{(resolved) => <EditShortlinkRoute shortCode={resolved} />}</Show>;
+}
+
+function EditShortlinkRoute(props: { shortCode: string }) {
 	const session = createMemo(() => requireSession());
-	const shortlink = createMemo(() => getEditableShortlink(decodeShortlinkRouteCode(props.params.code)));
+	const shortlink = createMemo(() => getEditableShortlink(props.shortCode));
 	const canView = createMemo(() => session().permissions['shortlink']?.includes('view') ?? false);
 	return <Show when={shortlink()}>{(resolved) => <EditShortlinkEditor shortlink={resolved()} canView={canView()} />}</Show>;
 }

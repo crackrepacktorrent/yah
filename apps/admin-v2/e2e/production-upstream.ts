@@ -1,13 +1,76 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createListmonkV62SettingsFixture } from '../src/integrations/listmonk/listmonk-settings-document.fixture';
 
 const port = 43124;
 const farFutureToken = `header.${Buffer.from(JSON.stringify({ exp: 4_102_444_800 })).toString('base64url')}.fixture`;
 const shlinkApiKey = 'fixture-shlink-secret';
 let failNextUmamiRequest = false;
+let delayNextUmamiRequest = false;
 let failNextShlinkRequest = false;
 let failNextListmonkRequest = false;
 let failNextCampaignAnalyticsRequest = false;
 let transactionalMessages: Record<string, unknown>[] = [];
+let smtpTestRequests: Array<{ authProtocol: unknown; email: unknown; hadPassword: boolean; host: unknown }> = [];
+
+function initialListmonkSettings(): Record<string, unknown> {
+	return {
+		...createListmonkV62SettingsFixture(),
+		'app.lang': 'en',
+		'app.from_email': 'YAH <hello@example.test>',
+		'app.notify_emails': ['operator@example.test'],
+		'app.send_optin_confirmation': true,
+		'app.enable_public_subscription_page': true,
+		'app.root_url': 'https://mail.example.test',
+		'bounce.enabled': true,
+		'privacy.disable_tracking': false,
+		'privacy.individual_tracking': true,
+		'privacy.unsubscribe_header': true,
+		'privacy.record_optin_ip': false,
+		'privacy.allow_blocklist': true,
+		'privacy.allow_preferences': true,
+		'privacy.allow_export': true,
+		'privacy.allow_wipe': true,
+		'privacy.domain_blocklist': ['blocked.example'],
+		'privacy.domain_allowlist': [],
+		'privacy.exportable': ['profile', 'subscriptions', 'campaign_views', 'link_clicks'],
+		'appearance.admin.custom_css': 'body::after { content: "••"; }',
+		smtp: [{
+			uuid: '10000000-0000-4000-8000-000000000001',
+			name: 'email-primary',
+			enabled: true,
+			host: 'smtp.example.test',
+			port: 587,
+			auth_protocol: 'login',
+			username: 'mailer',
+			password: '••••••••',
+			email_headers: [{ 'X-Provider': 'keep-me' }],
+			hello_hostname: '',
+			max_conns: 10,
+			max_msg_retries: 2,
+			msg_retry_delay: '10ms',
+			idle_timeout: '15s',
+			wait_timeout: '5s',
+			tls_type: 'STARTTLS',
+			tls_skip_verify: false,
+			from_addresses: ['example.test'],
+		}],
+	};
+}
+
+function initialListmonkLogs(): string[] {
+	return [
+		'2026-08-27T10:00:00Z listmonk started',
+		'2026-08-27T10:00:01Z SMTP pool ready',
+		'2026-08-27T10:00:02Z campaign worker ready',
+		'2026-08-27T10:00:03Z bounce worker ready',
+		'2026-08-27T10:00:04Z housekeeping complete',
+		...Array.from({ length: 199 }, (_, index) => `2026-08-27T10:${String(index + 5).padStart(2, '0')}:00Z worker event ${index + 1}`),
+		'2026-08-27T14:00:00Z authorization: Bearer fixture-log-token password=fixture-log-secret delivery diagnostic',
+	];
+}
+
+let listmonkSettings = initialListmonkSettings();
+let listmonkLogs = initialListmonkLogs();
 
 type FixtureEmailTemplate = {
 	id: number;
@@ -835,6 +898,93 @@ function acceptListmonkRequest(request: IncomingMessage, response: ServerRespons
 		return false;
 	}
 	return true;
+}
+
+function isFixtureRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function storedSecret(next: unknown, current: unknown): unknown {
+	if (next === '' && typeof current === 'string') return current;
+	return typeof next === 'string' && next ? '•'.repeat([...next].length) : next;
+}
+
+function preserveCollectionSecrets(body: Record<string, unknown>, current: Record<string, unknown>, key: string): void {
+	const currentItems = Array.isArray(current[key]) ? current[key] : [];
+	const currentByUuid = new Map(
+		currentItems
+			.filter(isFixtureRecord)
+			.map((item) => [item['uuid'], item]),
+	);
+	if (!Array.isArray(body[key])) return;
+	body[key] = body[key].map((candidate) => {
+		if (!isFixtureRecord(candidate)) return candidate;
+		const item = { ...candidate };
+		item['password'] = storedSecret(item['password'], currentByUuid.get(item['uuid'])?.['password']);
+		return item;
+	});
+}
+
+function preserveScalarSecret(body: Record<string, unknown>, current: Record<string, unknown>, key: string): void {
+	body[key] = storedSecret(body[key], current[key]);
+}
+
+function preserveNestedSecret(body: Record<string, unknown>, current: Record<string, unknown>, key: string, secretKey: string): void {
+	const next = body[key];
+	if (!isFixtureRecord(next)) return;
+	const currentValue = current[key];
+	const currentSecret = isFixtureRecord(currentValue) ? currentValue[secretKey] : undefined;
+	body[key] = { ...next, [secretKey]: storedSecret(next[secretKey], currentSecret) };
+}
+
+async function handleListmonkSettings(request: IncomingMessage, response: ServerResponse, url: URL): Promise<void> {
+	if (!acceptListmonkRequest(request, response)) return;
+
+	if (url.pathname === '/api/settings' && request.method === 'GET') {
+		sendJson(response, { data: structuredClone(listmonkSettings) });
+		return;
+	}
+	if (url.pathname === '/api/settings' && request.method === 'PUT') {
+		const body = await requestJson(request);
+		for (const key of ['smtp', 'messengers', 'bounce.mailboxes']) preserveCollectionSecrets(body, listmonkSettings, key);
+		for (const key of ['upload.s3.aws_secret_access_key', 'bounce.sendgrid_key']) preserveScalarSecret(body, listmonkSettings, key);
+		for (const [key, secretKey] of [
+			['bounce.azure', 'shared_secret'],
+			['bounce.postmark', 'password'],
+			['bounce.forwardemail', 'key'],
+			['bounce.lettermint', 'key'],
+			['security.oidc', 'client_secret'],
+		] as const) preserveNestedSecret(body, listmonkSettings, key, secretKey);
+		const nextCaptcha = body['security.captcha'];
+		const currentCaptcha = listmonkSettings['security.captcha'];
+		if (isFixtureRecord(nextCaptcha) && isFixtureRecord(nextCaptcha['hcaptcha'])) {
+			const currentHcaptcha = isFixtureRecord(currentCaptcha) && isFixtureRecord(currentCaptcha['hcaptcha']) ? currentCaptcha['hcaptcha'] : undefined;
+			nextCaptcha['hcaptcha'] = {
+				...nextCaptcha['hcaptcha'],
+				secret: storedSecret(nextCaptcha['hcaptcha']['secret'], currentHcaptcha?.['secret']),
+			};
+		}
+		listmonkSettings = structuredClone(body);
+		sendJson(response, { data: true });
+		return;
+	}
+	if (url.pathname === '/api/settings/smtp/test' && request.method === 'POST') {
+		const body = await requestJson(request);
+		smtpTestRequests.push({
+			authProtocol: body['auth_protocol'],
+			email: body['email'],
+			hadPassword: typeof body['password'] === 'string' && body['password'].length > 0,
+			host: body['host'],
+		});
+		sendJson(response, { data: ['Fixture SMTP message accepted.'] });
+		return;
+	}
+	if (url.pathname === '/api/logs' && request.method === 'GET') {
+		sendJson(response, { data: listmonkLogs });
+		return;
+	}
+
+	sendJson(response, { message: 'Unknown fixture Listmonk settings endpoint.' }, 404);
 }
 
 async function handleListmonkTemplates(request: IncomingMessage, response: ServerResponse, url: URL): Promise<void> {
@@ -1890,8 +2040,17 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
 		sendJson(response, { armed: true });
 		return;
 	}
+	if (url.pathname === '/__control/delay-next' && request.method === 'POST') {
+		delayNextUmamiRequest = true;
+		sendJson(response, { armed: true });
+		return;
+	}
 	if (url.pathname === '/__control/transactional-messages' && request.method === 'GET') {
 		sendJson(response, { messages: transactionalMessages });
+		return;
+	}
+	if (url.pathname === '/__control/email-settings' && request.method === 'GET') {
+		sendJson(response, { settings: listmonkSettings, smtpTestRequests });
 		return;
 	}
 	if (url.pathname === '/__control/campaigns' && request.method === 'GET') {
@@ -1994,10 +2153,14 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
 		optInRequestSequence = 0;
 		optInRequests = [];
 		failNextUmamiRequest = false;
+		delayNextUmamiRequest = false;
 		failNextShlinkRequest = false;
 		failNextListmonkRequest = false;
 		failNextCampaignAnalyticsRequest = false;
 		transactionalMessages = [];
+		smtpTestRequests = [];
+		listmonkSettings = initialListmonkSettings();
+		listmonkLogs = initialListmonkLogs();
 		sendJson(response, { reset: true });
 		return;
 	}
@@ -2007,6 +2170,10 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
 	}
 	if (url.pathname.startsWith('/api/templates')) {
 		await handleListmonkTemplates(request, response, url);
+		return;
+	}
+	if (url.pathname === '/api/settings' || url.pathname === '/api/settings/smtp/test' || url.pathname === '/api/logs') {
+		await handleListmonkSettings(request, response, url);
 		return;
 	}
 	if (url.pathname === '/api/lists' || url.pathname.startsWith('/api/lists/')) {
@@ -2048,6 +2215,10 @@ async function handle(request: IncomingMessage, response: ServerResponse): Promi
 		response.writeHead(502, { 'content-type': 'text/plain' });
 		response.end('fixture confidential diagnostic');
 		return;
+	}
+	if (delayNextUmamiRequest) {
+		delayNextUmamiRequest = false;
+		await new Promise((resolve) => setTimeout(resolve, 300));
 	}
 
 	setTimeout(() => sendJson(response, analyticsPayload(url)), 40);

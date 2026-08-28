@@ -138,6 +138,12 @@ declare module "virtual:file-routes" {
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/index")>;
     },
     {
+      path: "/(app)/emails/logs";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/logs")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/logs")>;
+    },
+    {
       path: "/(app)/members/";
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/members/index")>;
@@ -154,6 +160,12 @@ declare module "virtual:file-routes" {
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/roles/new")>;
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/new")>;
+    },
+    {
+      path: "/(app)/settings/email";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email")>;
+      $$route?: undefined;
     },
     {
       path: "/(app)/shortlinks/";
@@ -290,6 +302,42 @@ declare module "virtual:file-routes" {
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/[id]/edit")>;
     },
     {
+      path: "/(app)/settings/email/bounces";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/bounces")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/bounces")>;
+    },
+    {
+      path: "/(app)/settings/email/general";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/general")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/general")>;
+    },
+    {
+      path: "/(app)/settings/email/";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/index")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/index")>;
+    },
+    {
+      path: "/(app)/settings/email/performance";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/performance")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/performance")>;
+    },
+    {
+      path: "/(app)/settings/email/privacy";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/privacy")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/privacy")>;
+    },
+    {
+      path: "/(app)/settings/email/provider";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/provider")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/provider")>;
+    },
+    {
       path: "/(app)/shortlinks/:code/details";
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/shortlinks/[code]/details")>;
@@ -342,6 +390,14 @@ declare module "virtual:file-routes" {
               page: true;
               $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/index")>;
               $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/index")>;
+              children?: undefined;
+            },
+            {
+              path: "/logs";
+              id: "/logs";
+              page: true;
+              $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/logs")>;
+              $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/logs")>;
               children?: undefined;
             },
             {
@@ -497,6 +553,63 @@ declare module "virtual:file-routes" {
           $component: FileRouteLazyRef<typeof import("./src/routes/(app)/shortlinks/index")>;
           $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/shortlinks/index")>;
           children?: undefined;
+        },
+        {
+          path: "/settings/email";
+          id: "/settings/email";
+          page: true;
+          $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email")>;
+          $$route?: undefined;
+          children: readonly [
+            {
+              path: "/";
+              id: "/";
+              page: true;
+              $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/index")>;
+              $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/index")>;
+              children?: undefined;
+            },
+            {
+              path: "/bounces";
+              id: "/bounces";
+              page: true;
+              $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/bounces")>;
+              $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/bounces")>;
+              children?: undefined;
+            },
+            {
+              path: "/general";
+              id: "/general";
+              page: true;
+              $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/general")>;
+              $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/general")>;
+              children?: undefined;
+            },
+            {
+              path: "/privacy";
+              id: "/privacy";
+              page: true;
+              $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/privacy")>;
+              $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/privacy")>;
+              children?: undefined;
+            },
+            {
+              path: "/provider";
+              id: "/provider";
+              page: true;
+              $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/provider")>;
+              $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/provider")>;
+              children?: undefined;
+            },
+            {
+              path: "/performance";
+              id: "/performance";
+              page: true;
+              $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email/performance")>;
+              $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/settings/email/performance")>;
+              children?: undefined;
+            }
+          ];
         },
         {
           path: "/shortlinks/new";

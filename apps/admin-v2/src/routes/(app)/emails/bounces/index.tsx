@@ -79,7 +79,7 @@ function BounceTable(props: { page: BouncePage }) {
 			setDialog(null);
 			setSelectedIds([]);
 			navigate('/emails/bounces', { replace: true });
-			await revalidate(listBounces.key);
+			revalidate(listBounces.key);
 			toast.success(operation === 'selected'
 				? `${selectedCount} bounce record${selectedCount === 1 ? '' : 's'} cleared.`
 				: 'All bounce records cleared.');

@@ -13,11 +13,17 @@ import { visibleError } from '~/ui/visible-error';
 import '~/features/membership/membership.css';
 
 export const route = defineFileRoute('/members/:id/roles', {
+	matchFilters: { id: (segment) => decodeMemberRouteId(segment) !== '' },
 	preload: ({ params }) => void getMemberForRoleEdit(decodeMemberRouteId(params.id)),
 });
 
 export default function MemberRoleEditPage(props: RouteProps<typeof route>) {
-	const member = createMemo(() => getMemberForRoleEdit(decodeMemberRouteId(props.params.id)));
+	const memberId = createMemo(() => decodeMemberRouteId(props.params.id));
+	return <Show when={memberId()} keyed>{(resolved) => <MemberRoleRoute memberId={resolved} />}</Show>;
+}
+
+function MemberRoleRoute(props: { memberId: string }) {
+	const member = createMemo(() => getMemberForRoleEdit(props.memberId));
 	const session = createMemo(() => requireSession());
 	const canReadAccessControl = createMemo(() => session().permissions['ac']?.includes('read') ?? false);
 

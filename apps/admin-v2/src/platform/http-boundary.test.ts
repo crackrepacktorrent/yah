@@ -1,9 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
+import fileRouteManifest from 'virtual:file-routes';
 import { createAdminRuntimeGuard, rejectUnhandledApiRequests } from './http-boundary';
 
 const terminalResponse = new Response('next');
 
 describe('admin HTTP boundary', () => {
+	it('allows direct loads for every generated production page with router-compatible trailing slashes', async () => {
+		const next = vi.fn(async () => terminalResponse);
+		const guard = createAdminRuntimeGuard('production');
+		const productionPatterns = new Set(
+			fileRouteManifest
+				.filter((route) => route.page)
+				.map((route) => route.path.replace(/\/\([^/]+\)/g, '').replace(/\/$/, '') || '/')
+				.filter((path) => path !== '/*404' && path !== '/compatibility' && !path.startsWith('/compatibility/')),
+		);
+
+		for (const pattern of productionPatterns) {
+			const dynamicId = pattern.startsWith('/roles/')
+				? '~h637573746f6d2d726f6c65'
+				: pattern.startsWith('/members/:id/')
+					? '~h6d656d6265722d31'
+					: pattern.startsWith('/members/accept/')
+						? 'invitation-id'
+						: '42';
+			const directLoadPath = pattern.replace(':code', '~h6e6577').replace(':id', dynamicId);
+			expect(await guard(new Request(`https://admin.example${directLoadPath}`), next), directLoadPath).toBe(terminalResponse);
+			if (directLoadPath !== '/') {
+				const trailingSlashPath = `${directLoadPath}/`;
+				expect(await guard(new Request(`https://admin.example${trailingSlashPath}`), next), trailingSlashPath).toBe(terminalResponse);
+			}
+		}
+	});
+
 	it('fails closed for all unfinished application traffic outside lab mode', async () => {
 		const next = vi.fn(async () => terminalResponse);
 		const guard = createAdminRuntimeGuard('platform-disabled');
@@ -45,6 +73,13 @@ describe('admin HTTP boundary', () => {
 			'/emails/subscribers/new',
 			'/emails/subscribers/42',
 			'/emails/bounces',
+			'/emails/logs',
+			'/settings/email',
+			'/settings/email/general',
+			'/settings/email/performance',
+			'/settings/email/bounces',
+			'/settings/email/privacy',
+			'/settings/email/provider',
 			'/roles',
 			'/roles/new',
 			'/roles/~h6275696c74696e3a6f776e6572/edit',
@@ -63,7 +98,9 @@ describe('admin HTTP boundary', () => {
 			'/index.html',
 			'/compatibility/auth',
 			'/members/accept',
+			'/members/accept/invitation-id//',
 			'/shortlinks/press-kit/details',
+			'/shortlinks/~h70726573732d6b6974/details//',
 			'/shortlinks/~h70726573732d6b6974/unknown',
 			'/shortlinks/~h1/details',
 			'/shortlinks/~hFF/edit',
@@ -71,6 +108,7 @@ describe('admin HTTP boundary', () => {
 			'/emails/templates/0',
 			'/emails/templates/01',
 			'/emails/templates/not-an-id',
+			'/emails/templates/42//',
 			'/emails/templates/42/edit',
 			'/emails/lists/0',
 			'/emails/lists/01',

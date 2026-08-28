@@ -1,16 +1,14 @@
-@import '../../../ui/admin-controls.css';
-
 .shortlinks-page {
-	color: oklch(0.26 0.044 44.2);
+	color: var(--admin-text);
 }
 
 .shortlink-editor-page h1 { margin-bottom: 0; }
 
 .short-code { font-family: ui-monospace, monospace; font-weight: 700; }
-.row-title { display: block; margin-top: 0.2rem; color: oklch(0.46 0.035 44.2); }
+.row-title { display: block; margin-top: 0.2rem; color: var(--admin-text-muted); }
 .destination { display: block; max-width: 26rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-.tag-list > span { padding: 0.2rem 0.45rem; border-radius: 999px; background: oklch(0.92 0.045 67.7); font-size: 0.82rem; }
+.tag-list > span { padding: 0.2rem 0.45rem; border-radius: 999px; background: var(--admin-surface-selected); font-size: 0.82rem; }
 
 .shortlink-editor-page > p { margin-top: 0.5rem; color: oklch(0.44 0.035 44.2); }
 .shortlink-form {
@@ -19,7 +17,7 @@
 	gap: 1rem;
 	margin-top: 1.5rem;
 }
-.shortlink-options { display: flex; gap: 1.25rem; padding: 1rem; border: 1px solid oklch(0.82 0.02 67.7); border-radius: 0.5rem; }
+.shortlink-options { display: flex; gap: 1.25rem; padding: 1rem; border: 1px solid var(--admin-border); border-radius: var(--admin-radius-control); }
 .shortlink-options legend { padding: 0 0.25rem; font-weight: 700; }
 .shortlink-options label { display: flex; gap: 0.5rem; align-items: center; }
 .shortlink-options input { width: 1.15rem; height: 1.15rem; }
@@ -34,7 +32,7 @@
 	margin: 0 0 1.5rem;
 }
 .shortlink-stats div,
-.detail-card { padding: 1.25rem; border: 1px solid oklch(0.84 0.018 67.7); border-radius: 0.625rem; background: white; }
+.detail-card { padding: 1.25rem; border: 1px solid var(--admin-border-panel); border-radius: var(--admin-radius-panel); background: white; }
 .shortlink-stats dt { color: oklch(0.45 0.03 44.2); }
 .shortlink-stats dd { margin: 0.25rem 0 0; font-size: 1.8rem; font-weight: 750; }
 .detail-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(17rem, 1fr); gap: 1.25rem; }
@@ -47,7 +45,7 @@
 .qr-card { text-align: center; }
 .visits-card { margin-top: 1.25rem; }
 .user-agent { max-width: 24rem; overflow-wrap: anywhere; }
-.table-note { margin-bottom: 0; color: oklch(0.46 0.035 44.2); }
+.table-note { margin-bottom: 0; color: var(--admin-text-muted); }
 
 @media (max-width: 48rem) {
 	.detail-actions { justify-content: flex-start; }

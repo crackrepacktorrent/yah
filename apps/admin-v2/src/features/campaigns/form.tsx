@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal } from 'solid-js';
+import { For, Show, createMemo, createSignal, untrack } from 'solid-js';
 import type { EmailTemplateSummary } from '~/features/email-templates/contracts';
 import type { MailingList } from '~/features/mailing-lists/contracts';
 import { RichTextEditor } from '~/ui/rich-text-editor';
@@ -38,25 +38,30 @@ export function CampaignForm(props: {
 	cancelHref: string;
 	onSubmit: (values: CampaignFormValues) => void;
 }) {
-	const [type, setType] = createSignal<CampaignType>(props.initial?.type ?? 'regular');
-	const [name, setName] = createSignal(props.initial?.name ?? '');
-	const [subject, setSubject] = createSignal(props.initial?.subject ?? '');
-	const [fromEmail, setFromEmail] = createSignal(props.initial?.fromEmail ?? '');
-	const [selectedLists, setSelectedLists] = createSignal<number[]>(props.initial?.listIds ?? []);
-	const [body, setBody] = createSignal(props.initial?.body ?? '');
-	const [contentType, setContentType] = createSignal<AuthorableCampaignContentType>(props.initial?.contentType ?? 'richtext');
-	const [templateId, setTemplateId] = createSignal<number | null>(props.initial?.templateId ?? null);
-	const [tags, setTags] = createSignal((props.initial?.tags ?? []).join(', '));
-	const [sendAt, setSendAt] = createSignal(toLocalCampaignDateTime(props.initial?.sendAt ?? null));
+	const initial = untrack(() => props.initial);
+	const [type, setType] = createSignal<CampaignType>(initial?.type ?? 'regular');
+	const [name, setName] = createSignal(initial?.name ?? '');
+	const [subject, setSubject] = createSignal(initial?.subject ?? '');
+	const [fromEmail, setFromEmail] = createSignal(initial?.fromEmail ?? '');
+	const [selectedLists, setSelectedLists] = createSignal<number[]>(initial?.listIds ?? []);
+	const [body, setBody] = createSignal(initial?.body ?? '');
+	const [contentType, setContentType] = createSignal<AuthorableCampaignContentType>(initial?.contentType ?? 'richtext');
+	const [templateId, setTemplateId] = createSignal<number | null>(initial?.templateId ?? null);
+	const [tags, setTags] = createSignal((initial?.tags ?? []).join(', '));
+	const [sendAt, setSendAt] = createSignal(toLocalCampaignDateTime(initial?.sendAt ?? null));
 	const activeLists = createMemo(() => props.lists.filter((list) => list.status === 'active'));
 	const selectableLists = createMemo(() => type() === 'optin' ? activeLists().filter((list) => list.optIn === 'double') : activeLists());
 	const unavailableSelectedLists = createMemo(() => {
 		const selectableIds = new Set(selectableLists().map((list) => list.id));
-		return props.lists.filter((list) => selectedLists().includes(list.id) && !selectableIds.has(list.id));
+		const unavailable: MailingList[] = [];
+		for (const list of props.lists) {
+			if (selectedLists().includes(list.id) && !selectableIds.has(list.id)) unavailable.push(list);
+		}
+		return unavailable;
 	});
 	const campaignTemplates = createMemo(() => props.templates.filter((template) => template.kind === 'campaign'));
 	const initialTemplateMissingFromCatalog = createMemo(
-		() => props.initial?.templateId != null && !campaignTemplates().some((template) => template.id === props.initial?.templateId),
+		() => initial?.templateId != null && !campaignTemplates().some((template) => template.id === initial.templateId),
 	);
 
 	function selectType(next: CampaignType): void {
@@ -142,7 +147,7 @@ export function CampaignForm(props: {
 				<span>Campaign template</span>
 				<select name="templateId" value={templateId() === null ? '' : String(templateId())} onChange={(event) => setTemplateId(event.currentTarget.value === '' ? null : Number(event.currentTarget.value))} disabled={props.pending}>
 					<option value="">Default campaign template</option>
-					<Show when={initialTemplateMissingFromCatalog()}><option value={props.initial!.templateId!}>Current template #{props.initial!.templateId!}</option></Show>
+					<Show when={initialTemplateMissingFromCatalog()}><option value={initial!.templateId!}>Current template #{initial!.templateId!}</option></Show>
 					<For each={campaignTemplates()}>{(template) => <option value={template.id}>{template.name}</option>}</For>
 				</select>
 			</label>

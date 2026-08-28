@@ -1,7 +1,7 @@
+import { decodePositiveIntegerRouteSegment } from '~/platform/positive-integer-route-segment';
+
 export function decodeEmailTemplateRouteId(segment: string): number {
-	if (!/^[1-9]\d*$/.test(segment)) return 0;
-	const id = Number(segment);
-	return Number.isSafeInteger(id) ? id : 0;
+	return decodePositiveIntegerRouteSegment(segment);
 }
 
 export function emailTemplateHref(id: number): string {

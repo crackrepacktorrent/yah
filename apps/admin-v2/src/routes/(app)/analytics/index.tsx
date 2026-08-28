@@ -1,5 +1,6 @@
+import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
-import { For, Loading, Show, createMemo, createSignal } from 'solid-js';
+import { Errored, For, Loading, Show, createMemo, createSignal, isPending } from 'solid-js';
 import { ANALYTICS_PERIODS, type AnalyticsMetric, type AnalyticsPeriod, type AnalyticsSnapshot } from '~/features/analytics/contracts';
 import { getAnalytics } from '~/features/analytics/server';
 import './index.css';
@@ -38,6 +39,7 @@ function formatTimestamp(timestamp: string, period: AnalyticsPeriod): string {
 export default function AnalyticsPage() {
 	const [period, setPeriod] = createSignal<AnalyticsPeriod>('7d');
 	const snapshot = createMemo(() => getAnalytics(period()));
+	const updating = createMemo(() => isPending(snapshot));
 
 	return (
 		<section class="analytics-page">
@@ -65,9 +67,14 @@ export default function AnalyticsPage() {
 				</fieldset>
 			</header>
 
-			<Loading fallback={<p class="analytics-status" role="status">Loading analytics…</p>}>
-				<Show when={snapshot()}>{(data) => <AnalyticsSnapshotView snapshot={data()} />}</Show>
-			</Loading>
+			<Errored fallback={(_error, reset) => <div class="analytics-error" role="alert"><p>Analytics for this period could not be loaded.</p><button class="button button--secondary" type="button" onClick={() => { revalidate(getAnalytics.keyFor(period()), true); reset(); }}>Try again</button></div>}>
+				<Loading fallback={<p class="analytics-status" role="status">Loading analytics…</p>}>
+					<div class="analytics-result-slot" aria-busy={updating() ? 'true' : undefined}>
+						<Show when={updating()}><p class="analytics-updating" role="status">Updating analytics…</p></Show>
+						<Show when={snapshot()}>{(data) => <AnalyticsSnapshotView snapshot={data()} />}</Show>
+					</div>
+				</Loading>
+			</Errored>
 		</section>
 	);
 }

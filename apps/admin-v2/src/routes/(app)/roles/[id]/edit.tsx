@@ -11,15 +11,18 @@ import { visibleError } from '~/ui/visible-error';
 import '../roles.css';
 
 export const route = defineFileRoute('/roles/:id/edit', {
+	matchFilters: { id: (segment) => decodeRoleRouteId(segment) !== '' },
 	preload: () => void listRoles(),
 });
 
 export default function EditRolePage(props: RouteProps<typeof route>) {
+	const roleId = createMemo(() => decodeRoleRouteId(props.params.id));
+	return <Show when={roleId()} keyed>{(resolved) => <EditRoleRoute roleId={resolved} />}</Show>;
+}
+
+function EditRoleRoute(props: { roleId: string }) {
 	const catalog = createMemo(() => listRoles());
-	const role = createMemo(() => {
-		const roleId = decodeRoleRouteId(props.params.id);
-		return catalog().roles.find((candidate) => candidate.id === roleId);
-	});
+	const role = createMemo(() => catalog().roles.find((candidate) => candidate.id === props.roleId));
 	return (
 		<Show when={role()} fallback={<RoleNotFound />}>
 			{(resolved) => <RoleEditor role={resolved()} catalog={catalog()} />}

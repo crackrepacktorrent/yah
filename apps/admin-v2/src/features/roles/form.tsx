@@ -1,4 +1,4 @@
-import { For, Show, createSignal } from 'solid-js';
+import { For, Show, createSignal, untrack } from 'solid-js';
 import type { CustomRolePermissions } from './contracts';
 
 type PermissionStatements = Record<string, readonly string[]>;
@@ -17,6 +17,7 @@ const resourceLabels: Record<string, string> = {
 	campaign: 'Campaigns',
 	analytics: 'Analytics',
 	settings: 'Settings',
+	provider: 'Email provider operations',
 };
 
 export function resourceLabel(resource: string): string {
@@ -41,9 +42,11 @@ export function RoleForm(props: {
 	cancelHref: string;
 	onSubmit: (value: { key: string; permissions: CustomRolePermissions }) => void;
 }) {
-	const [key, setKey] = createSignal(props.initialKey ?? '');
+	const initialKey = untrack(() => props.initialKey);
+	const initialPermissions = untrack(() => props.initialPermissions);
+	const [key, setKey] = createSignal(initialKey ?? '');
 	const [permissions, setPermissions] = createSignal<CustomRolePermissions>(
-		structuredClone(props.initialPermissions ?? {}),
+		structuredClone(initialPermissions ?? {}),
 	);
 
 	function toggle(resource: string, action: string): void {

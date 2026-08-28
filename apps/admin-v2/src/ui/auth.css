@@ -39,7 +39,7 @@
 	gap: 1rem;
 	padding: 2rem;
 	border: 1px solid color-mix(in srgb, var(--auth-border) 55%, transparent);
-	border-radius: 0.625rem;
+	border-radius: var(--admin-radius-panel);
 	background: var(--auth-surface);
 	box-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 8%);
 }
@@ -88,7 +88,7 @@
 	min-height: 2.5rem;
 	padding: 0.5rem 0.75rem;
 	border: 1px solid var(--auth-border);
-	border-radius: 0.5rem;
+	border-radius: var(--admin-radius-control);
 	color: var(--auth-foreground);
 	background: var(--auth-input);
 	font: inherit;
@@ -107,7 +107,7 @@
 	justify-content: center;
 	padding: 0.5rem 1rem;
 	border: 1px solid transparent;
-	border-radius: 0.5rem;
+	border-radius: var(--admin-radius-control);
 	color: white;
 	background: var(--auth-primary);
 	font: inherit;

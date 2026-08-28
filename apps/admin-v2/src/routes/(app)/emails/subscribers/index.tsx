@@ -1,6 +1,6 @@
 import { revalidate, useNavigate, useSearchParams } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
-import { For, Show, createEffect, createMemo, createSignal } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, untrack } from 'solid-js';
 import { MAX_BULK_SUBSCRIBER_SELECTION, type SubscriberPage, type SubscriberSummary } from '~/features/subscribers/contracts';
 import { decodeSubscriberListLocation, subscriberHref, subscriberListHref } from '~/features/subscribers/routing';
 import { blocklistSubscribers, deleteSubscribers, listSubscribers } from '~/features/subscribers/server';
@@ -36,6 +36,7 @@ function SubscriberTable(props: { page: SubscriberPage }) {
 	const [dialog, setDialog] = createSignal<'delete' | 'blocklist' | null>(null);
 	const [mutationPending, setMutationPending] = createSignal(false);
 	const [mutationError, setMutationError] = createSignal('');
+	const [search, setSearch] = createSignal(untrack(() => props.page.search));
 	const selected = createMemo(() => props.page.items.filter((subscriber) => selectedIds().includes(subscriber.id)));
 	const blocklistSelection = createMemo(() => selected().filter((subscriber) => subscriber.status !== 'blocklisted'));
 	const selectableIds = createMemo(() => props.page.items
@@ -50,6 +51,13 @@ function SubscriberTable(props: { page: SubscriberPage }) {
 		() => `${props.page.page}:${props.page.search}`,
 		(key, previous) => {
 			if (previous !== undefined && key !== previous) setSelectedIds([]);
+		},
+	);
+	createEffect(
+		() => props.page.search,
+		(resolvedSearch, previousSearch) => {
+			// Do not overwrite a draft if the first deferred effect runs after typing.
+			if (previousSearch !== undefined && resolvedSearch !== previousSearch) setSearch(resolvedSearch);
 		},
 	);
 	createEffect(
@@ -85,7 +93,7 @@ function SubscriberTable(props: { page: SubscriberPage }) {
 			else await deleteSubscribers({ subscribers });
 			setDialog(null);
 			setSelectedIds([]);
-			await revalidate(listSubscribers.key);
+			revalidate(listSubscribers.key);
 			toast.success(operation === 'blocklist' ? 'Subscribers blocklisted.' : 'Subscribers deleted.');
 		} catch (caught) {
 			setMutationError(visibleError(caught, `The selected subscribers could not be ${operation === 'blocklist' ? 'blocklisted' : 'deleted'}.`));
@@ -101,7 +109,7 @@ function SubscriberTable(props: { page: SubscriberPage }) {
 				<Show when={canCreate()}><a class="button" href="/emails/subscribers/new">New subscriber</a></Show>
 			</header>
 			<form class="subscriber-search" role="search" action="/emails/subscribers" method="get">
-				<label class="filter-field"><span>Search subscribers</span><input type="search" name="search" defaultValue={props.page.search} maxlength={200} placeholder="Email or name" /></label>
+				<label class="filter-field"><span>Search subscribers</span><input type="search" name="search" value={search()} onInput={(event) => setSearch(event.currentTarget.value)} maxlength={200} placeholder="Email or name" /></label>
 				<button class="button button--secondary" type="submit">Search</button>
 				<Show when={props.page.search}><a class="button button--secondary" href="/emails/subscribers">Clear</a></Show>
 			</form>

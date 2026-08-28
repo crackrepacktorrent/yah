@@ -6,7 +6,8 @@
 	margin-bottom: 1.5rem;
 }
 
-.page-header h1 { margin-bottom: 0; }
+.page-header h1 { margin: 0; }
+.page-header > div:first-child > p:not(.eyebrow) { margin: 0.35rem 0 0; color: var(--admin-text-muted); }
 
 .button {
 	display: inline-flex;
@@ -15,7 +16,7 @@
 	justify-content: center;
 	padding: 0.625rem 1rem;
 	border: 1px solid var(--admin-action);
-	border-radius: 0.5rem;
+	border-radius: var(--admin-radius-control);
 	color: white;
 	background: var(--admin-action);
 	font: inherit;
@@ -35,14 +36,14 @@
 
 .button--secondary {
 	color: oklch(0.34 0.08 46.5);
-	background: white;
+	background: var(--admin-surface-raised);
 }
 .button--secondary:hover { background: oklch(0.95 0.02 67.7); }
 .button--danger,
-.button--danger-secondary { border-color: oklch(0.48 0.18 28); }
-.button--danger { background: oklch(0.48 0.18 28); }
-.button--danger:hover { background: oklch(0.4 0.16 28); }
-.button--danger-secondary { color: oklch(0.42 0.16 28); background: white; }
+.button--danger-secondary { border-color: var(--admin-danger); }
+.button--danger { background: var(--admin-danger); }
+.button--danger:hover { background: var(--admin-danger-hover); }
+.button--danger-secondary { color: oklch(0.42 0.16 28); background: var(--admin-surface-raised); }
 .button--danger-secondary:hover { background: oklch(0.96 0.025 28); }
 
 .filter-field,
@@ -61,20 +62,20 @@
 .form-field input {
 	min-height: 2.75rem;
 	padding: 0.625rem 0.75rem;
-	border: 1px solid oklch(0.68 0.025 60);
-	border-radius: 0.5rem;
+	border: 1px solid var(--admin-control-border);
+	border-radius: var(--admin-radius-control);
 	color: inherit;
-	background: white;
+	background: var(--admin-surface-raised);
 	font: inherit;
 }
 
-.form-field small { color: oklch(0.48 0.025 44.2); font-weight: 450; }
+.form-field small { color: var(--admin-text-subtle); font-weight: 450; }
 .form-field--wide { grid-column: 1 / -1; }
 
 .data-table-scroll {
 	overflow-x: auto;
-	border: 1px solid oklch(0.82 0.02 67.7);
-	border-radius: 0.625rem;
+	border: 1px solid var(--admin-border);
+	border-radius: var(--admin-radius-panel);
 }
 
 .data-table {
@@ -85,7 +86,7 @@
 .data-table th,
 .data-table td {
 	padding: 0.75rem;
-	border-bottom: 1px solid oklch(0.88 0.016 67.7);
+	border-bottom: 1px solid var(--admin-border-subtle);
 	text-align: left;
 	vertical-align: top;
 }
@@ -93,10 +94,10 @@
 .data-table tbody tr:last-child td { border-bottom: 0; }
 .data-table th { color: oklch(0.34 0.045 44.2); background: oklch(0.96 0.014 67.7); }
 
-.breadcrumbs { display: flex; gap: 0.5rem; margin-bottom: 1rem; color: oklch(0.46 0.035 44.2); }
-.breadcrumbs a { color: oklch(0.42 0.12 46.5); }
+.breadcrumbs { display: flex; gap: 0.5rem; margin-bottom: 1rem; color: var(--admin-text-muted); }
+.breadcrumbs a { color: var(--admin-link); }
 .form-actions { display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap; }
-.field-error { padding: 0.75rem; border-radius: 0.5rem; color: oklch(0.36 0.15 28); background: oklch(0.94 0.04 28); }
+.field-error { padding: 0.75rem; border-radius: var(--admin-radius-control); color: oklch(0.36 0.15 28); background: var(--admin-danger-surface); }
 
 @media (max-width: 48rem) {
 	.page-header { align-items: flex-start; flex-direction: column; }

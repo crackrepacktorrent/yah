@@ -1,11 +1,11 @@
 .campaign-analytics-page {
-	color: oklch(0.26 0.044 44.2);
+	color: var(--admin-text);
 }
 
 .campaign-analytics-intro {
 	max-width: 70rem;
 	margin: 0 0 1.25rem;
-	color: oklch(0.46 0.035 44.2);
+	color: var(--admin-text-muted);
 }
 
 .campaign-analytics-filters {
@@ -14,8 +14,8 @@
 	gap: 1rem;
 	align-items: end;
 	padding: 1rem;
-	border: 1px solid oklch(0.84 0.018 67.7);
-	border-radius: 0.625rem;
+	border: 1px solid var(--admin-border-panel);
+	border-radius: var(--admin-radius-panel);
 	background: oklch(0.985 0.006 67.7);
 }
 
@@ -33,7 +33,7 @@
 
 .campaign-analytics-filters fieldset > p {
 	margin: 0.25rem 0 0.65rem;
-	color: oklch(0.48 0.025 44.2);
+	color: var(--admin-text-subtle);
 	font-size: 0.88rem;
 }
 
@@ -64,7 +64,7 @@
 .campaign-analytics-options small {
 	min-width: 0;
 	overflow-wrap: anywhere;
-	color: oklch(0.48 0.025 44.2);
+	color: var(--admin-text-subtle);
 }
 
 .campaign-analytics-dates {
@@ -81,8 +81,8 @@
 .campaign-analytics-dates input {
 	min-height: 2.75rem;
 	padding: 0.625rem 0.75rem;
-	border: 1px solid oklch(0.68 0.025 60);
-	border-radius: 0.5rem;
+	border: 1px solid var(--admin-control-border);
+	border-radius: var(--admin-radius-control);
 	color: inherit;
 	background: white;
 	font: inherit;
@@ -107,7 +107,7 @@
 .campaign-metric-empty {
 	margin: 1rem 0 0;
 	padding: 1rem;
-	border-radius: 0.5rem;
+	border-radius: var(--admin-radius-control);
 }
 
 .campaign-analytics-filter-error,
@@ -118,7 +118,7 @@
 .campaign-analytics-empty,
 .campaign-metric-loading,
 .campaign-metric-empty {
-	background: oklch(0.975 0.008 67.7);
+	background: var(--admin-surface-subtle);
 }
 
 .campaign-analytics-results {
@@ -131,8 +131,8 @@
 .campaign-metric-panel {
 	min-width: 0;
 	padding: 1rem;
-	border: 1px solid oklch(0.84 0.018 67.7);
-	border-radius: 0.625rem;
+	border: 1px solid var(--admin-border-panel);
+	border-radius: var(--admin-radius-panel);
 	background: oklch(0.985 0.006 67.7);
 }
 
@@ -147,7 +147,7 @@
 	justify-content: space-between;
 	gap: 0.75rem;
 	padding: 0.85rem 1rem;
-	border-radius: 0.5rem;
+	border-radius: var(--admin-radius-control);
 }
 
 .campaign-metric-error p {

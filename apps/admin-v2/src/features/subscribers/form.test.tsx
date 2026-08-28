@@ -1,5 +1,5 @@
 import { createComponent, render } from '@solidjs/web';
-import { flush } from 'solid-js';
+import { createSignal, flush } from 'solid-js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MailingList } from '~/features/mailing-lists/contracts';
 import type { SubscriberDetail, SubscriberMembership } from './contracts';
@@ -127,6 +127,7 @@ describe('SubscriberProfileForm', () => {
 	it('keeps blocklisted status read-only instead of hiding recovery inside ordinary editing', () => {
 		const container = mount(() => createComponent(SubscriberProfileForm, {
 			subscriber: subscriber({ status: 'blocklisted' }),
+			resetVersion: 0,
 			pending: false,
 			error: '',
 			onSubmit: vi.fn(),
@@ -135,6 +136,28 @@ describe('SubscriberProfileForm', () => {
 		expect(container.querySelector('select[name="status"]')).toBeNull();
 		expect(container.querySelector<HTMLInputElement>('input[value="Blocklisted"]')?.disabled).toBe(true);
 		expect(container.textContent).toContain('separate recovery workflow');
+	});
+
+	it('preserves a dirty draft across unrelated data refreshes and resets after its own save', () => {
+		const [current, setCurrent] = createSignal(subscriber());
+		const [resetVersion, setResetVersion] = createSignal(0);
+		const container = mount(() => createComponent(SubscriberProfileForm, {
+			get subscriber() { return current(); },
+			get resetVersion() { return resetVersion(); },
+			pending: false,
+			error: '',
+			onSubmit: vi.fn(),
+		}));
+		const name = container.querySelector<HTMLInputElement>('input[name="name"]')!;
+		name.value = 'Unsaved profile draft';
+		name.dispatchEvent(new InputEvent('input', { bubbles: true }));
+		setCurrent(subscriber({ name: 'Provider profile', updatedAt: '2026-01-03T00:00:00.000Z' }));
+		flush();
+		expect(name.value).toBe('Unsaved profile draft');
+
+		setResetVersion(1);
+		flush();
+		expect(name.value).toBe('Provider profile');
 	});
 });
 
@@ -152,6 +175,7 @@ describe('SubscriberMembershipForm', () => {
 		const container = mount(() => createComponent(SubscriberMembershipForm, {
 			subscriber: detail,
 			lists: [list(1), list(2, { optIn: 'double' }), list(3, { status: 'archived' }), list(4, { kind: 'temporary' }), list(5)],
+			resetVersion: 0,
 			pending: false,
 			error: '',
 			onSubmit,
@@ -168,5 +192,27 @@ describe('SubscriberMembershipForm', () => {
 		expect(onSubmit).toHaveBeenCalledWith([2]);
 		expect(container.textContent).toContain('Unchecking an existing membership unsubscribes it while preserving its consent history');
 		expect(container.textContent).toContain('remain unconfirmed until the recipient confirms');
+	});
+
+	it('preserves dirty membership choices across a profile refresh', () => {
+		const [current, setCurrent] = createSignal(subscriber({ memberships: [membership(1)] }));
+		const [resetVersion, setResetVersion] = createSignal(0);
+		const container = mount(() => createComponent(SubscriberMembershipForm, {
+			get subscriber() { return current(); },
+			lists: [list(1), list(2)],
+			get resetVersion() { return resetVersion(); },
+			pending: false,
+			error: '',
+			onSubmit: vi.fn(),
+		}));
+		const second = container.querySelector<HTMLInputElement>('input[value="2"]')!;
+		second.click();
+		setCurrent(subscriber({ memberships: [membership(1)], updatedAt: '2026-01-03T00:00:00.000Z' }));
+		flush();
+		expect(second.checked).toBe(true);
+
+		setResetVersion(1);
+		flush();
+		expect(second.checked).toBe(false);
 	});
 });

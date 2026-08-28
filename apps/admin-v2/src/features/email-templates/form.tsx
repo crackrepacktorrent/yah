@@ -1,4 +1,4 @@
-import { Show, createSignal } from 'solid-js';
+import { Show, createSignal, untrack } from 'solid-js';
 import type { AuthorableEmailTemplateKind, CreateEmailTemplateCommand } from './contracts';
 import { visibleError } from '~/ui/visible-error';
 
@@ -19,10 +19,11 @@ export function EmailTemplateForm(props: {
 	onSubmit: (values: EmailTemplateFormValues) => void;
 	onPreview: (values: Pick<EmailTemplateFormValues, 'kind' | 'body'>) => Promise<string>;
 }) {
-	const [name, setName] = createSignal(props.initial?.name ?? '');
-	const [kind, setKind] = createSignal<AuthorableEmailTemplateKind>(props.initial?.kind ?? 'tx');
-	const [subject, setSubject] = createSignal(props.initial?.subject ?? '');
-	const [body, setBody] = createSignal(props.initial?.body ?? '');
+	const initial = untrack(() => props.initial);
+	const [name, setName] = createSignal(initial?.name ?? '');
+	const [kind, setKind] = createSignal<AuthorableEmailTemplateKind>(initial?.kind ?? 'tx');
+	const [subject, setSubject] = createSignal(initial?.subject ?? '');
+	const [body, setBody] = createSignal(initial?.body ?? '');
 	const [previewHtml, setPreviewHtml] = createSignal('');
 	const [previewPending, setPreviewPending] = createSignal(false);
 	const [previewError, setPreviewError] = createSignal('');

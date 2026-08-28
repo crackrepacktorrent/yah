@@ -19,11 +19,17 @@ import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/templates/:id', {
+	matchFilters: { id: (segment) => decodeEmailTemplateRouteId(segment) > 0 },
 	preload: ({ params }) => void getEmailTemplate(decodeEmailTemplateRouteId(params.id)),
 });
 
 export default function EmailTemplateDetailPage(props: RouteProps<typeof route>) {
-	const template = createMemo(() => getEmailTemplate(decodeEmailTemplateRouteId(props.params.id)));
+	const templateId = createMemo(() => decodeEmailTemplateRouteId(props.params.id));
+	return <Show when={templateId()} keyed>{(resolved) => <EmailTemplateRoute templateId={resolved} />}</Show>;
+}
+
+function EmailTemplateRoute(props: { templateId: number }) {
+	const template = createMemo(() => getEmailTemplate(props.templateId));
 	return <Show when={template()}>{(resolved) => <EmailTemplateDetailView template={resolved()} />}</Show>;
 }
 

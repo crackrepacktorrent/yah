@@ -238,6 +238,10 @@ test('framework-neutral content engines preserve reactive lifecycle behavior', a
 	await page.goto('/compatibility/content');
 	const editor = page.getByRole('textbox', { name: 'Campaign content' });
 	const output = page.getByLabel('Generated HTML');
+	const toolbar = page.getByRole('toolbar', { name: 'Campaign content formatting' });
+	for (const name of ['Bold', 'Italic', 'Underline', 'Strikethrough', 'Heading 1', 'Heading 2', 'Heading 3', 'Bulleted list', 'Numbered list', 'Block quote', 'Add link']) {
+		await expect(toolbar.getByRole('button', { name })).toBeVisible();
+	}
 	await expect(editor).toContainText('Solid 2 keeps Lexical framework-neutral.');
 	await expect(editor).not.toHaveAttribute('aria-busy');
 	await editor.click();
@@ -248,6 +252,10 @@ test('framework-neutral content engines preserve reactive lifecycle behavior', a
 	await editor.press('ControlOrMeta+A');
 	await page.getByRole('button', { name: 'Bold' }).click();
 	await expect(output).toContainText(/<(b|strong)/);
+	await page.getByRole('button', { name: 'Add link' }).click();
+	await page.getByLabel('Link URL').fill('https://example.org/campaign');
+	await page.getByRole('button', { name: 'Apply link' }).click();
+	await expect(output).toContainText(/<a href="https:\/\/example\.org\/campaign"/);
 
 	await page.getByRole('button', { name: 'Replace editor value' }).click();
 	await expect(editor).toHaveText('External replacement.');

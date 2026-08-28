@@ -1,4 +1,4 @@
-import { Show, createSignal } from 'solid-js';
+import { Show, createSignal, untrack } from 'solid-js';
 import type { AuthorableMailingListKind, MailingListOptIn, MailingListStatus } from './contracts';
 
 export type MailingListFormValues = {
@@ -27,11 +27,12 @@ export function MailingListForm(props: {
 	cancelHref: string;
 	onSubmit: (values: MailingListFormValues) => void;
 }) {
-	const [name, setName] = createSignal(props.initial?.name ?? '');
-	const [kind, setKind] = createSignal<AuthorableMailingListKind>(props.initial?.kind ?? 'private');
-	const [optIn, setOptIn] = createSignal<MailingListOptIn>(props.initial?.optIn ?? 'double');
-	const [status, setStatus] = createSignal<MailingListStatus>(props.initial?.status ?? 'active');
-	const [description, setDescription] = createSignal(props.initial?.description ?? '');
+	const initial = untrack(() => props.initial);
+	const [name, setName] = createSignal(initial?.name ?? '');
+	const [kind, setKind] = createSignal<AuthorableMailingListKind>(initial?.kind ?? 'private');
+	const [optIn, setOptIn] = createSignal<MailingListOptIn>(initial?.optIn ?? 'double');
+	const [status, setStatus] = createSignal<MailingListStatus>(initial?.status ?? 'active');
+	const [description, setDescription] = createSignal(initial?.description ?? '');
 
 	return (
 		<form
@@ -75,7 +76,7 @@ export function MailingListForm(props: {
 			<label class="form-field form-field--wide">
 				<span>Description</span>
 				<textarea name="description" value={description()} onInput={(event) => setDescription(event.currentTarget.value)} rows="5" maxlength={10_000} disabled={props.pending} />
-				<Show when={props.mode === 'edit' && props.initial?.description}>
+				<Show when={props.mode === 'edit' && initial?.description}>
 					<small>Listmonk 6 can replace this description but cannot clear it to empty.</small>
 				</Show>
 			</label>

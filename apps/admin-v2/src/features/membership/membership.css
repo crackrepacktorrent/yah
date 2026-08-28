@@ -1,8 +1,6 @@
-@import '../../ui/admin-controls.css';
-
 .membership-page,
 .membership-editor-page {
-	color: oklch(0.26 0.044 44.2);
+	color: var(--admin-text);
 }
 
 .membership-section + .membership-section {
@@ -27,7 +25,7 @@
 .membership-section__header p,
 .membership-editor-page > p,
 .membership-empty {
-	color: oklch(0.46 0.035 44.2);
+	color: var(--admin-text-muted);
 }
 
 .role-badges,
@@ -79,7 +77,7 @@
 .role-fieldset {
 	padding: 1rem;
 	border: 1px solid oklch(0.75 0.025 60);
-	border-radius: 0.5rem;
+	border-radius: var(--admin-radius-control);
 }
 
 .role-fieldset legend {
@@ -89,7 +87,7 @@
 
 .role-fieldset > p {
 	margin: 0 0 0.75rem;
-	color: oklch(0.46 0.035 44.2);
+	color: var(--admin-text-muted);
 	font-size: 0.9rem;
 }
 
@@ -105,7 +103,7 @@
 	align-items: center;
 	gap: 0.55rem;
 	padding: 0.6rem 0.75rem;
-	border: 1px solid oklch(0.82 0.02 67.7);
+	border: 1px solid var(--admin-border);
 	border-radius: 0.45rem;
 	background: white;
 	cursor: pointer;

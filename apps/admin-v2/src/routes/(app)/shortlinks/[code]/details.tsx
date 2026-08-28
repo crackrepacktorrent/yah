@@ -12,13 +12,19 @@ import { visibleError } from '~/ui/visible-error';
 import '../shortlinks.css';
 
 export const route = defineFileRoute('/shortlinks/:code/details', {
+	matchFilters: { code: (segment) => decodeShortlinkRouteCode(segment) !== '' },
 	preload: ({ params }) => void getShortlink(decodeShortlinkRouteCode(params.code)),
 });
 
 export default function ShortlinkDetailPage(props: RouteProps<typeof route>) {
+	const shortCode = createMemo(() => decodeShortlinkRouteCode(props.params.code));
+	return <Show when={shortCode()} keyed>{(resolved) => <ShortlinkDetailRoute shortCode={resolved} />}</Show>;
+}
+
+function ShortlinkDetailRoute(props: { shortCode: string }) {
 	const navigate = useNavigate();
 	const session = createMemo(() => requireSession());
-	const detail = createMemo(() => getShortlink(decodeShortlinkRouteCode(props.params.code)));
+	const detail = createMemo(() => getShortlink(props.shortCode));
 	const canEdit = createMemo(() => session().permissions['shortlink']?.includes('edit') ?? false);
 	const canDelete = createMemo(() => session().permissions['shortlink']?.includes('delete') ?? false);
 	const printedQr = createMemo(() => isPrintedQrShortCode(detail().shortlink.shortCode));

@@ -19,11 +19,17 @@ import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/subscribers/:id', {
+	matchFilters: { id: (segment) => decodeSubscriberRouteId(segment) > 0 },
 	preload: ({ params }) => void getSubscriber(decodeSubscriberRouteId(params.id)),
 });
 
 export default function SubscriberDetailPage(props: RouteProps<typeof route>) {
-	const subscriber = createMemo(() => getSubscriber(decodeSubscriberRouteId(props.params.id)));
+	const subscriberId = createMemo(() => decodeSubscriberRouteId(props.params.id));
+	return <Show when={subscriberId()} keyed>{(resolved) => <SubscriberRoute subscriberId={resolved} />}</Show>;
+}
+
+function SubscriberRoute(props: { subscriberId: number }) {
+	const subscriber = createMemo(() => getSubscriber(props.subscriberId));
 	return <Show when={subscriber()}>{(resolved) => <SubscriberDetailView subscriber={resolved()} />}</Show>;
 }
 
@@ -43,8 +49,10 @@ function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 	const membershipState = createMemo(() => canViewLists() ? getSubscriberMemberships(props.subscriber.id) : null);
 	const [profilePending, setProfilePending] = createSignal(false);
 	const [profileError, setProfileError] = createSignal('');
+	const [profileResetVersion, setProfileResetVersion] = createSignal(0);
 	const [membershipsPending, setMembershipsPending] = createSignal(false);
 	const [membershipsError, setMembershipsError] = createSignal('');
+	const [membershipsResetVersion, setMembershipsResetVersion] = createSignal(0);
 	const [activityOpen, setActivityOpen] = createSignal(false);
 	const [testSendOpen, setTestSendOpen] = createSignal(false);
 	const [bouncesOpen, setBouncesOpen] = createSignal(false);
@@ -55,7 +63,11 @@ function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 	async function refresh(): Promise<void> {
 		const keys = [getSubscriber.keyFor(props.subscriber.id), listSubscribers.key];
 		if (canViewLists()) keys.push(getSubscriberMemberships.keyFor(props.subscriber.id));
-		await revalidate(keys);
+		revalidate(keys);
+		await Promise.all([
+			getSubscriber(props.subscriber.id),
+			...(canViewLists() ? [getSubscriberMemberships(props.subscriber.id)] : []),
+		]);
 	}
 
 	async function saveProfile(values: SubscriberProfileFormValues): Promise<void> {
@@ -63,7 +75,13 @@ function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 		setProfilePending(true);
 		try {
 			await updateSubscriberProfile({ id: props.subscriber.id, expectedUpdatedAt: props.subscriber.updatedAt, ...values });
-			await refresh();
+			try {
+				await refresh();
+			} catch {
+				setProfileError('The subscriber profile was saved, but its latest provider state could not be reloaded. Reload this page before editing again.');
+				return;
+			}
+			setProfileResetVersion((version) => version + 1);
 			toast.success('Subscriber profile updated.');
 		} catch (caught) {
 			setProfileError(visibleError(caught, 'The subscriber profile could not be updated.'));
@@ -84,7 +102,13 @@ function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 				expectedMembershipVersion: current.membershipVersion,
 				listIds,
 			});
-			await refresh();
+			try {
+				await refresh();
+			} catch {
+				setMembershipsError('The memberships were saved, but their latest provider state could not be reloaded. Reload this page before editing again.');
+				return;
+			}
+			setMembershipsResetVersion((version) => version + 1);
 			toast.success('Subscriber memberships updated.');
 		} catch (caught) {
 			setMembershipsError(visibleError(caught, 'The subscriber memberships could not be updated.'));
@@ -119,8 +143,14 @@ function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 				if (!current) throw new Error('Subscriber memberships are unavailable.');
 				await requestSubscriberOptIn({ ...version, expectedMembershipVersion: current.membershipVersion });
 			}
+			try {
+				await refresh();
+			} catch {
+				setDialog(null);
+				toast.error(`The subscriber was ${operation === 'blocklist' ? 'blocklisted' : 'sent an opt-in request'}, but its latest provider state could not be reloaded. Reload this page before another change.`);
+				return;
+			}
 			setDialog(null);
-			await refresh();
 			toast.success(operation === 'blocklist' ? 'Subscriber blocklisted.' : 'Opt-in request accepted.');
 		} catch (caught) {
 			setActionError(visibleError(caught, operation === 'optin' ? 'The opt-in request was not accepted.' : `The subscriber could not be ${operation === 'blocklist' ? 'blocklisted' : 'deleted'}.`));
@@ -143,7 +173,7 @@ function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 			<section class="subscriber-section" aria-labelledby="subscriber-profile-heading">
 				<h2 id="subscriber-profile-heading">Profile</h2>
 				<Show when={canEdit()} fallback={<ReadOnlyProfile subscriber={props.subscriber} />}>
-					<SubscriberProfileForm subscriber={props.subscriber} pending={profilePending()} error={profileError()} onSubmit={(values) => void saveProfile(values)} />
+					<SubscriberProfileForm subscriber={props.subscriber} resetVersion={profileResetVersion()} pending={profilePending()} error={profileError()} onSubmit={(values) => void saveProfile(values)} />
 				</Show>
 			</section>
 
@@ -152,7 +182,7 @@ function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 					<h2 id="subscriber-memberships-heading">Mailing-list memberships</h2>
 					<Errored fallback={(_error, reset) => <SubscriberSectionError title="Memberships unavailable" retry={() => { revalidate(getSubscriberMemberships.keyFor(props.subscriber.id), true); reset(); }} />}>
 						<Loading fallback={<p role="status">Loading subscriber memberships…</p>}>
-							<Show when={membershipState()}>{(current) => <><Show when={canEdit() && current().canRequestOptIn}><div class="subscriber-detail-actions"><button class="button button--secondary" type="button" onClick={() => openDialog('optin')}>Request confirmation</button></div></Show><Show when={canEditMemberships()} fallback={<ReadOnlyMemberships subscriber={current()} />}><SubscriberMembershipForm subscriber={current()} lists={lists()} pending={membershipsPending()} error={membershipsError()} onSubmit={(ids) => void saveMemberships(ids)} /></Show></>}</Show>
+							<Show when={membershipState()}>{(current) => <><Show when={canEdit() && current().canRequestOptIn}><div class="subscriber-detail-actions"><button class="button button--secondary" type="button" onClick={() => openDialog('optin')}>Request confirmation</button></div></Show><Show when={canEditMemberships()} fallback={<ReadOnlyMemberships subscriber={current()} />}><SubscriberMembershipForm subscriber={current()} lists={lists()} resetVersion={membershipsResetVersion()} pending={membershipsPending()} error={membershipsError()} onSubmit={(ids) => void saveMemberships(ids)} /></Show></>}</Show>
 						</Loading>
 					</Errored>
 				</section>
@@ -272,7 +302,7 @@ function SubscriberBounceHistory(props: { subscriberId: number; email: string; c
 		setError('');
 		try {
 			await clearSubscriberBounces(props.subscriberId);
-			await revalidate(listSubscriberBounces.keyFor(props.subscriberId));
+			revalidate(listSubscriberBounces.keyFor(props.subscriberId));
 			setConfirmOpen(false);
 			toast.success('Subscriber bounce history cleared.');
 		} catch (caught) {

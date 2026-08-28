@@ -49,9 +49,14 @@ function unavailableMessage(step: InvitationStep): string {
 }
 
 export default function AcceptInvitationPage(props: RouteProps<typeof route>) {
+	const invitationId = createMemo(() => props.params.id);
+	return <Show when={invitationId()} keyed>{(resolved) => <AcceptInvitationRoute invitationId={resolved} />}</Show>;
+}
+
+function AcceptInvitationRoute(props: { invitationId: string }) {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
-	const invitationId = () => props.params.id;
+	const invitationId = () => props.invitationId;
 	const invitationPath = () => invitationCallbackPath(invitationId());
 	const invitation = createMemo(() => getInvitationInfo(invitationId()));
 	const session = createMemo(() => getSession());

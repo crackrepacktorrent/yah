@@ -1,5 +1,5 @@
 import { defineFileRoute } from '@solidjs/router/fs';
-import { For, Show, createMemo, createSignal } from 'solid-js';
+import { For, Show, createMemo } from 'solid-js';
 import { emailTemplateKindLabel } from '~/features/email-templates/form';
 import { emailTemplateHref } from '~/features/email-templates/routing';
 import { listEmailTemplates } from '~/features/email-templates/server';
@@ -13,17 +13,6 @@ export default function EmailTemplateListPage() {
 	const templates = createMemo(() => listEmailTemplates());
 	const session = createMemo(() => requireSession());
 	const canCreate = createMemo(() => session().permissions['template']?.includes('create') ?? false);
-	const [filter, setFilter] = createSignal('');
-	const filtered = createMemo(() => {
-		const search = filter().trim().toLowerCase();
-		return templates().filter(
-			(template) =>
-				!search ||
-				template.name.toLowerCase().includes(search) ||
-				template.subject.toLowerCase().includes(search) ||
-				emailTemplateKindLabel(template.kind).toLowerCase().includes(search),
-		);
-	});
 
 	return (
 		<section class="email-templates-page">
@@ -34,25 +23,13 @@ export default function EmailTemplateListPage() {
 				</div>
 				<Show when={canCreate()}><a class="button" href="/emails/templates/new">New template</a></Show>
 			</header>
-			<label class="filter-field">
-				<span>Filter templates</span>
-				<input
-					type="search"
-					value={filter()}
-					onInput={(event) => setFilter(event.currentTarget.value)}
-					placeholder="Name, subject, or type"
-				/>
-			</label>
 			<div class="data-table-scroll">
 				<table class="data-table">
 					<caption class="visually-hidden">Email templates</caption>
 					<thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Subject</th><th scope="col">Created</th><th scope="col">Updated</th></tr></thead>
 					<tbody>
-						<Show
-							when={filtered().length > 0}
-							fallback={<tr><td colspan="5">No email templates match this filter.</td></tr>}
-						>
-							<For each={filtered()}>
+						<Show when={templates().length > 0} fallback={<tr><td colspan="5">No email templates yet.</td></tr>}>
+							<For each={templates()}>
 								{(template) => (
 									<tr>
 										<td><a class="email-template-name" href={emailTemplateHref(template.id)}>{template.name}</a></td>

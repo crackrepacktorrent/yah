@@ -20,12 +20,23 @@ export default function ProtectedLayout(props: ParentProps) {
 	const canViewCampaigns = createMemo(() => session().permissions['campaign']?.includes('view') ?? false);
 	const canViewSubscribers = createMemo(() => session().permissions['subscriber']?.includes('view') ?? false);
 	const canViewBounces = createMemo(() => session().permissions['bounce']?.includes('view') ?? false);
+	const canViewSettings = createMemo(() => session().permissions['settings']?.includes('view') ?? false);
+	const canViewEmailLogs = createMemo(() => session().permissions['provider']?.includes('manage') ?? false);
 	const canViewRoles = createMemo(() => session().permissions['ac']?.includes('read') ?? false);
 	const canViewMembers = createMemo(
 		() =>
 			(session().permissions['member']?.includes('create') ?? false) &&
 			(session().permissions['invitation']?.includes('create') ?? false),
 	);
+	const emailHref = createMemo(() => {
+		if (canViewEmailTemplates()) return '/emails';
+		if (canViewMailingLists()) return '/emails/lists';
+		if (canViewCampaigns()) return '/emails/campaigns';
+		if (canViewSubscribers()) return '/emails/subscribers';
+		if (canViewBounces()) return '/emails/bounces';
+		if (canViewEmailLogs()) return '/emails/logs';
+		return undefined;
+	});
 
 	async function handleLogout(): Promise<void> {
 		try {
@@ -70,8 +81,8 @@ export default function ProtectedLayout(props: ParentProps) {
 									Shortlinks
 								</a>
 							</Show>
-							<Show when={canViewEmailTemplates() || canViewMailingLists() || canViewCampaigns() || canViewSubscribers() || canViewBounces()}>
-								<a href={canViewEmailTemplates() ? '/emails' : canViewMailingLists() ? '/emails/lists' : canViewCampaigns() ? '/emails/campaigns' : canViewSubscribers() ? '/emails/subscribers' : '/emails/bounces'}>Email</a>
+							<Show when={emailHref()}>
+								{(href) => <a href={href()}>Email</a>}
 							</Show>
 							<Show when={canViewRoles()}>
 								<a href="/roles">Roles</a>
@@ -79,9 +90,12 @@ export default function ProtectedLayout(props: ParentProps) {
 							<Show when={canViewMembers()}>
 								<a href="/members">Members</a>
 							</Show>
+							<Show when={canViewSettings()}>
+								<a href="/settings/email">Settings</a>
+							</Show>
 						</nav>
 						<div class="admin-account-v2">
-							<span>{session().user.email}</span>
+							<span class="admin-account-email-v2">{session().user.email}</span>
 							<button type="button" onClick={() => void handleLogout()}>
 								Sign out
 							</button>

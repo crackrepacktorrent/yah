@@ -11,11 +11,17 @@ import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/lists/:id', {
+	matchFilters: { id: (segment) => decodeMailingListRouteId(segment) > 0 },
 	preload: ({ params }) => void getMailingList(decodeMailingListRouteId(params.id)),
 });
 
 export default function MailingListDetailPage(props: RouteProps<typeof route>) {
-	const list = createMemo(() => getMailingList(decodeMailingListRouteId(props.params.id)));
+	const listId = createMemo(() => decodeMailingListRouteId(props.params.id));
+	return <Show when={listId()} keyed>{(resolved) => <MailingListRoute listId={resolved} />}</Show>;
+}
+
+function MailingListRoute(props: { listId: number }) {
+	const list = createMemo(() => getMailingList(props.listId));
 	return <Show when={list()}>{(resolved) => <MailingListDetail list={resolved()} />}</Show>;
 }
 
@@ -36,6 +42,12 @@ function MailingListDetail(props: { list: MailingList }) {
 		try {
 			await updateMailingList({ id: props.list.id, expectedUpdatedAt: props.list.updatedAt, ...values });
 			revalidate([getMailingList.keyFor(props.list.id), listMailingLists.key]);
+			try {
+				await getMailingList(props.list.id);
+			} catch {
+				setError('The mailing list was saved, but its latest provider state could not be reloaded. Reload this page before editing again.');
+				return;
+			}
 			toast.success('Mailing list updated.');
 		} catch (caught) {
 			setError(visibleError(caught, 'The mailing list could not be updated.'));

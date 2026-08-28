@@ -57,7 +57,7 @@ function CampaignTable(props: { campaigns: CampaignSummary[] }) {
 			await deleteCampaigns({ campaigns: selected().map((campaign) => ({ id: campaign.id, expectedUpdatedAt: campaign.updatedAt })) });
 			setSelectedIds([]);
 			setDeleteOpen(false);
-			await revalidate(listCampaigns.key);
+			revalidate(listCampaigns.key);
 			toast.success('Draft campaigns deleted.');
 		} catch (caught) {
 			setDeleteError(visibleError(caught, 'The selected campaigns could not be deleted.'));

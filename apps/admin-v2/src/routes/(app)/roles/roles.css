@@ -1,11 +1,9 @@
-@import '../../../ui/admin-controls.css';
-
-.roles-page { color: oklch(0.26 0.044 44.2); }
+.roles-page { color: var(--admin-text); }
 .roles-page h1 { margin-bottom: 0; }
 .roles-page > p { margin-top: 0.5rem; color: oklch(0.44 0.035 44.2); }
 .role-key { font-family: ui-monospace, monospace; font-weight: 700; }
 .role-type,
-.role-date { color: oklch(0.46 0.035 44.2); }
+.role-date { color: var(--admin-text-muted); }
 .role-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .role-actions a:not(.button) { font-weight: 650; }
 
@@ -21,20 +19,20 @@
 .permission-groups fieldset {
 	min-width: 0;
 	padding: 1rem;
-	border: 1px solid oklch(0.82 0.02 67.7);
-	border-radius: 0.625rem;
+	border: 1px solid var(--admin-border);
+	border-radius: var(--admin-radius-panel);
 }
 .permission-groups legend { padding: 0 0.3rem; font-weight: 750; }
 .permission-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
 .permission-toggle { display: flex; gap: 0.5rem; align-items: flex-start; }
 .permission-toggle input { width: 1.15rem; height: 1.15rem; flex: 0 0 auto; margin-top: 0.15rem; }
-.permission-toggle--all { padding-bottom: 0.65rem; border-bottom: 1px solid oklch(0.88 0.016 67.7); font-weight: 650; }
+.permission-toggle--all { padding-bottom: 0.65rem; border-bottom: 1px solid var(--admin-border-subtle); font-weight: 650; }
 
 .permission-details { max-width: 58rem; margin: 1.5rem 0; }
-.permission-details > div { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 2fr); gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid oklch(0.88 0.016 67.7); }
+.permission-details > div { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 2fr); gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--admin-border-subtle); }
 .permission-details dt { font-weight: 700; }
 .permission-details dd { margin: 0; }
-.role-retirement-note { max-width: 58rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid oklch(0.84 0.018 67.7); color: oklch(0.44 0.035 44.2); }
+.role-retirement-note { max-width: 58rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--admin-border-panel); color: oklch(0.44 0.035 44.2); }
 
 @media (max-width: 48rem) {
 	.permission-groups,

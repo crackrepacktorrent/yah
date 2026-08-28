@@ -15,10 +15,11 @@ export default function EmailManagementLayout(props: ParentProps) {
 	const canViewCampaigns = createMemo(() => session().permissions['campaign']?.includes('view') ?? false);
 	const canViewSubscribers = createMemo(() => session().permissions['subscriber']?.includes('view') ?? false);
 	const canViewBounces = createMemo(() => session().permissions['bounce']?.includes('view') ?? false);
+	const canViewLogs = createMemo(() => session().permissions['provider']?.includes('manage') ?? false);
 
 	return (
 		<>
-			<Show when={canViewTemplates() || canViewLists() || canViewCampaigns() || canViewSubscribers() || canViewBounces()}>
+			<Show when={canViewTemplates() || canViewLists() || canViewCampaigns() || canViewSubscribers() || canViewBounces() || canViewLogs()}>
 				<nav class="email-navigation" aria-label="Email management">
 					<Show when={canViewCampaigns()}>
 						<a href="/emails/campaigns" data-selected={routeIsWithin(location.pathname, '/emails/campaigns') || undefined}>Campaigns</a>
@@ -43,6 +44,9 @@ export default function EmailManagementLayout(props: ParentProps) {
 					</Show>
 					<Show when={canViewBounces()}>
 						<a href="/emails/bounces" data-selected={routeIsWithin(location.pathname, '/emails/bounces') || undefined}>Bounces</a>
+					</Show>
+					<Show when={canViewLogs()}>
+						<a href="/emails/logs" data-selected={routeIsWithin(location.pathname, '/emails/logs') || undefined}>Logs</a>
 					</Show>
 				</nav>
 			</Show>

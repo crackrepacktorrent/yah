@@ -11,19 +11,21 @@ import { visibleError } from '~/ui/visible-error';
 import '../roles.css';
 
 export const route = defineFileRoute('/roles/:id/clone', {
-	preload: ({ params }) => {
+	matchFilters: { id: (segment) => decodeRoleRouteId(segment) !== '' },
+	preload: () => {
 		void requireRoleRouteCapability('create');
 		void listRoles();
-		void decodeRoleRouteId(params.id);
 	},
 });
 
 export default function CloneRolePage(props: RouteProps<typeof route>) {
+	const roleId = createMemo(() => decodeRoleRouteId(props.params.id));
+	return <Show when={roleId()} keyed>{(resolved) => <CloneRoleRoute roleId={resolved} />}</Show>;
+}
+
+function CloneRoleRoute(props: { roleId: string }) {
 	const catalog = createMemo(() => listRoles());
-	const role = createMemo(() => {
-		const roleId = decodeRoleRouteId(props.params.id);
-		return catalog().roles.find((candidate) => candidate.id === roleId);
-	});
+	const role = createMemo(() => catalog().roles.find((candidate) => candidate.id === props.roleId));
 	return <Show when={role()} fallback={<RoleNotFound />}>{(resolved) => <CloneRoleEditor role={resolved()} />}</Show>;
 }
 

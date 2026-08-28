@@ -11,6 +11,7 @@ export const customRoleStatements = {
 	campaign: ['view', 'create', 'edit', 'delete', 'send'],
 	analytics: ['view'],
 	settings: ['view', 'edit'],
+	provider: ['manage'],
 } as const;
 
 export const statements = {
@@ -66,6 +67,7 @@ export const defaultRolePermissions: Record<string, Permissions> = {
 		campaign: ['view', 'create', 'edit', 'delete', 'send'],
 		analytics: ['view'],
 		settings: ['view', 'edit'],
+		provider: ['manage'],
 	},
 	admin: {
 		member: ['create', 'update', 'delete'],

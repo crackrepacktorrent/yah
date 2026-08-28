@@ -21,7 +21,7 @@
 .qr-code-controls select {
 	min-height: 2.25rem;
 	padding: 0.35rem 0.55rem;
-	border: 1px solid oklch(0.68 0.025 60);
+	border: 1px solid var(--admin-control-border);
 	border-radius: 0.4rem;
 	color: inherit;
 	background: white;

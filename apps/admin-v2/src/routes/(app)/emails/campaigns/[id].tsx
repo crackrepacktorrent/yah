@@ -14,6 +14,7 @@ import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/campaigns/:id', {
+	matchFilters: { id: (segment) => decodeCampaignRouteId(segment) > 0 },
 	preload: ({ params }) => void getCampaign(decodeCampaignRouteId(params.id)),
 });
 
@@ -33,7 +34,12 @@ function transitionCopy(campaign: CampaignDetail, transition: CampaignTransition
 }
 
 export default function CampaignDetailPage(props: RouteProps<typeof route>) {
-	const campaign = createMemo(() => getCampaign(decodeCampaignRouteId(props.params.id)));
+	const campaignId = createMemo(() => decodeCampaignRouteId(props.params.id));
+	return <Show when={campaignId()} keyed>{(resolved) => <CampaignRoute campaignId={resolved} />}</Show>;
+}
+
+function CampaignRoute(props: { campaignId: number }) {
+	const campaign = createMemo(() => getCampaign(props.campaignId));
 	return <Show when={campaign()}>{(resolved) => <CampaignDetailView campaign={resolved()} />}</Show>;
 }
 
@@ -86,11 +92,12 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 	}));
 
 	async function refresh(): Promise<void> {
-		await revalidate([
+		revalidate([
 			getCampaign.keyFor(props.campaign.id),
 			listCampaigns.key,
 			previewCampaign.keyFor(props.campaign.id),
 		]);
+		await getCampaign(props.campaign.id);
 	}
 
 	async function handleUpdate(values: CampaignFormValues): Promise<void> {
@@ -105,13 +112,18 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 				fromEmail: values.fromEmail,
 				listIds: values.listIds,
 				body: values.body,
-					contentType: values.contentType,
-					templateId: values.templateId,
-					tags: values.tags,
-					sendAt: values.sendAt,
-				});
-				clearPreview();
+				contentType: values.contentType,
+				templateId: values.templateId,
+				tags: values.tags,
+				sendAt: values.sendAt,
+			});
+			clearPreview();
+			try {
 				await refresh();
+			} catch {
+				setError('The campaign draft was saved, but its latest provider state could not be reloaded. Reload this page before editing again.');
+				return;
+			}
 			toast.success('Campaign draft updated.');
 		} catch (caught) {
 			setError(visibleError(caught, 'The campaign draft could not be updated.'));
@@ -147,8 +159,14 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 		setTransitionError('');
 		try {
 			await transitionCampaign({ id: props.campaign.id, expectedUpdatedAt: props.campaign.updatedAt, transition: selectedTransition() });
+			try {
+				await refresh();
+			} catch {
+				setTransitionOpen(false);
+				toast.error('The campaign status changed, but its latest provider state could not be reloaded. Reload this page before another change.');
+				return;
+			}
 			setTransitionOpen(false);
-			await refresh();
 			toast.success('Campaign status updated.');
 		} catch (caught) {
 			setTransitionError(visibleError(caught, 'The campaign status could not be changed.'));
