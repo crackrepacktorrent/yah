@@ -9,7 +9,7 @@ export default function Document(props: ParentProps) {
 				<meta charset="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<meta name="robots" content="noindex, nofollow" />
-				<title>{env.VITE_ADMIN_V2_TITLE}</title>
+				<title>{env.VITE_ADMIN_TITLE}</title>
 				<HydrationScript />
 			</head>
 			<body>{props.children}</body>

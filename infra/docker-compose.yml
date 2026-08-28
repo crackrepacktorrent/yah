@@ -101,7 +101,7 @@ services:
       PORT: 3002
       # Keep the runtime mode explicit; the Solid 2 server bundle validates
       # the complete production contract only in this mode.
-      ADMIN_V2_RUNTIME: production
+      ADMIN_RUNTIME: production
     expose:
       - "3002"
     depends_on:
@@ -126,7 +126,7 @@ services:
 
   shlink:
     # Stateful provider: never reconcile automatically. This is the exact
-    # production v5.0.1 artifact inventoried before the admin-v2 cutover.
+    # production v5.0.1 artifact inventoried before the admin cutover.
     image: shlinkio/shlink:5.0.1@sha256:a6d8508bc6b0eba5a28e1ee8b64dd5253434cd113c950e715baab4020edcd2a1
     restart: unless-stopped
     environment:

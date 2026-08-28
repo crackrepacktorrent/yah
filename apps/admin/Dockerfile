@@ -17,7 +17,7 @@ COPY packages/admin-core ./packages/admin-core
 # Build with the platform boundary closed. Server environment is read and
 # validated when the resulting process boots, so production credentials and a
 # reachable production database never belong in the image-build context.
-RUN cd apps/admin && ADMIN_V2_RUNTIME=platform-disabled bun run build
+RUN cd apps/admin && ADMIN_RUNTIME=platform-disabled bun run build
 
 # Dereference Bun's workspace link at the package boundary so the runtime copy
 # does not depend on Bun's internal content-store path.
@@ -43,7 +43,7 @@ COPY --from=builder /srvx-runtime ./node_modules/srvx
 COPY --from=builder /app/apps/admin/ops ./ops
 
 ENV NODE_ENV=production
-ENV ADMIN_V2_RUNTIME=production
+ENV ADMIN_RUNTIME=production
 ENV PORT=3002
 EXPOSE 3002
 

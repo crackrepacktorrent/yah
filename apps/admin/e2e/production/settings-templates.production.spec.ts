@@ -10,7 +10,7 @@ import {
 } from '../production-test';
 
 test('email operators can safely update SMTP settings, test delivery, and inspect redacted logs', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic Listmonk settings assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic Listmonk settings assertions require the local fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${70 + testInfo.retry}`,
@@ -158,7 +158,7 @@ test('email operators can safely update SMTP settings, test delivery, and inspec
 });
 
 test('email templates use route editors, provider previews, exact defaults, and single deletion', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic Listmonk assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic Listmonk assertions require the local fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${55 + testInfo.retry}`,

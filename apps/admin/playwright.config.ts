@@ -2,9 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 const disabledPort = 43122;
 const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'];
-const bunExecutable = process.env['ADMIN_V2_E2E_BUN_EXECUTABLE'] ?? 'bun';
+const bunExecutable = process.env['ADMIN_E2E_BUN_EXECUTABLE'] ?? 'bun';
 
-if (!/^[\w./-]+$/.test(bunExecutable)) throw new Error('ADMIN_V2_E2E_BUN_EXECUTABLE must be a plain executable path.');
+if (!/^[\w./-]+$/.test(bunExecutable)) throw new Error('ADMIN_E2E_BUN_EXECUTABLE must be a plain executable path.');
 
 export default defineConfig({
 	testDir: './e2e',
@@ -21,7 +21,7 @@ export default defineConfig({
 	},
 	webServer: [
 		{
-			command: `env ADMIN_V2_RUNTIME=platform-disabled ${bunExecutable} run start --host 127.0.0.1 --port ${disabledPort}`,
+			command: `env ADMIN_RUNTIME=platform-disabled ${bunExecutable} run start --host 127.0.0.1 --port ${disabledPort}`,
 			url: `http://127.0.0.1:${disabledPort}/api/health`,
 			reuseExistingServer: false,
 			timeout: 30_000,

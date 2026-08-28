@@ -7,7 +7,7 @@ import { decodeRoleRouteId } from '~/features/roles/routing';
 import { decodeShortlinkRouteCode } from '~/features/shortlinks/routing';
 import { decodeSubscriberRouteId } from '~/features/subscribers/routing';
 
-export type AdminV2Runtime = 'production' | 'platform-disabled';
+export type AdminRuntime = 'production' | 'platform-disabled';
 
 function hasPathPrefix(pathname: string, prefix: string): boolean {
 	return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -105,7 +105,7 @@ function methodNotAllowed(allowed: string): Response {
  * product slices, their server-function transport, and the real auth API.
  * Every callable function still owns its runtime, validation, and auth checks.
  */
-export function createAdminRuntimeGuard(runtime: AdminV2Runtime): FetchMiddleware {
+export function createAdminRuntimeGuard(runtime: AdminRuntime): FetchMiddleware {
 	return (request, next) => {
 		const { pathname } = new URL(request.url);
 		if (runtime === 'platform-disabled' && pathname !== '/api/health') {

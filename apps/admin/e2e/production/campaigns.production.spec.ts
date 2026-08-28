@@ -11,7 +11,7 @@ import {
 } from '../production-test';
 
 test('campaigns preserve provider state, enforce stale versions, and use truthful status and opt-in workflows', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic campaign assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic campaign assertions require the local fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${58 + testInfo.retry}`,
@@ -156,7 +156,7 @@ test('campaigns preserve provider state, enforce stale versions, and use truthfu
 });
 
 test('email analytics uses URL-owned native filters and one provider request per metric', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic campaign analytics assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic campaign analytics assertions require the local fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${67 + testInfo.retry}`,
@@ -270,7 +270,7 @@ test('email analytics uses URL-owned native filters and one provider request per
 });
 
 test('campaign test-send resolves one eligible subscriber and never retries an ambiguous v6.2 request', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic campaign test-send assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic campaign test-send assertions require the local fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await request.post(`${upstreamOrigin}/__control/campaign-messenger?id=21&messenger=email-primary`);
 	await page.setExtraHTTPHeaders({
@@ -405,7 +405,7 @@ test('campaign test-send resolves one eligible subscriber and never retries an a
 });
 
 test('campaign test-send honors permissions split across assigned roles', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'The split-role operator is a local disposable fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'The split-role operator is a local disposable fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${69 + testInfo.retry}`,
@@ -427,7 +427,7 @@ test('campaign test-send honors permissions split across assigned roles', async 
 });
 
 test('a campaign-view-only role lands on campaigns without advertising mutations', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'The campaign-only role is a local disposable fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'The campaign-only role is a local disposable fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${61 + testInfo.retry}`,

@@ -15,13 +15,13 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_DB: yah_admin_v2_test
+          POSTGRES_DB: yah_admin_test
           POSTGRES_USER: yah
           POSTGRES_PASSWORD: yah-ci-only
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U yah -d yah_admin_v2_test"
+          --health-cmd "pg_isready -U yah -d yah_admin_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -43,7 +43,7 @@ jobs:
       - name: Bootstrap disposable auth database
         run: bun run --cwd apps/admin ops:bootstrap-admin
         env:
-          DATABASE_URL: postgres://yah:yah-ci-only@127.0.0.1:5432/yah_admin_v2_test
+          DATABASE_URL: postgres://yah:yah-ci-only@127.0.0.1:5432/yah_admin_test
           BETTER_AUTH_SECRET: yah-ci-auth-secret-at-least-32-characters
           BOOTSTRAP_ADMIN_EMAIL: owner-one@example.test
           BOOTSTRAP_ADMIN_NAME: CI Owner
@@ -52,10 +52,10 @@ jobs:
       - name: Test Solid 2 production auth and authorization
         run: bun run --cwd apps/admin test:auth-integration
         env:
-          ADMIN_V2_AUTH_INTEGRATION: '1'
-          ADMIN_V2_AUTH_INTEGRATION_CONFIRMATION: mutate-and-clean-disposable-auth-database
-          ADMIN_V2_RUNTIME: production
-          DATABASE_URL: postgres://yah:yah-ci-only@127.0.0.1:5432/yah_admin_v2_test
+          ADMIN_AUTH_INTEGRATION: '1'
+          ADMIN_AUTH_INTEGRATION_CONFIRMATION: mutate-and-clean-disposable-auth-database
+          ADMIN_RUNTIME: production
+          DATABASE_URL: postgres://yah:yah-ci-only@127.0.0.1:5432/yah_admin_test
           BETTER_AUTH_SECRET: yah-ci-auth-secret-at-least-32-characters
           BETTER_AUTH_URL: http://127.0.0.1:43123
           PUBLIC_SITE_URL: https://www.example.test
@@ -78,9 +78,9 @@ jobs:
       - name: Test Solid 2 production routes in a real browser
         run: bun run --cwd apps/admin test:e2e:production
         env:
-          ADMIN_V2_RUNTIME: production
-          ADMIN_V2_PRODUCTION_E2E_CONFIRMATION: mutate-and-clean-disposable-production-e2e-database
-          DATABASE_URL: postgres://yah:yah-ci-only@127.0.0.1:5432/yah_admin_v2_test
+          ADMIN_RUNTIME: production
+          ADMIN_PRODUCTION_E2E_CONFIRMATION: mutate-and-clean-disposable-production-e2e-database
+          DATABASE_URL: postgres://yah:yah-ci-only@127.0.0.1:5432/yah_admin_test
           BETTER_AUTH_SECRET: yah-ci-auth-secret-at-least-32-characters
           BETTER_AUTH_URL: http://127.0.0.1:43123
           PUBLIC_SITE_URL: https://www.example.test

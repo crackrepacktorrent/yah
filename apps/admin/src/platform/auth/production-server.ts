@@ -20,7 +20,7 @@ export const pool = new Pool({ connectionString: productionConfig.DATABASE_URL }
 const mailer = createListmonkTransactionalMailer(productionConfig);
 
 function dispatchPublicAuthEmail(task: Promise<unknown>): void {
-	void task.catch((error) => console.error('[admin-v2:auth-email] Background email delivery failed', error));
+	void task.catch((error) => console.error('[admin:auth-email] Background email delivery failed', error));
 }
 
 export const auth = betterAuth({

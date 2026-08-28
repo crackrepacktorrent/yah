@@ -3,7 +3,7 @@ import { serve } from 'srvx';
 import { staticMiddleware } from 'srvx/static';
 import { handleRequest } from './dist/server/server.js';
 
-const production = process.env.ADMIN_V2_RUNTIME === 'production';
+const production = process.env.ADMIN_RUNTIME === 'production';
 const staticFiles = staticMiddleware({ dir: fileURLToPath(new URL('./dist/client', import.meta.url)) });
 
 const productionAssets = async (request, next) => {

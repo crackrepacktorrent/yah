@@ -73,7 +73,7 @@ describe.skipIf(!enabled)('Listmonk v6 campaign contract', () => {
 			body: '<p>Campaign contract body</p>',
 			contentType: 'html',
 			templateId: null,
-			tags: ['admin-v2-contract'],
+			tags: ['admin-contract'],
 			sendAt: null,
 		});
 		createdCampaignIds.push(regular.id);
@@ -90,15 +90,15 @@ describe.skipIf(!enabled)('Listmonk v6 campaign contract', () => {
 			altbody: raw['altbody'],
 			content_type: raw['content_type'],
 			send_at: raw['send_at'],
-			headers: [{ 'x-admin-v2-contract': suffix }],
-			attribs: { adminV2Contract: suffix },
+			headers: [{ 'x-admin-contract': suffix }],
+			attribs: { adminContract: suffix },
 			tags: raw['tags'],
 			messenger: raw['messenger'],
 			template_id: raw['template_id'],
 			archive: raw['archive'],
 			archive_slug: raw['archive_slug'],
 			archive_template_id: raw['archive_template_id'],
-			archive_meta: { adminV2Contract: suffix },
+			archive_meta: { adminContract: suffix },
 			media: [],
 			body_source: raw['body_source'],
 		});
@@ -116,13 +116,13 @@ describe.skipIf(!enabled)('Listmonk v6 campaign contract', () => {
 			body: '<p>Updated campaign contract body</p>',
 			contentType: 'html',
 			templateId: seeded.templateId,
-			tags: ['admin-v2-contract', 'preserved'],
+			tags: ['admin-contract', 'preserved'],
 			sendAt: scheduledAt,
 		});
 		const preserved = await providerCampaign(regular.id);
-		expect(preserved['headers']).toEqual([{ 'x-admin-v2-contract': suffix }]);
-		expect(preserved['attribs']).toEqual({ adminV2Contract: suffix });
-		expect(preserved['archive_meta']).toEqual({ adminV2Contract: suffix });
+		expect(preserved['headers']).toEqual([{ 'x-admin-contract': suffix }]);
+		expect(preserved['attribs']).toEqual({ adminContract: suffix });
+		expect(preserved['archive_meta']).toEqual({ adminContract: suffix });
 
 		const schedulable = await campaigns.get(regular.id);
 		if (!schedulable) throw new Error('Disposable regular campaign disappeared after update.');
@@ -138,7 +138,7 @@ describe.skipIf(!enabled)('Listmonk v6 campaign contract', () => {
 			body: '',
 			contentType: 'richtext',
 			templateId: null,
-			tags: ['admin-v2-contract'],
+			tags: ['admin-contract'],
 			sendAt: null,
 		});
 		createdCampaignIds.push(optin.id);

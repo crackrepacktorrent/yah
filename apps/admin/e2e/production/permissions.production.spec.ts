@@ -1,7 +1,7 @@
 import { expect, test, canonicalOrganizationId, deniedEmail, isolatedEmail, ownerPassword, upstreamOrigin } from '../production-test';
 
 test('create and edit capabilities remain independently usable without view access', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic Shlink assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic Shlink assertions require the local fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${60 + testInfo.retry}`,

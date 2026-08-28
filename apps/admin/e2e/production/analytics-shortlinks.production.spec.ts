@@ -1,7 +1,7 @@
 import { expect, test, ownerEmail, ownerPassword, softNavigate, upstreamOrigin } from '../production-test';
 
 test('analytics is permission-discoverable, keyboard-selectable, semantic, and safely retryable', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic analytics assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic analytics assertions require the local fixture.');
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${30 + testInfo.retry}`,
 	});
@@ -51,7 +51,7 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 });
 
 test('shortlinks preserve the typed CRUD workflow and dashboard panels fail independently', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic Shlink assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic Shlink assertions require the local fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${50 + testInfo.retry}`,

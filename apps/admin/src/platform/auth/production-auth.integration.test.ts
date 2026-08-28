@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-const integrationRequested = process.env['ADMIN_V2_AUTH_INTEGRATION'] === '1';
+const integrationRequested = process.env['ADMIN_AUTH_INTEGRATION'] === '1';
 const integrationConfirmation = 'mutate-and-clean-disposable-auth-database';
 
 if (integrationRequested) {
-	if (process.env['ADMIN_V2_AUTH_INTEGRATION_CONFIRMATION'] !== integrationConfirmation) {
-		throw new Error(`Production auth integration requires ADMIN_V2_AUTH_INTEGRATION_CONFIRMATION=${integrationConfirmation}.`);
+	if (process.env['ADMIN_AUTH_INTEGRATION_CONFIRMATION'] !== integrationConfirmation) {
+		throw new Error(`Production auth integration requires ADMIN_AUTH_INTEGRATION_CONFIRMATION=${integrationConfirmation}.`);
 	}
 
 	const databaseUrl = process.env['DATABASE_URL'];
@@ -27,22 +27,22 @@ const origin = process.env['BETTER_AUTH_URL'] ?? 'http://127.0.0.1:43123';
 const fixturePassword = 'owner-one-test-password-2026';
 const sourceOwnerEmail = 'owner-one@example.test';
 const fixture = {
-	userId: 'admin-v2-integration-member',
-	accountId: 'admin-v2-integration-member-account',
-	memberId: 'admin-v2-integration-member-membership',
-	email: 'admin-v2-member@example.test',
-	nonMemberUserId: 'admin-v2-integration-nonmember',
-	nonMemberAccountId: 'admin-v2-integration-nonmember-account',
-	nonMemberEmail: 'admin-v2-nonmember@example.test',
-	unverifiedUserId: 'admin-v2-integration-unverified',
-	unverifiedAccountId: 'admin-v2-integration-unverified-account',
-	unverifiedEmail: 'admin-v2-unverified@example.test',
-	roleId: 'admin-v2-integration-reviewer-role',
-	role: 'admin-v2-reviewer',
-	racingRoleId: 'admin-v2-integration-race-role',
-	racingRole: 'admin-v2-race-role',
-	racingInvitationId: 'admin-v2-integration-race-invitation',
-	uniqueRole: 'admin-v2-concurrent-role',
+	userId: 'admin-integration-member',
+	accountId: 'admin-integration-member-account',
+	memberId: 'admin-integration-member-membership',
+	email: 'admin-member@example.test',
+	nonMemberUserId: 'admin-integration-nonmember',
+	nonMemberAccountId: 'admin-integration-nonmember-account',
+	nonMemberEmail: 'admin-nonmember@example.test',
+	unverifiedUserId: 'admin-integration-unverified',
+	unverifiedAccountId: 'admin-integration-unverified-account',
+	unverifiedEmail: 'admin-unverified@example.test',
+	roleId: 'admin-integration-reviewer-role',
+	role: 'admin-reviewer',
+	racingRoleId: 'admin-integration-race-role',
+	racingRole: 'admin-race-role',
+	racingInvitationId: 'admin-integration-race-invitation',
+	uniqueRole: 'admin-concurrent-role',
 } as const;
 
 type ProductionRuntime = typeof import('./production-server');

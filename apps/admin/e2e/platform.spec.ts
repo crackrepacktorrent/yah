@@ -9,7 +9,7 @@ import { expect, test } from '@playwright/test';
 test('platform-disabled mode exposes health and rejects everything else', async ({ request }) => {
 	const health = await request.get('/api/health');
 	expect(health.status()).toBe(200);
-	expect(await health.json()).toEqual({ app: 'yah-admin-v2', status: 'ok' });
+	expect(await health.json()).toEqual({ app: 'yah-admin', runtime: 'platform-disabled', status: 'ok' });
 
 	const head = await request.head('/api/health');
 	expect(head.status()).toBe(200);
