@@ -70,7 +70,7 @@
 	cursor: pointer;
 }
 
-.send-later-toggle input[type="checkbox"] {
+.send-later-toggle input[type='checkbox'] {
 	accent-color: var(--color-primary);
 }
 
@@ -95,11 +95,11 @@
 }
 
 /* Taller RTE for campaign editor */
-.form-fields :global(.rte-editor) {
+.form-fields .rte-editor {
 	min-height: clamp(250px, 45vh, 600px);
 }
 
-.form-fields :global(.rte-container) {
+.form-fields .rte-container {
 	min-height: 350px;
 }
 

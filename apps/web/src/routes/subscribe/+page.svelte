@@ -30,7 +30,7 @@
 	<link rel="canonical" href={canonicalUrl} />
 </svelte:head>
 
-<div class="subscribe-page">
+<div class="subscribe-page" class:subscribe-page-embed={data.embedded}>
 	<div class="subscribe-card">
 		<h1>Subscribe</h1>
 
@@ -39,7 +39,11 @@
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M20 6L9 17l-5-5"/>
 				</svg>
-				<p>You're subscribed! Check your inbox for a confirmation email.</p>
+				<p>
+					{form.hasOptin
+						? "You're almost subscribed. Check your inbox to confirm your subscription."
+						: "You're subscribed."}
+				</p>
 			</div>
 		{:else}
 			{#if unavailable}
@@ -63,6 +67,10 @@
 						}
 					};
 				}}>
+					<div class="honeypot" aria-hidden="true">
+						<label for="website">Website</label>
+						<input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+					</div>
 					<div class="form-fields">
 						<div class="field">
 							<label for="email">Email <span class="required">*</span></label>
@@ -71,6 +79,7 @@
 								type="email"
 								name="email"
 								autocomplete="email"
+								maxlength="320"
 								required
 								placeholder="you@example.com"
 								value={form?.email ?? ''}
@@ -84,6 +93,7 @@
 								type="text"
 								name="name"
 								autocomplete="name"
+								maxlength="255"
 								placeholder="Your name (optional)"
 								value={form?.name ?? ''}
 							/>
@@ -104,6 +114,9 @@
 									</label>
 								{/each}
 							</div>
+							{#if data.lists.length > 20}
+								<p class="field-hint">Choose up to 20 lists.</p>
+							{/if}
 						</fieldset>
 
 						<button type="submit" class="submit-btn" disabled={submitting}>
@@ -125,6 +138,11 @@
 		padding: 2rem;
 		background: var(--color-page-bg, #f5f5f5);
 		font-family: var(--font-body, 'Rubik Variable', system-ui, sans-serif);
+	}
+
+	.subscribe-page-embed {
+		min-height: 0;
+		padding: 1rem;
 	}
 
 	.subscribe-card {
@@ -178,6 +196,15 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+	}
+
+	.honeypot {
+		position: absolute;
+		left: -10000px;
+		top: auto;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
 	}
 
 	.field {
@@ -238,6 +265,12 @@
 
 	.list-option input[type='checkbox'] {
 		accent-color: var(--color-primary, #3b82f6);
+	}
+
+	.field-hint {
+		margin: 0;
+		color: var(--color-muted, #666);
+		font-size: 0.8rem;
 	}
 
 	.submit-btn {

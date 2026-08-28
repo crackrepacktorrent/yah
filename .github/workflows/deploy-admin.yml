@@ -4,18 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/admin/**'
-      - 'package.json'
-      - 'bun.lock'
-      - 'turbo.json'
-      - 'infra/docker-compose.yml'
-      - '.github/workflows/deploy-admin.yml'
+      - "apps/admin/**"
+      - "apps/admin-v2/**"
+      - "packages/admin-core/**"
+      - "package.json"
+      - "bun.lock"
+      - "turbo.json"
+      - ".github/workflows/deploy-admin.yml"
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Image tag to deploy (default: latest)'
+        description: "Exact image tag to deploy (defaults to this workflow commit SHA)"
         required: false
-        default: 'latest'
+        default: ""
 
 env:
   REGISTRY: ghcr.io
@@ -57,11 +58,14 @@ jobs:
     needs: build
     if: always() && (needs.build.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    concurrency:
+      group: production-vps
+      cancel-in-progress: false
     steps:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
-          TAG: ${{ inputs.image_tag || 'latest' }}
+          TAG: ${{ inputs.image_tag || github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: deploy
@@ -69,14 +73,19 @@ jobs:
           envs: TAG
           script: |
             set -e
+            exec 9>/home/deploy/yah/.production-deploy.lock
+            flock --timeout 900 9
             cd /home/deploy/yah
-            git pull origin main
+            git pull --ff-only origin main
             cd infra
             ADMIN_TAG=$TAG docker compose pull yah-admin
-            ADMIN_TAG=$TAG docker compose up -d yah-admin
-            docker image prune -f
+            # Fail closed before replacing the running admin. The first strict-
+            # verification rollout intentionally stops here until the attested
+            # owner operation in docs/admin-stabilization.md has been completed.
+            ADMIN_TAG=$TAG docker compose run --rm --no-deps yah-admin bun ops/audit-auth.js
+            ADMIN_TAG=$TAG docker compose up -d --no-deps --pull never --wait yah-admin
 
       - name: Verify deployment
         run: |
           sleep 10
-          curl -sf --retry 3 --retry-delay 5 https://admin.y4h.org/login || exit 1
+          curl -sf --retry 3 --retry-delay 5 https://admin.y4h.org/api/health || exit 1

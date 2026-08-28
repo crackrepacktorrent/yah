@@ -1,17 +1,19 @@
 import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
 import { For, Show, createMemo, createSignal } from 'solid-js';
-import { toast } from 'solid-sonner';
-import {
-	Badge, Button, EmptyState, PageHeader, Section,
-} from '~/components';
+import { toast, toastError } from '~/lib/toast';
+import { Badge, Button, EmptyState, PageHeader, Section } from '~/components';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { toastError } from '~/lib/utils';
 import { listLists, updateList } from '../lists.server';
+import { getSubscriptionFormConfig } from './forms.server';
+import { getEmbedSnippet, getSubscribeUrl } from './subscription-form';
 import './index.css';
 
 export const route: RouteDefinition = {
-	preload: () => { void listLists(); },
+	preload: () => {
+		void listLists();
+		void getSubscriptionFormConfig();
+	},
 };
 
 type ListItem = {
@@ -26,6 +28,7 @@ type ListItem = {
 export default function FormsPage() {
 	const session = createAsync(() => requireSession());
 	const data = createAsync(() => listLists());
+	const config = createAsync(() => getSubscriptionFormConfig());
 
 	const [pendingToggle, setPendingToggle] = createSignal<number | null>(null);
 	const [copiedId, setCopiedId] = createSignal<string | null>(null);
@@ -47,22 +50,9 @@ export default function FormsPage() {
 		}
 	}
 
-	function getSubscribeUrl(listUuid: string) {
-		return `/subscribe?list=${listUuid}`;
-	}
-
-	function getEmbedSnippet(listUuid: string, listName: string) {
-		return `<form method="post" action="/subscribe">
-  <input type="email" name="email" required placeholder="Your email" />
-  <input type="text" name="name" placeholder="Your name" />
-  <input type="hidden" name="list" value="${listUuid}" />
-  <button type="submit">Subscribe to ${listName}</button>
-</form>`;
-	}
-
 	async function copySnippet(listUuid: string, listName: string) {
 		try {
-			await navigator.clipboard.writeText(getEmbedSnippet(listUuid, listName));
+			await navigator.clipboard.writeText(getEmbedSnippet(config()!.publicSiteUrl, listUuid, listName));
 			setCopiedId(listUuid);
 			setTimeout(() => setCopiedId(null), 2000);
 		} catch {
@@ -74,10 +64,12 @@ export default function FormsPage() {
 		<>
 			<PageHeader title="Subscription Forms" />
 
-			<Show when={data()}>
+			<Show when={data() && config()}>
 				<div class="public-url">
 					<span class="url-label">Public subscription page:</span>
-					<a href="/subscribe" target="_blank" rel="noopener" class="url-link">/subscribe</a>
+					<a href={getSubscribeUrl(config()!.publicSiteUrl)} target="_blank" rel="noopener" class="url-link">
+						{getSubscribeUrl(config()!.publicSiteUrl)}
+					</a>
 					<span class="url-hint">(shows all public lists)</span>
 				</div>
 
@@ -97,17 +89,18 @@ export default function FormsPage() {
 													<div class="form-card-meta">
 														<Badge variant="info">public</Badge>
 														<Badge variant={list.optin === 'double' ? 'warning' : 'success'}>{list.optin} opt-in</Badge>
-														<span class="subscriber-count">{list.subscriber_count} subscriber{list.subscriber_count !== 1 ? 's' : ''}</span>
+														<span class="subscriber-count">
+															{list.subscriber_count} subscriber
+															{list.subscriber_count !== 1 ? 's' : ''}
+														</span>
 													</div>
 												</div>
 												<div class="form-card-actions">
-													<a href={getSubscribeUrl(list.uuid)} target="_blank" rel="noopener" class="preview-link">Preview</a>
+													<a href={getSubscribeUrl(config()!.publicSiteUrl, list.uuid)} target="_blank" rel="noopener" class="preview-link">
+														Preview
+													</a>
 													<Show when={can(session(), 'list', 'edit')}>
-														<Button
-															variant="ghost"
-															onClick={() => toggleListType(list)}
-															disabled={pendingToggle() === list.id}
-														>
+														<Button variant="ghost" onClick={() => toggleListType(list)} disabled={pendingToggle() === list.id}>
 															{pendingToggle() === list.id ? '…' : 'Make Private'}
 														</Button>
 													</Show>
@@ -120,7 +113,7 @@ export default function FormsPage() {
 														{copiedId() === list.uuid ? 'Copied!' : 'Copy'}
 													</button>
 												</div>
-												<pre class="embed-code">{getEmbedSnippet(list.uuid, list.name)}</pre>
+												<pre class="embed-code">{getEmbedSnippet(config()!.publicSiteUrl, list.uuid, list.name)}</pre>
 											</div>
 										</div>
 									)}
@@ -138,14 +131,12 @@ export default function FormsPage() {
 											<div class="private-list-info">
 												<span class="private-list-name">{list.name}</span>
 												<Badge>private</Badge>
-												<span class="subscriber-count">{list.subscriber_count} subscriber{list.subscriber_count !== 1 ? 's' : ''}</span>
+												<span class="subscriber-count">
+													{list.subscriber_count} subscriber{list.subscriber_count !== 1 ? 's' : ''}
+												</span>
 											</div>
 											<Show when={can(session(), 'list', 'edit')}>
-												<Button
-													variant="ghost"
-													onClick={() => toggleListType(list)}
-													disabled={pendingToggle() === list.id}
-												>
+												<Button variant="ghost" onClick={() => toggleListType(list)} disabled={pendingToggle() === list.id}>
 													{pendingToggle() === list.id ? '…' : 'Make Public'}
 												</Button>
 											</Show>

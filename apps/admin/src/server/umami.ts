@@ -1,4 +1,5 @@
 import { env } from '~/server/env';
+import { fetchUpstream, parseJsonResponse } from '~/server/upstream-http';
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 let tokenPromise: Promise<string> | null = null;
@@ -12,7 +13,7 @@ async function getToken(): Promise<string> {
 
 	tokenPromise = (async () => {
 		try {
-			const res = await fetch(`${env.UMAMI_URL}/api/auth/login`, {
+			const res = await fetchUpstream(`${env.UMAMI_URL}/api/auth/login`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -25,7 +26,10 @@ async function getToken(): Promise<string> {
 				throw new Error(`Umami auth failed: ${res.status}`);
 			}
 
-			const data = await res.json();
+			const data = await parseJsonResponse<unknown>(res, 'Umami');
+			if (!data || typeof data !== 'object' || !('token' in data) || typeof data.token !== 'string') {
+				throw new Error('Umami auth response did not include a token.');
+			}
 			cachedToken = { token: data.token, expiresAt: getJwtExpiry(data.token) };
 			return data.token;
 		} finally {
@@ -57,24 +61,31 @@ function getWebsiteId(): string {
 	return env.UMAMI_WEBSITE_ID;
 }
 
-async function umamiGet<T>(path: string, params?: Record<string, string>): Promise<T> {
+async function umamiGet<T>(path: string, params?: Record<string, string>, retryUnauthorized = true): Promise<T> {
 	const token = await getToken();
-	const url = new URL(`${process.env['UMAMI_URL']}/api${path}`);
+	const url = new URL(`${env.UMAMI_URL}/api${path}`);
 	if (params) {
 		for (const [k, v] of Object.entries(params)) {
 			url.searchParams.set(k, v);
 		}
 	}
 
-	const res = await fetch(url, {
+	const res = await fetchUpstream(url, {
 		headers: { Authorization: `Bearer ${token}` },
 	});
 
-	if (!res.ok) {
-		throw new Error(`Umami API error: ${res.status} ${await res.text()}`);
+	if (res.status === 401) {
+		// Revoke only the token used by this request. Concurrent requests may
+		// already have installed a newer token through the shared login promise.
+		if (cachedToken?.token === token) cachedToken = null;
+		if (retryUnauthorized) return umamiGet<T>(path, params, false);
 	}
 
-	return res.json();
+	if (!res.ok) {
+		throw new Error(`Umami API error: ${res.status}`);
+	}
+
+	return parseJsonResponse<T>(res, 'Umami');
 }
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -126,21 +137,9 @@ export async function getPageviews(
 	});
 }
 
-export type MetricType =
-	| 'path'
-	| 'referrer'
-	| 'browser'
-	| 'os'
-	| 'device'
-	| 'country'
-	| 'city';
+export type MetricType = 'path' | 'referrer' | 'browser' | 'os' | 'device' | 'country' | 'city';
 
-export async function getMetrics(
-	startAt: number,
-	endAt: number,
-	type: MetricType,
-	limit = 10,
-): Promise<UmamiMetric[]> {
+export async function getMetrics(startAt: number, endAt: number, type: MetricType, limit = 10): Promise<UmamiMetric[]> {
 	return umamiGet<UmamiMetric[]>(`/websites/${getWebsiteId()}/metrics`, {
 		startAt: String(startAt),
 		endAt: String(endAt),

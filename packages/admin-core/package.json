@@ -1,0 +1,23 @@
+{
+  "name": "@yah/admin-core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "bun test"
+  },
+  "exports": {
+    "./constants": "./src/constants.ts",
+    "./invitation-auth-policy": "./src/invitation-auth-policy.ts",
+    "./invitation-path": "./src/invitation-path.ts",
+    "./invitation-state": "./src/invitation-state.ts",
+    "./membership-policy": "./src/membership-policy.ts",
+    "./permissions": "./src/permissions.ts",
+    "./public-auth-boundary": "./src/public-auth-boundary.ts",
+    "./role-permissions": "./src/role-permissions.ts",
+    "./shortlink-policy": "./src/shortlink-policy.ts"
+  },
+  "dependencies": {
+    "better-auth": "1.6.30"
+  }
+}

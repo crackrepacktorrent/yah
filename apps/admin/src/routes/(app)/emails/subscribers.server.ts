@@ -1,6 +1,14 @@
 import { query } from '@solidjs/router';
 import { getListmonk } from '~/server/listmonk';
 import { withPermissions } from '~/server/auth-helpers';
+import {
+	CreateSubscriberInputSchema,
+	SubscriberIdSchema,
+	UpdateSubscriberInputSchema,
+	type CreateSubscriberInput,
+	type UpdateSubscriberInput,
+} from '~/lib/admin-contracts';
+import { idListSchema, parseInput } from '~/server/validation';
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
@@ -15,49 +23,37 @@ export const listSubscribers = query(async () => {
 export const getSubscriberBounces = query(async (id: number) => {
 	'use server';
 	return withPermissions({ subscriber: ['view'] }, async () => {
-		return getListmonk().getSubscriberBounces(id);
+		return getListmonk().getSubscriberBounces(parseInput(SubscriberIdSchema, id));
 	});
 }, 'getSubscriberBounces');
 
 export const getSubscriberExport = query(async (id: number) => {
 	'use server';
 	return withPermissions({ subscriber: ['view'] }, async () => {
-		return getListmonk().getSubscriberExport(id);
+		return getListmonk().getSubscriberExport(parseInput(SubscriberIdSchema, id));
 	});
 }, 'getSubscriberExport');
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
-export async function createSubscriber(params: {
-	email: string;
-	name?: string;
-	status?: string;
-	listIds?: number[];
-	preconfirm?: boolean;
-}) {
+export async function createSubscriber(params: CreateSubscriberInput) {
 	'use server';
 	return withPermissions({ subscriber: ['create'] }, async () => {
+		const input = parseInput(CreateSubscriberInputSchema, params);
 		return getListmonk().createSubscriber({
-			email: params.email,
-			name: params.name,
-			status: params.status,
-			lists: params.listIds,
-			preconfirm: params.preconfirm,
+			email: input.email,
+			name: input.name,
+			status: input.status,
+			lists: input.listIds,
+			preconfirm: input.preconfirm,
 		});
 	});
 }
 
-export async function updateSubscriber(params: {
-	id: number;
-	email?: string;
-	name?: string;
-	status?: string;
-	listIds?: number[];
-	preconfirm?: boolean;
-}) {
+export async function updateSubscriber(params: UpdateSubscriberInput) {
 	'use server';
 	return withPermissions({ subscriber: ['edit'] }, async () => {
-		const { id, listIds, ...rest } = params;
+		const { id, listIds, ...rest } = parseInput(UpdateSubscriberInputSchema, params);
 		return getListmonk().updateSubscriber(id, { ...rest, lists: listIds });
 	});
 }
@@ -65,27 +61,27 @@ export async function updateSubscriber(params: {
 export async function deleteSubscribers(ids: number[]): Promise<void> {
 	'use server';
 	return withPermissions({ subscriber: ['delete'] }, async () => {
-		await getListmonk().deleteSubscribers(ids);
+		await getListmonk().deleteSubscribers(parseInput(idListSchema, ids));
 	});
 }
 
 export async function blocklistSubscribers(ids: number[]): Promise<void> {
 	'use server';
 	return withPermissions({ subscriber: ['blocklist'] }, async () => {
-		await getListmonk().blocklistSubscribers(ids);
+		await getListmonk().blocklistSubscribers(parseInput(idListSchema, ids));
 	});
 }
 
 export async function deleteSubscriberBounces(id: number): Promise<void> {
 	'use server';
 	return withPermissions({ bounce: ['delete'] }, async () => {
-		await getListmonk().deleteSubscriberBounces(id);
+		await getListmonk().deleteSubscriberBounces(parseInput(SubscriberIdSchema, id));
 	});
 }
 
 export async function sendOptinConfirmation(subscriberId: number): Promise<void> {
 	'use server';
 	return withPermissions({ subscriber: ['edit'] }, async () => {
-		await getListmonk().sendOptinConfirmation(subscriberId);
+		await getListmonk().sendOptinConfirmation(parseInput(SubscriberIdSchema, subscriberId));
 	});
 }
