@@ -4,9 +4,9 @@ node_modules
 # Build outputs
 apps/web/build/
 apps/web/.svelte-kit/
-apps/admin-v2/dist/
-apps/admin-v2/playwright-report/
-apps/admin-v2/test-results/
+apps/admin/dist/
+apps/admin/playwright-report/
+apps/admin/test-results/
 build/
 .svelte-kit/
 
