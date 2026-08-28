@@ -4,9 +4,6 @@ node_modules
 # Build outputs
 apps/web/build/
 apps/web/.svelte-kit/
-apps/admin/.output/
-apps/admin/playwright-report/
-apps/admin/test-results/
 apps/admin-v2/dist/
 apps/admin-v2/playwright-report/
 apps/admin-v2/test-results/
@@ -46,7 +43,6 @@ vite.config.ts.timestamp-*
 !README.md
 !docs/admin-stabilization.md
 !docs/storyblok-editor-fields.md
-!apps/admin/e2e/README.md
 
 # Playwright MCP
 .playwright-mcp
