@@ -34,7 +34,7 @@ jobs:
             # A valid Caddy edit can still break permanent printed QR aliases.
             # Keep this deploy-time barrier in addition to the synchronized CI test.
             sh scripts/validate-printed-shortlinks.sh caddy/Caddyfile
-            docker compose run --rm --no-deps caddy validate --config /etc/caddy/Caddyfile
+            docker compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile
             # Reconcile only Caddy. App workflows deploy exact commit-SHA
             # images; providers and databases require maintenance runbooks.
             docker compose up -d --no-deps --pull never --wait caddy
