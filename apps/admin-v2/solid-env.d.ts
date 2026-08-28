@@ -21,7 +21,6 @@ declare module 'virtual:env/server' {
     : string;
   const env: {
     readonly "ADMIN_V2_RUNTIME": __Out<__Schema["server"]["ADMIN_V2_RUNTIME"]>;
-    readonly "ADMIN_V2_COMPATIBILITY_AUTH_SECRET": __Out<__Schema["server"]["ADMIN_V2_COMPATIBILITY_AUTH_SECRET"]>;
     readonly "DATABASE_URL": __Out<__Schema["server"]["DATABASE_URL"]>;
     readonly "BETTER_AUTH_SECRET": __Out<__Schema["server"]["BETTER_AUTH_SECRET"]>;
     readonly "BETTER_AUTH_URL": __Out<__Schema["server"]["BETTER_AUTH_URL"]>;

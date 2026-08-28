@@ -5,7 +5,6 @@ export { expect };
 import { Pool } from 'pg';
 import { requireDisposableProductionE2EDatabase } from './production-environment';
 
-export const compatibilityOrigin = 'http://127.0.0.1:43121';
 export const productionOrigin = process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'] ?? 'http://127.0.0.1:43123';
 export const upstreamOrigin = 'http://127.0.0.1:43124';
 export const ownerEmail = 'owner-one@example.test';

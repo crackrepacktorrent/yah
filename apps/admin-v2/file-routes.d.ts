@@ -81,48 +81,10 @@ declare module "virtual:file-routes" {
       $$route?: undefined;
     },
     {
-      path: "/api/adapter-probe";
-      page: false;
-      $GET: FileRouteLazyRef<typeof import("./src/routes/api/adapter-probe")>;
-      $POST: FileRouteLazyRef<typeof import("./src/routes/api/adapter-probe")>;
-      $HEAD: FileRouteLazyRef<typeof import("./src/routes/api/adapter-probe")>;
-      $$route?: undefined;
-    },
-    {
       path: "/api/health";
       page: false;
       $HEAD: FileRouteLazyRef<typeof import("./src/routes/api/health")>;
       $GET: FileRouteLazyRef<typeof import("./src/routes/api/health")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/compatibility/auth";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/auth")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/compatibility/content";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/content")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/compatibility/icons";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/icons")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/compatibility/";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/index")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/compatibility/index")>;
-    },
-    {
-      path: "/compatibility/toasts";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/toasts")>;
       $$route?: undefined;
     },
     {
@@ -703,51 +665,11 @@ declare module "virtual:file-routes" {
       ];
     },
     {
-      path: "/compatibility/";
-      id: "/compatibility/";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/index")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/compatibility/index")>;
-      children?: undefined;
-    },
-    {
-      path: "/compatibility/auth";
-      id: "/compatibility/auth";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/auth")>;
-      $$route?: undefined;
-      children?: undefined;
-    },
-    {
       path: "/members/accept/:id";
       id: "/members/accept/:id";
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/members/accept/[id]")>;
       $$route: FileRouteEagerRef<typeof import("./src/routes/members/accept/[id]")>;
-      children?: undefined;
-    },
-    {
-      path: "/compatibility/icons";
-      id: "/compatibility/icons";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/icons")>;
-      $$route?: undefined;
-      children?: undefined;
-    },
-    {
-      path: "/compatibility/toasts";
-      id: "/compatibility/toasts";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/toasts")>;
-      $$route?: undefined;
-      children?: undefined;
-    },
-    {
-      path: "/compatibility/content";
-      id: "/compatibility/content";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/compatibility/content")>;
-      $$route?: undefined;
       children?: undefined;
     }
   ];

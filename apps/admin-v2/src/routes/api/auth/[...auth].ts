@@ -3,12 +3,6 @@ import { env } from 'virtual:env/server';
 import { handlePublicAuthRequest } from '@yah/admin-core/public-auth-boundary';
 
 const handleAuth: APIHandler = async ({ request }) => {
-	if (env.ADMIN_V2_RUNTIME === 'compatibility-lab') {
-		return handlePublicAuthRequest(request, async (forwardedRequest) => {
-			const { compatibilityAuth } = await import('~/platform/auth/compatibility-server');
-			return compatibilityAuth.handler(forwardedRequest);
-		});
-	}
 	if (env.ADMIN_V2_RUNTIME === 'production') {
 		return handlePublicAuthRequest(request, async (forwardedRequest) => {
 			const { auth } = await import('~/platform/auth/production-server');
