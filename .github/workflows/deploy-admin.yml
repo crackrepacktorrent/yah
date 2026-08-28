@@ -80,7 +80,7 @@ jobs:
             ADMIN_TAG=$TAG docker compose pull yah-admin
             # Fail closed before replacing the running admin. The first strict-
             # verification rollout intentionally stops here until the attested
-            # owner operation in docs/admin-stabilization.md has been completed.
+            # owner operation in docs/runbooks.md has been completed.
             ADMIN_TAG=$TAG docker compose run --rm --no-deps yah-admin bun ops/audit-auth.js
             ADMIN_TAG=$TAG docker compose up -d --no-deps --pull never --wait yah-admin
 

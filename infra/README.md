@@ -55,7 +55,7 @@ Production providers are pinned to immutable release digests in Compose.
 `LISTMONK_IMAGE` exists only for the documented database-aware v6.0 rollback;
 do not persist an override in `infra/.env` or use it as a floating deployment
 setting. The complete Listmonk v6.2 and printed-QR Shlink procedure is in
-[`docs/admin-stabilization.md`](../docs/admin-stabilization.md#listmonk-v62-production-maintenance-runbook).
+[`docs/runbooks.md`](../docs/runbooks.md#listmonk-rollback-to-v60).
 
 Secrets live in `/home/deploy/yah/infra/.env` on the VPS (gitignored; see
 `.env.production.example`). Running `docker compose config` locally without that
