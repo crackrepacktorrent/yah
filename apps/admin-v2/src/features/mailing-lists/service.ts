@@ -1,5 +1,6 @@
-import type { Permissions } from '@yah/admin-core/permissions';
-import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
+import { createPublicError } from '~/platform/errors';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	CreateMailingListCommandSchema,
 	MailingListCapabilitySchema,
@@ -13,7 +14,6 @@ import {
 	type SetMailingListVisibilityCommand,
 	type UpdateMailingListCommand,
 } from './contracts';
-import { createPublicError } from '~/platform/errors';
 
 export type MailingListManager = {
 	list(): Promise<MailingList[]>;
@@ -37,25 +37,16 @@ export type MailingListManager = {
 };
 
 export type MailingListServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	manager: MailingListManager;
 };
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw createPublicError(result.issues[0]?.message ?? 'Invalid mailing-list data.', 400);
-	return result.output;
-}
+const parse = createPublicInputParser('Invalid mailing-list data.');
 
 async function authorize(
-	headers: Headers,
 	capability: MailingListCapability,
 	dependencies: MailingListServiceDependencies,
 ): Promise<void> {
-	await dependencies.enforcePermissions(headers, { list: [capability] });
+	await dependencies.authorization.requirePermissions({ list: [capability] });
 }
 
 function notFound(): never {
@@ -99,39 +90,35 @@ async function surfaceMutation(operation: () => Promise<void>): Promise<void> {
 
 export async function requireAuthorizedMailingListCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: MailingListServiceDependencies,
 ): Promise<true> {
 	const capability = parse(MailingListCapabilitySchema, input);
-	await authorize(headers, capability, dependencies);
+	await authorize(capability, dependencies);
 	return true;
 }
 
 export async function listAuthorizedMailingLists(
-	headers: Headers,
 	dependencies: MailingListServiceDependencies,
 ): Promise<MailingList[]> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.list();
 }
 
 export async function readAuthorizedMailingList(
 	input: unknown,
-	headers: Headers,
 	dependencies: MailingListServiceDependencies,
 ): Promise<MailingList> {
 	const id = parse(MailingListIdSchema, input);
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return (await dependencies.manager.get(id)) ?? notFound();
 }
 
 export async function createAuthorizedMailingList(
 	input: CreateMailingListCommand,
-	headers: Headers,
 	dependencies: MailingListServiceDependencies,
 ): Promise<{ id: number }> {
 	const command = parse(CreateMailingListCommandSchema, input);
-	await authorize(headers, 'create', dependencies);
+	await authorize('create', dependencies);
 	try {
 		return { id: (await dependencies.manager.create(command)).id };
 	} catch (error) {
@@ -144,11 +131,10 @@ export async function createAuthorizedMailingList(
 
 export async function updateAuthorizedMailingList(
 	input: UpdateMailingListCommand,
-	headers: Headers,
 	dependencies: MailingListServiceDependencies,
 ): Promise<void> {
 	const command = parse(UpdateMailingListCommandSchema, input);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	const current = (await dependencies.manager.get(command.id)) ?? notFound();
 	requireAuthorable(current);
 	requireCurrentVersion(current, command.expectedUpdatedAt);
@@ -166,11 +152,10 @@ export async function updateAuthorizedMailingList(
 
 export async function setAuthorizedMailingListVisibility(
 	input: SetMailingListVisibilityCommand,
-	headers: Headers,
 	dependencies: MailingListServiceDependencies,
 ): Promise<void> {
 	const command = parse(SetMailingListVisibilityCommandSchema, input);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	const current = (await dependencies.manager.get(command.id)) ?? notFound();
 	requireAuthorable(current);
 	requireCurrentVersion(current, command.expectedUpdatedAt);
@@ -188,11 +173,10 @@ export async function setAuthorizedMailingListVisibility(
 
 export async function deleteAuthorizedMailingList(
 	input: unknown,
-	headers: Headers,
 	dependencies: MailingListServiceDependencies,
 ): Promise<void> {
 	const id = parse(MailingListIdSchema, input);
-	await authorize(headers, 'delete', dependencies);
+	await authorize('delete', dependencies);
 	const current = (await dependencies.manager.get(id)) ?? notFound();
 	requireAuthorable(current);
 	await surfaceMutation(() => dependencies.manager.delete(id));

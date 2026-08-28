@@ -1,6 +1,8 @@
+import { can } from '@yah/admin-core/permissions';
 import { useLocation } from '@solidjs/router';
 import { Show, createMemo, type ParentProps } from 'solid-js';
 import { requireSession } from '~/platform/auth/session';
+import { SectionNavigation, type SectionNavigationItem } from '~/ui/section-navigation';
 import './emails/emails.css';
 
 function routeIsWithin(pathname: string, base: string): boolean {
@@ -10,46 +12,37 @@ function routeIsWithin(pathname: string, base: string): boolean {
 export default function EmailManagementLayout(props: ParentProps) {
 	const location = useLocation();
 	const session = createMemo(() => requireSession());
-	const canViewTemplates = createMemo(() => session().permissions['template']?.includes('view') ?? false);
-	const canViewLists = createMemo(() => session().permissions['list']?.includes('view') ?? false);
-	const canViewCampaigns = createMemo(() => session().permissions['campaign']?.includes('view') ?? false);
-	const canViewSubscribers = createMemo(() => session().permissions['subscriber']?.includes('view') ?? false);
-	const canViewBounces = createMemo(() => session().permissions['bounce']?.includes('view') ?? false);
-	const canViewLogs = createMemo(() => session().permissions['provider']?.includes('manage') ?? false);
+	const canViewTemplates = createMemo(() => can(session(), 'template', 'view'));
+	const canViewLists = createMemo(() => can(session(), 'list', 'view'));
+	const canViewCampaigns = createMemo(() => can(session(), 'campaign', 'view'));
+	const canViewSubscribers = createMemo(() => can(session(), 'subscriber', 'view'));
+	const canViewBounces = createMemo(() => can(session(), 'bounce', 'view'));
+	const canViewLogs = createMemo(() => can(session(), 'provider', 'manage'));
+	const items = createMemo<SectionNavigationItem[]>(() => {
+		const pathname = location.pathname;
+		const links: SectionNavigationItem[] = [];
+		if (canViewCampaigns()) {
+			links.push(
+				{ href: '/emails/campaigns', label: 'Campaigns', selected: routeIsWithin(pathname, '/emails/campaigns') },
+				{ href: '/emails/analytics', label: 'Email analytics', selected: routeIsWithin(pathname, '/emails/analytics') },
+			);
+		}
+		if (canViewTemplates()) links.push({ href: '/emails', label: 'Templates', selected: pathname === '/emails' || routeIsWithin(pathname, '/emails/templates') });
+		if (canViewLists()) {
+			links.push(
+				{ href: '/emails/lists', label: 'Lists', selected: routeIsWithin(pathname, '/emails/lists') },
+				{ href: '/emails/forms', label: 'Forms', selected: routeIsWithin(pathname, '/emails/forms') },
+			);
+		}
+		if (canViewSubscribers()) links.push({ href: '/emails/subscribers', label: 'Subscribers', selected: routeIsWithin(pathname, '/emails/subscribers') });
+		if (canViewBounces()) links.push({ href: '/emails/bounces', label: 'Bounces', selected: routeIsWithin(pathname, '/emails/bounces') });
+		if (canViewLogs()) links.push({ href: '/emails/logs', label: 'Logs', selected: routeIsWithin(pathname, '/emails/logs') });
+		return links;
+	});
 
 	return (
 		<>
-			<Show when={canViewTemplates() || canViewLists() || canViewCampaigns() || canViewSubscribers() || canViewBounces() || canViewLogs()}>
-				<nav class="email-navigation" aria-label="Email management">
-					<Show when={canViewCampaigns()}>
-						<a href="/emails/campaigns" data-selected={routeIsWithin(location.pathname, '/emails/campaigns') || undefined}>Campaigns</a>
-					</Show>
-					<Show when={canViewCampaigns()}>
-						<a href="/emails/analytics" data-selected={routeIsWithin(location.pathname, '/emails/analytics') || undefined}>Email analytics</a>
-					</Show>
-					<Show when={canViewTemplates()}>
-						<a
-							href="/emails"
-							data-selected={(location.pathname === '/emails' || routeIsWithin(location.pathname, '/emails/templates')) || undefined}
-						>
-							Templates
-						</a>
-					</Show>
-					<Show when={canViewLists()}>
-						<a href="/emails/lists" data-selected={routeIsWithin(location.pathname, '/emails/lists') || undefined}>Lists</a>
-						<a href="/emails/forms" data-selected={routeIsWithin(location.pathname, '/emails/forms') || undefined}>Forms</a>
-					</Show>
-					<Show when={canViewSubscribers()}>
-						<a href="/emails/subscribers" data-selected={routeIsWithin(location.pathname, '/emails/subscribers') || undefined}>Subscribers</a>
-					</Show>
-					<Show when={canViewBounces()}>
-						<a href="/emails/bounces" data-selected={routeIsWithin(location.pathname, '/emails/bounces') || undefined}>Bounces</a>
-					</Show>
-					<Show when={canViewLogs()}>
-						<a href="/emails/logs" data-selected={routeIsWithin(location.pathname, '/emails/logs') || undefined}>Logs</a>
-					</Show>
-				</nav>
-			</Show>
+			<Show when={items().length > 0}><SectionNavigation label="Email management" items={items()} /></Show>
 			{props.children}
 		</>
 	);

@@ -111,39 +111,6 @@
 	text-underline-offset: 0.16em;
 }
 
-.admin-loading {
-	display: grid;
-	min-height: 100vh;
-	place-items: center;
-}
-
-.admin-page-loading {
-	display: grid;
-	min-height: 60vh;
-	place-items: center;
-}
-
-.admin-spinner {
-	width: 5rem;
-	height: 5rem;
-	border: 0.4rem solid var(--admin-border);
-	border-top-color: var(--admin-action);
-	border-radius: 50%;
-	animation: admin-spin 0.8s linear infinite;
-}
-
-@keyframes admin-spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.admin-spinner {
-		animation: none;
-	}
-}
-
 @media (max-width: 64rem) {
 	.admin-header-v2 {
 		flex-wrap: wrap;

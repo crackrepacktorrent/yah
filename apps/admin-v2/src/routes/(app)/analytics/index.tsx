@@ -1,6 +1,6 @@
 import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
-import { Errored, For, Loading, Show, createMemo, createSignal, isPending } from 'solid-js';
+import { Errored, For, Loading, Show, createMemo, createSignal, isPending, latest } from 'solid-js';
 import { ANALYTICS_PERIODS, type AnalyticsMetric, type AnalyticsPeriod, type AnalyticsSnapshot } from '~/features/analytics/contracts';
 import { getAnalytics } from '~/features/analytics/server';
 import './index.css';
@@ -39,6 +39,7 @@ function formatTimestamp(timestamp: string, period: AnalyticsPeriod): string {
 export default function AnalyticsPage() {
 	const [period, setPeriod] = createSignal<AnalyticsPeriod>('7d');
 	const snapshot = createMemo(() => getAnalytics(period()));
+	const visibleSnapshot = createMemo(() => latest(snapshot));
 	const updating = createMemo(() => isPending(snapshot));
 
 	return (
@@ -70,8 +71,8 @@ export default function AnalyticsPage() {
 			<Errored fallback={(_error, reset) => <div class="analytics-error" role="alert"><p>Analytics for this period could not be loaded.</p><button class="button button--secondary" type="button" onClick={() => { revalidate(getAnalytics.keyFor(period()), true); reset(); }}>Try again</button></div>}>
 				<Loading fallback={<p class="analytics-status" role="status">Loading analytics…</p>}>
 					<div class="analytics-result-slot" aria-busy={updating() ? 'true' : undefined}>
-						<Show when={updating()}><p class="analytics-updating" role="status">Updating analytics…</p></Show>
-						<Show when={snapshot()}>{(data) => <AnalyticsSnapshotView snapshot={data()} />}</Show>
+						<Show when={updating()}><p class="visually-hidden" role="status">Updating analytics…</p></Show>
+						<Show when={visibleSnapshot()}>{(data) => <AnalyticsSnapshotView snapshot={data()} />}</Show>
 					</div>
 				</Loading>
 			</Errored>
@@ -141,7 +142,7 @@ function PageviewFigure(props: { snapshot: AnalyticsSnapshot }) {
 				<For each={props.snapshot.pageviews}>
 					{(point) => (
 						<li>
-							<span class="pageview-label">{formatTimestamp(point.timestamp, props.snapshot.period)}</span>
+							<span>{formatTimestamp(point.timestamp, props.snapshot.period)}</span>
 							<span class="pageview-value">{point.pageviews.toLocaleString()}</span>
 							<span class="pageview-track" aria-hidden="true">
 								<span style={{ width: `${(point.pageviews / maximum()) * 100}%` }} />

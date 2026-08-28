@@ -1,5 +1,6 @@
 import type { Permissions } from '@yah/admin-core/permissions';
 import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
 import {
 	EmailSettingsCapabilitySchema,
 	SaveEmailBounceSettingsCommandSchema,
@@ -39,7 +40,7 @@ export type EmailSettingsManager = {
 };
 
 export type EmailSettingsServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	manager: EmailSettingsManager;
 };
 
@@ -52,8 +53,8 @@ function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknow
 	return result.output;
 }
 
-async function authorize(headers: Headers, capability: 'view' | 'edit', dependencies: EmailSettingsServiceDependencies): Promise<void> {
-	await dependencies.enforcePermissions(headers, { settings: [capability] });
+async function authorize(capability: 'view' | 'edit', dependencies: EmailSettingsServiceDependencies): Promise<void> {
+	await dependencies.authorization.requirePermissions({ settings: [capability] });
 }
 
 function validateServers(command: v.InferOutput<typeof SaveEmailSettingsCommandSchema>): void {
@@ -81,51 +82,45 @@ function surfaceMutationFailure(error: unknown, fallback: string): never {
 
 export async function requireAuthorizedEmailSettingsCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<true> {
 	const capability = parse(EmailSettingsCapabilitySchema, input);
-	await authorize(headers, capability, dependencies);
+	await authorize(capability, dependencies);
 	return true;
 }
 
 export async function readAuthorizedEmailSettings(
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<EmailSettings> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.read();
 }
 
 export async function readAuthorizedEmailGeneralSettings(
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<EmailGeneralSettings> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.readGeneral();
 }
 
 export async function readAuthorizedEmailPerformanceSettings(
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<EmailPerformanceSettings> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.readPerformance();
 }
 
 export async function readAuthorizedEmailBounceSettings(
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<EmailBounceSettings> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.readBounces();
 }
 
 export async function readAuthorizedEmailPrivacyPolicy(
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<EmailPrivacyPolicy> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.readPrivacy();
 }
 
@@ -141,7 +136,6 @@ function normalizedUnique(values: string[], lowerCase: boolean): string[] {
 
 export async function saveAuthorizedEmailGeneralSettings(
 	input: SaveEmailGeneralSettingsCommand,
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<SaveEmailSettingsResult> {
 	const command = parse(SaveEmailGeneralSettingsCommandSchema, input);
@@ -149,7 +143,7 @@ export async function saveAuthorizedEmailGeneralSettings(
 		...command,
 		notifyEmails: normalizedUnique(command.notifyEmails, false),
 	};
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	try {
 		return await dependencies.manager.saveGeneral(normalized);
 	} catch (error) {
@@ -159,14 +153,13 @@ export async function saveAuthorizedEmailGeneralSettings(
 
 export async function saveAuthorizedEmailPerformanceSettings(
 	input: SaveEmailPerformanceSettingsCommand,
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<SaveEmailSettingsResult> {
 	const command = parse(SaveEmailPerformanceSettingsCommandSchema, input);
 	if (command.slidingWindow && command.slidingWindowRate < 1) {
 		throw createPublicError('Enter at least one message for the enabled sliding window.', 400);
 	}
-	await dependencies.enforcePermissions(headers, { provider: ['manage'] });
+	await dependencies.authorization.requirePermissions({ provider: ['manage'] });
 	try {
 		return await dependencies.manager.savePerformance(command);
 	} catch (error) {
@@ -195,7 +188,6 @@ function durationMilliseconds(value: string): number {
 
 export async function saveAuthorizedEmailBounceSettings(
 	input: SaveEmailBounceSettingsCommand,
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<SaveEmailSettingsResult> {
 	const command = parse(SaveEmailBounceSettingsCommandSchema, input);
@@ -223,7 +215,7 @@ export async function saveAuthorizedEmailBounceSettings(
 	};
 	const permissions: Permissions = { provider: ['manage'] };
 	if (Object.values(command.actions).some(({ action }) => action === 'delete')) permissions['subscriber'] = ['delete'];
-	await dependencies.enforcePermissions(headers, permissions);
+	await dependencies.authorization.requirePermissions(permissions);
 	try {
 		return await dependencies.manager.saveBounces(normalized);
 	} catch (error) {
@@ -233,7 +225,6 @@ export async function saveAuthorizedEmailBounceSettings(
 
 export async function saveAuthorizedEmailPrivacyPolicy(
 	input: SaveEmailPrivacyPolicyCommand,
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<SaveEmailSettingsResult> {
 	const command = parse(SaveEmailPrivacyPolicyCommandSchema, input);
@@ -248,7 +239,7 @@ export async function saveAuthorizedEmailPrivacyPolicy(
 	}
 	const overlap = normalized.domainBlocklist.find((domain) => normalized.domainAllowlist.includes(domain));
 	if (overlap) throw createPublicError(`${overlap} cannot be both allowed and blocked.`, 400);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	try {
 		return await dependencies.manager.savePrivacy(normalized);
 	} catch (error) {
@@ -258,12 +249,11 @@ export async function saveAuthorizedEmailPrivacyPolicy(
 
 export async function saveAuthorizedEmailSettings(
 	input: SaveEmailSettingsCommand,
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<SaveEmailSettingsResult> {
 	const command = parse(SaveEmailSettingsCommandSchema, input);
 	validateServers(command);
-	await dependencies.enforcePermissions(headers, { provider: ['manage'] });
+	await dependencies.authorization.requirePermissions({ provider: ['manage'] });
 	try {
 		return await dependencies.manager.save(command);
 	} catch (error) {
@@ -273,7 +263,6 @@ export async function saveAuthorizedEmailSettings(
 
 export async function testAuthorizedSmtp(
 	input: TestSmtpCommand,
-	headers: Headers,
 	dependencies: EmailSettingsServiceDependencies,
 ): Promise<void> {
 	const command = parse(TestSmtpCommandSchema, input);
@@ -281,7 +270,7 @@ export async function testAuthorizedSmtp(
 	if (command.server.authProtocol !== 'none' && !command.server.password) {
 		throw createPublicError('Re-enter the SMTP password before testing this server.', 400);
 	}
-	await dependencies.enforcePermissions(headers, { provider: ['manage'] });
+	await dependencies.authorization.requirePermissions({ provider: ['manage'] });
 	try {
 		await dependencies.manager.test(command);
 	} catch (error) {

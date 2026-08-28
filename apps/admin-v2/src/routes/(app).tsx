@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, type RouteDefinition, useNavigate } from '@solidjs/router';
 import { Errored, Loading, Show, createMemo, type ParentProps } from 'solid-js';
 import { authClient } from '~/platform/auth/client';
@@ -13,20 +14,20 @@ export const route = {
 export default function ProtectedLayout(props: ParentProps) {
 	const navigate = useNavigate();
 	const session = createMemo(() => requireSession());
-	const canViewAnalytics = createMemo(() => session().permissions['analytics']?.includes('view') ?? false);
-	const canViewShortlinks = createMemo(() => session().permissions['shortlink']?.includes('view') ?? false);
-	const canViewEmailTemplates = createMemo(() => session().permissions['template']?.includes('view') ?? false);
-	const canViewMailingLists = createMemo(() => session().permissions['list']?.includes('view') ?? false);
-	const canViewCampaigns = createMemo(() => session().permissions['campaign']?.includes('view') ?? false);
-	const canViewSubscribers = createMemo(() => session().permissions['subscriber']?.includes('view') ?? false);
-	const canViewBounces = createMemo(() => session().permissions['bounce']?.includes('view') ?? false);
-	const canViewSettings = createMemo(() => session().permissions['settings']?.includes('view') ?? false);
-	const canViewEmailLogs = createMemo(() => session().permissions['provider']?.includes('manage') ?? false);
-	const canViewRoles = createMemo(() => session().permissions['ac']?.includes('read') ?? false);
+	const canViewAnalytics = createMemo(() => can(session(), 'analytics', 'view'));
+	const canViewShortlinks = createMemo(() => can(session(), 'shortlink', 'view'));
+	const canViewEmailTemplates = createMemo(() => can(session(), 'template', 'view'));
+	const canViewMailingLists = createMemo(() => can(session(), 'list', 'view'));
+	const canViewCampaigns = createMemo(() => can(session(), 'campaign', 'view'));
+	const canViewSubscribers = createMemo(() => can(session(), 'subscriber', 'view'));
+	const canViewBounces = createMemo(() => can(session(), 'bounce', 'view'));
+	const canViewSettings = createMemo(() => can(session(), 'settings', 'view'));
+	const canViewEmailLogs = createMemo(() => can(session(), 'provider', 'manage'));
+	const canViewRoles = createMemo(() => can(session(), 'ac', 'read'));
 	const canViewMembers = createMemo(
 		() =>
-			(session().permissions['member']?.includes('create') ?? false) &&
-			(session().permissions['invitation']?.includes('create') ?? false),
+			can(session(), 'member', 'create') &&
+			can(session(), 'invitation', 'create'),
 	);
 	const emailHref = createMemo(() => {
 		if (canViewEmailTemplates()) return '/emails';

@@ -1,9 +1,8 @@
 import { query } from '@solidjs/router';
 import { ORG_SLUG } from '@yah/admin-core/constants';
 import * as v from 'valibot';
-import { createPublicError, surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { createPublicError } from '~/platform/errors';
+import { runProductionRequest } from '~/platform/production-request.server';
 
 const invitationIdSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(255));
 const completeAccountSchema = v.strictObject({
@@ -32,10 +31,7 @@ function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknow
 
 export const getInvitationInfo = query(async (id: string): Promise<InvitationInfo | null> => {
 	'use server';
-	const request = getServerRequest();
-
-	try {
-		requireProductionRuntime();
+	return runProductionRequest(async (request) => {
 		const invitationId = parse(invitationIdSchema, id);
 		const { auth, pool } = await import('~/platform/auth/production-server');
 		const result = await pool.query(
@@ -76,18 +72,13 @@ export const getInvitationInfo = query(async (id: string): Promise<InvitationInf
 			organizationName: revealDetails ? row.organizationName : null,
 			role: revealDetails ? row.role : null,
 		};
-	} catch (error) {
-		surfaceError(error);
-	}
+	});
 }, 'invitation-info');
 
 /** Establish the mailbox owner's password before membership is granted. */
 export async function completeInvitationAccount(input: CompleteInvitationAccountCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-
-	try {
-		requireProductionRuntime();
+	return runProductionRequest(async (request) => {
 		const data = parse(completeAccountSchema, input);
 		const { auth, pool } = await import('~/platform/auth/production-server');
 		const session = await auth.api.getSession({ headers: request.headers });
@@ -116,18 +107,13 @@ export async function completeInvitationAccount(input: CompleteInvitationAccount
 
 		await auth.api.updateUser({ headers: request.headers, body: { name: data.name } });
 		await auth.api.setPassword({ headers: request.headers, body: { newPassword: data.password } });
-	} catch (error) {
-		surfaceError(error);
-	}
+	});
 }
 
 /** Accept only an invitation observed as live in this invocation. */
 export async function acceptInvitation(id: string): Promise<{ organizationId: string }> {
 	'use server';
-	const request = getServerRequest();
-
-	try {
-		requireProductionRuntime();
+	return runProductionRequest(async (request) => {
 		const invitationId = parse(invitationIdSchema, id);
 		const { auth, pool } = await import('~/platform/auth/production-server');
 		const session = await auth.api.getSession({ headers: request.headers });
@@ -153,7 +139,5 @@ export async function acceptInvitation(id: string): Promise<{ organizationId: st
 
 		await auth.api.acceptInvitation({ headers: request.headers, body: { invitationId } });
 		return { organizationId: invitation.organizationId };
-	} catch (error) {
-		surfaceError(error);
-	}
+	});
 }

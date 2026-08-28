@@ -1,5 +1,6 @@
-import type { Permissions } from '@yah/admin-core/permissions';
-import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
+import { createPublicError } from '~/platform/errors';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	CreateEmailTemplateCommandSchema,
 	EmailTemplateCapabilitySchema,
@@ -17,7 +18,6 @@ import {
 	type PreviewNewEmailTemplateCommand,
 	type UpdateEmailTemplateCommand,
 } from './contracts';
-import { createPublicError } from '~/platform/errors';
 
 export type EmailTemplateManager = {
 	list(): Promise<EmailTemplateSummary[]>;
@@ -31,25 +31,16 @@ export type EmailTemplateManager = {
 };
 
 export type EmailTemplateServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	manager: EmailTemplateManager;
 };
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw createPublicError(result.issues[0]?.message ?? 'Invalid email template data.', 400);
-	return result.output;
-}
+const parse = createPublicInputParser('Invalid email template data.');
 
 async function authorize(
-	headers: Headers,
 	capability: EmailTemplateCapability,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<void> {
-	await dependencies.enforcePermissions(headers, { template: [capability] });
+	await dependencies.authorization.requirePermissions({ template: [capability] });
 }
 
 const contentSlot = /\{\{\s*template\s+"content"\s*\.\s*\}\}/g;
@@ -108,41 +99,37 @@ async function preview(operation: () => Promise<string>, missingIsNotFound: bool
 
 export async function requireAuthorizedEmailTemplateCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<true> {
 	const capability = parse(EmailTemplateCapabilitySchema, input);
-	await authorize(headers, capability, dependencies);
+	await authorize(capability, dependencies);
 	return true;
 }
 
 export async function listAuthorizedEmailTemplates(
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<EmailTemplateSummary[]> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.list();
 }
 
 export async function readAuthorizedEmailTemplate(
 	input: unknown,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<EmailTemplateDetail> {
 	const id = parse(EmailTemplateIdSchema, input);
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return (await dependencies.manager.get(id)) ?? notFound();
 }
 
 export async function createAuthorizedEmailTemplate(
 	input: CreateEmailTemplateCommand,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<{ id: number }> {
 	const command = parse(CreateEmailTemplateCommandSchema, input);
 	requireValidBody(command.kind, command.body);
 	requireValidSubject(command.kind, command.subject);
-	await authorize(headers, 'create', dependencies);
+	await authorize('create', dependencies);
 	try {
 		const created = await dependencies.manager.create({
 			...command,
@@ -156,11 +143,10 @@ export async function createAuthorizedEmailTemplate(
 
 export async function updateAuthorizedEmailTemplate(
 	input: UpdateEmailTemplateCommand,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<void> {
 	const command = parse(UpdateEmailTemplateCommandSchema, input);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	const existing = await dependencies.manager.get(command.id);
 	if (!existing) notFound();
 	if (existing.kind === 'campaign_visual') {
@@ -180,11 +166,10 @@ export async function updateAuthorizedEmailTemplate(
 
 export async function deleteAuthorizedEmailTemplate(
 	input: unknown,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<void> {
 	const id = parse(EmailTemplateIdSchema, input);
-	await authorize(headers, 'delete', dependencies);
+	await authorize('delete', dependencies);
 	const existing = await dependencies.manager.get(id);
 	if (!existing) notFound();
 	if (existing.isDefault) throw createPublicError('The default campaign template cannot be deleted.', 409);
@@ -193,11 +178,10 @@ export async function deleteAuthorizedEmailTemplate(
 
 export async function setAuthorizedDefaultEmailTemplate(
 	input: unknown,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<void> {
 	const id = parse(EmailTemplateIdSchema, input);
-	await authorize(headers, 'set-default', dependencies);
+	await authorize('set-default', dependencies);
 	const existing = await dependencies.manager.get(id);
 	if (!existing) notFound();
 	if (existing.kind !== 'campaign') throw createPublicError('Only HTML campaign templates can be the default.', 409);
@@ -207,32 +191,29 @@ export async function setAuthorizedDefaultEmailTemplate(
 
 export async function previewAuthorizedSavedEmailTemplate(
 	input: unknown,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<string> {
 	const id = parse(EmailTemplateIdSchema, input);
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return preview(() => dependencies.manager.previewSaved(id), true);
 }
 
 export async function previewAuthorizedNewEmailTemplate(
 	input: PreviewNewEmailTemplateCommand,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<string> {
 	const command = parse(PreviewNewEmailTemplateCommandSchema, input);
 	requireValidBody(command.kind, command.body);
-	await authorize(headers, 'create', dependencies);
+	await authorize('create', dependencies);
 	return preview(() => dependencies.manager.previewDraft(command), false);
 }
 
 export async function previewAuthorizedEditedEmailTemplate(
 	input: PreviewEditedEmailTemplateCommand,
-	headers: Headers,
 	dependencies: EmailTemplateServiceDependencies,
 ): Promise<string> {
 	const command = parse(PreviewEditedEmailTemplateCommandSchema, input);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	const existing = await dependencies.manager.get(command.id);
 	if (!existing) notFound();
 	const kind = existing.kind;

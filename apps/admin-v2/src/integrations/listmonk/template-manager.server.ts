@@ -7,6 +7,7 @@ import {
 	type EmailTemplateSummary,
 } from '~/features/email-templates/contracts';
 import type { EmailTemplateManager } from '~/features/email-templates/service';
+import { createProviderResponseParser } from '~/integrations/provider-response.server';
 import type { ProductionConfig } from '~/platform/config/production';
 import {
 	createListmonkTransport,
@@ -38,16 +39,7 @@ const deleteResponseSchema = v.object({ data: v.literal(true) });
 type ListmonkConfig = Pick<ProductionConfig, 'LISTMONK_URL' | 'LISTMONK_API_TOKEN'>;
 type TemplateSummaryDto = v.InferOutput<typeof templateSummarySchema>;
 type TemplateDetailDto = v.InferOutput<typeof templateDetailSchema>;
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-	endpoint: string,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw new Error(`Listmonk returned an invalid ${endpoint} response.`);
-	return result.output;
-}
+const parse = createProviderResponseParser('Listmonk');
 
 function normalizeSummary(value: TemplateSummaryDto): EmailTemplateSummary {
 	return {

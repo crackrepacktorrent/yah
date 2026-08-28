@@ -10,6 +10,7 @@ import {
 	type BounceSummary,
 } from '~/features/bounces/contracts';
 import type { BounceManager } from '~/features/bounces/service';
+import { createProviderResponseParser } from '~/integrations/provider-response.server';
 import type { ProductionConfig } from '~/platform/config/production';
 import { createListmonkTransport, type ListmonkRequest } from './transport.server';
 
@@ -53,16 +54,7 @@ const deleteResponseSchema = v.strictObject({ data: v.literal(true) });
 
 type ListmonkConfig = Pick<ProductionConfig, 'LISTMONK_URL' | 'LISTMONK_API_TOKEN'>;
 type BounceDto = v.InferOutput<typeof bounceSchema>;
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-	endpoint: string,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw new Error(`Listmonk returned an invalid ${endpoint} response.`);
-	return result.output;
-}
+const parse = createProviderResponseParser('Listmonk');
 
 function normalize(value: BounceDto): BounceSummary {
 	return {

@@ -47,7 +47,7 @@ export function SubscriberCreateForm(props: {
 	);
 
 	return (
-		<form class="subscriber-form" onSubmit={(event) => {
+		<form class="subscriber-form form-grid" onSubmit={(event) => {
 			event.preventDefault();
 			if (disabledWithPendingDoubleOptIn()) return;
 			props.onSubmit({ email: email(), name: name(), status: status(), listIds: selectedIds(), preconfirmSubscriptions: preconfirmSubscriptions() });
@@ -122,7 +122,7 @@ export function SubscriberProfileForm(props: {
 	);
 
 	return (
-		<form class="subscriber-form subscriber-form--profile" onSubmit={(event) => {
+		<form class="subscriber-form form-grid" onSubmit={(event) => {
 			event.preventDefault();
 			props.onSubmit({ email: email(), name: name(), status: status() });
 		}}>

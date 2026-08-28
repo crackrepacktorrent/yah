@@ -1,5 +1,8 @@
-import type { Permissions } from '@yah/admin-core/permissions';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
 import * as v from 'valibot';
+import { isPrintedQrShortCode } from '@yah/admin-core/shortlink-policy';
+import { createPublicError } from '~/platform/errors';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	CreateShortlinkCommandSchema,
 	EditShortlinkCommandSchema,
@@ -14,8 +17,6 @@ import {
 	type ShortlinkDetail,
 	type ShortlinkOverview,
 } from './contracts';
-import { isPrintedQrShortCode } from '@yah/admin-core/shortlink-policy';
-import { createPublicError } from '~/platform/errors';
 
 export type ShortlinkManager = {
 	list(): Promise<Shortlink[]>;
@@ -29,55 +30,43 @@ export type ShortlinkManager = {
 };
 
 export type ShortlinkServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	manager: ShortlinkManager;
 };
 
 export type CreateShortlinkOutcome = { ok: true; shortCode: string } | { ok: false; reason: 'conflict' };
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw createPublicError(result.issues[0]?.message ?? 'Invalid shortlink data.', 400);
-	return result.output;
-}
+const parse = createPublicInputParser('Invalid shortlink data.');
 
 async function authorize(
-	headers: Headers,
 	capability: ShortlinkCapability,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<void> {
-	await dependencies.enforcePermissions(headers, { shortlink: [capability] });
+	await dependencies.authorization.requirePermissions({ shortlink: [capability] });
 }
 
 export async function requireAuthorizedShortlinkCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<true> {
 	const capability = parse(ShortlinkCapabilitySchema, input);
-	await authorize(headers, capability, dependencies);
+	await authorize(capability, dependencies);
 	return true;
 }
 
 export async function listAuthorizedShortlinks(
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<Shortlink[]> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.list();
 }
 
 async function readAuthorizedShortlinkWithCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 	capability: 'view' | 'edit',
 ): Promise<ShortlinkDetail> {
 	const shortCode = parse(ShortCodeSchema, input);
-	await authorize(headers, capability, dependencies);
+	await authorize(capability, dependencies);
 	const detail = await dependencies.manager.getDetail(shortCode);
 	if (!detail) throw createPublicError('Shortlink not found.', 404);
 	return detail;
@@ -85,19 +74,17 @@ async function readAuthorizedShortlinkWithCapability(
 
 export function readAuthorizedShortlink(
 	input: unknown,
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<ShortlinkDetail> {
-	return readAuthorizedShortlinkWithCapability(input, headers, dependencies, 'view');
+	return readAuthorizedShortlinkWithCapability(input, dependencies, 'view');
 }
 
 export async function readAuthorizedEditableShortlink(
 	input: unknown,
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<EditableShortlink> {
 	const shortCode = parse(ShortCodeSchema, input);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	const shortlink = await dependencies.manager.getEditable(shortCode);
 	if (!shortlink) throw createPublicError('Shortlink not found.', 404);
 	return shortlink;
@@ -105,11 +92,10 @@ export async function readAuthorizedEditableShortlink(
 
 export async function createAuthorizedShortlink(
 	input: CreateShortlinkCommand,
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<CreateShortlinkOutcome> {
 	const command = parse(CreateShortlinkCommandSchema, input);
-	await authorize(headers, 'create', dependencies);
+	await authorize('create', dependencies);
 	try {
 		return { ok: true, ...(await dependencies.manager.create(command)) };
 	} catch (error) {
@@ -123,21 +109,19 @@ export async function createAuthorizedShortlink(
 
 export async function editAuthorizedShortlink(
 	input: EditShortlinkCommand,
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<void> {
 	const command = parse(EditShortlinkCommandSchema, input);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	await dependencies.manager.edit(command);
 }
 
 export async function deleteAuthorizedShortlink(
 	input: unknown,
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<void> {
 	const shortCode = parse(ShortCodeSchema, input);
-	await authorize(headers, 'delete', dependencies);
+	await authorize('delete', dependencies);
 	if (isPrintedQrShortCode(shortCode)) {
 		throw createPublicError('This shortlink backs a printed QR code and cannot be deleted.', 409);
 	}
@@ -146,18 +130,16 @@ export async function deleteAuthorizedShortlink(
 
 export async function resetAuthorizedShortlinkVisits(
 	input: unknown,
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<{ deletedCount: number }> {
 	const shortCode = parse(ShortCodeSchema, input);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	return dependencies.manager.resetVisits(shortCode);
 }
 
 export async function readAuthorizedShortlinkOverview(
-	headers: Headers,
 	dependencies: ShortlinkServiceDependencies,
 ): Promise<ShortlinkOverview> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.getOverview();
 }

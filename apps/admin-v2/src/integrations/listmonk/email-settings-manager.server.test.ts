@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createListmonkEmailSettingsManager, prepareMaskedSettingsForWrite } from './email-settings-manager.server';
+import { createListmonkEmailSettingsManager } from './email-settings-manager.server';
 import { createListmonkV62SettingsFixture } from './listmonk-settings-document.fixture';
+import { prepareMaskedSettingsForWrite } from './listmonk-settings-document.server';
 
 const config = { LISTMONK_URL: 'https://mail.example/', LISTMONK_API_TOKEN: 'admin:secret-token' };
 const uuid = '10000000-0000-4000-8000-000000000001';
@@ -227,14 +228,15 @@ describe('Listmonk email settings manager', () => {
 			}
 			return json({ data: current });
 		});
-		const manager = createListmonkEmailSettingsManager(config, request);
+		const generalManager = createListmonkEmailSettingsManager(config, request);
+		const privacyManager = createListmonkEmailSettingsManager(config, request);
 		await Promise.all([
-			manager.saveGeneral({
+			generalManager.saveGeneral({
 				siteName: 'YAH Updates', logoUrl: 'https://example.test/logo.png', faviconUrl: '',
 				fromEmail: 'YAH Updates <updates@example.test>', notifyEmails: ['new@example.test'], sendOptInConfirmation: false,
 				showOptInPage: false, publicArchiveEnabled: true, publicArchiveRssContentEnabled: true,
 			}),
-			manager.savePrivacy({
+			privacyManager.savePrivacy({
 				disableTracking: true, individualTracking: false, unsubscribeHeader: false, recordOptInIp: true,
 				allowBlocklist: false, allowPreferences: false, allowExport: false, allowWipe: false,
 				exportable: ['profile', 'subscriptions'],
@@ -263,6 +265,39 @@ describe('Listmonk email settings manager', () => {
 			'privacy.exportable': ['profile', 'subscriptions'],
 		});
 		expect(bodies[1]?.['app.from_email']).toBe('YAH Updates <updates@example.test>');
+	});
+
+	it('releases the process-wide queue after a failed document validation', async () => {
+		const queueConfig = { ...config, LISTMONK_URL: 'https://queue.example/' };
+		let reads = 0;
+		let current = createListmonkV62SettingsFixture();
+		const request = vi.fn(async (_input: string | URL, init: RequestInit = {}) => {
+			if (init.method === 'PUT') {
+				current = JSON.parse(String(init.body)) as Record<string, unknown>;
+				return json({ data: true });
+			}
+			reads += 1;
+			return reads === 1 ? json({ data: { smtp: [providerServer] } }) : json({ data: current });
+		});
+		const first = createListmonkEmailSettingsManager(queueConfig, request);
+		const second = createListmonkEmailSettingsManager(queueConfig, request);
+		const [failed, succeeded] = await Promise.allSettled([
+			first.saveGeneral({
+				siteName: 'YAH Updates', logoUrl: '', faviconUrl: '', fromEmail: 'YAH <hello@example.test>',
+				notifyEmails: [], sendOptInConfirmation: true, showOptInPage: true,
+				publicArchiveEnabled: false, publicArchiveRssContentEnabled: false,
+			}),
+			second.savePrivacy({
+				disableTracking: true, individualTracking: false, unsubscribeHeader: true, recordOptInIp: false,
+				allowBlocklist: true, allowPreferences: true, allowExport: true, allowWipe: true,
+				exportable: ['profile'], domainBlocklist: [], domainAllowlist: [],
+			}),
+		]);
+
+		expect(failed.status).toBe('rejected');
+		expect(succeeded).toEqual({ status: 'fulfilled', value: { needsRestart: false } });
+		expect(request.mock.calls.map(([, init]) => init?.method ?? 'GET')).toEqual(['GET', 'GET', 'PUT']);
+		expect(current['privacy.disable_tracking']).toBe(true);
 	});
 
 	it('writes complete performance and bounce controls while retaining secrets and mailbox-owned fields', async () => {

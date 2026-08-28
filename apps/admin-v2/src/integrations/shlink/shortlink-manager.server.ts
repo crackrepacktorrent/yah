@@ -12,6 +12,7 @@ import {
 	type VisitSummary,
 } from '~/features/shortlinks/contracts';
 import { fetchUpstream, parseJsonResponse, readErrorBody } from '~/integrations/http';
+import { createProviderResponseParser } from '~/integrations/provider-response.server';
 import type { ProductionConfig } from '~/platform/config/production';
 
 const MAX_LIST_ITEMS = 10_000;
@@ -72,16 +73,7 @@ const nonUniqueSlugProblemSchema = v.object({
 
 type ShlinkConfig = Pick<ProductionConfig, 'SHLINK_URL' | 'SHLINK_API_KEY'>;
 type RequestUpstream = typeof fetchUpstream;
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-	endpoint: string,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw new Error(`Shlink returned an invalid ${endpoint} response.`);
-	return result.output;
-}
+const parse = createProviderResponseParser('Shlink');
 
 function normalizeSummary(summary: v.InferOutput<typeof visitSummarySchema>): VisitSummary {
 	return { total: summary.total, nonBots: summary.nonBots, bots: summary.bots };

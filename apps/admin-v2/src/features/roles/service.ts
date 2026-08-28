@@ -5,6 +5,9 @@ import {
 	type Permissions,
 } from '@yah/admin-core/permissions';
 import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
+import { createPublicError } from '~/platform/errors';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	CreateRoleCommandSchema,
 	RoleIdSchema,
@@ -22,7 +25,6 @@ import {
 	type UpdateRoleCommand,
 	type UpdateRoleOutcome,
 } from './contracts';
-import { createPublicError } from '~/platform/errors';
 
 /** Product-facing operations only; organization scoping belongs to the adapter. */
 export type RoleDirectory = {
@@ -33,18 +35,10 @@ export type RoleDirectory = {
 };
 
 export type RoleServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	directory: RoleDirectory;
 };
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw createPublicError(result.issues[0]?.message ?? 'Invalid role data.', 400);
-	return result.output;
-}
+const parse = createPublicInputParser('Invalid role data.');
 
 function normalizeCustomPermissions(
 	permissions: Record<string, string[]>,
@@ -102,20 +96,18 @@ function isBuiltInId(roleId: string): boolean {
 }
 
 async function enforceGrantSubset(
-	headers: Headers,
 	permissions: CustomRolePermissions,
 	dependencies: RoleServiceDependencies,
 ): Promise<void> {
 	if (Object.keys(permissions).length > 0) {
-		await dependencies.enforcePermissions(headers, permissions as Permissions);
+		await dependencies.authorization.requirePermissions(permissions as Permissions);
 	}
 }
 
 export async function listAuthorizedRoles(
-	headers: Headers,
 	dependencies: RoleServiceDependencies,
 ): Promise<RoleCatalog> {
-	await dependencies.enforcePermissions(headers, { ac: ['read'] });
+	await dependencies.authorization.requirePermissions({ ac: ['read'] });
 	const customRoles = await dependencies.directory.listCustomRoles();
 	const builtInRoles = Object.entries(defaultRolePermissions).map(([key, permissions]) => ({
 		id: `builtin:${key}`,
@@ -140,28 +132,26 @@ export async function listAuthorizedRoles(
 
 export async function requireAuthorizedRoleRouteCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: RoleServiceDependencies,
 ): Promise<true> {
 	const capability = parse(RoleRouteCapabilitySchema, input);
 	const permissions: Record<RoleRouteCapability, Permissions> = {
 		create: { ac: ['create'] },
 	};
-	await dependencies.enforcePermissions(headers, permissions[capability]);
+	await dependencies.authorization.requirePermissions(permissions[capability]);
 	return true;
 }
 
 export async function createAuthorizedRole(
 	input: CreateRoleCommand,
-	headers: Headers,
 	dependencies: RoleServiceDependencies,
 ): Promise<CreateRoleOutcome> {
 	const command = parse(CreateRoleCommandSchema, input);
 	const permissions = parseCommandPermissions(command.permissions);
-	await dependencies.enforcePermissions(headers, { ac: ['create'] });
+	await dependencies.authorization.requirePermissions({ ac: ['create'] });
 
 	if (Object.hasOwn(defaultRolePermissions, command.key)) return { ok: false, reason: 'key-conflict' };
-	await enforceGrantSubset(headers, permissions, dependencies);
+	await enforceGrantSubset(permissions, dependencies);
 
 	try {
 		const role = await dependencies.directory.createCustomRole(command.key, permissions);
@@ -176,16 +166,15 @@ export async function createAuthorizedRole(
 
 export async function updateAuthorizedRole(
 	input: UpdateRoleCommand,
-	headers: Headers,
 	dependencies: RoleServiceDependencies,
 ): Promise<UpdateRoleOutcome> {
 	const command = parse(UpdateRoleCommandSchema, input);
 	const permissions = parseCommandPermissions(command.permissions);
-	await dependencies.enforcePermissions(headers, { ac: ['update'] });
+	await dependencies.authorization.requirePermissions({ ac: ['update'] });
 
 	if (isBuiltInId(command.roleId)) return { ok: false, reason: 'built-in' };
 	if (!(await dependencies.directory.findCustomRole(command.roleId))) return { ok: false, reason: 'not-found' };
-	await enforceGrantSubset(headers, permissions, dependencies);
+	await enforceGrantSubset(permissions, dependencies);
 
 	try {
 		const role = await dependencies.directory.updateCustomRole(command.roleId, permissions);

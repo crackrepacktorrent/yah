@@ -44,6 +44,7 @@ const visual: EmailTemplateDetail = {
 };
 
 function dependencies(existing: EmailTemplateDetail | null = transactional) {
+	const enforcePermissions = vi.fn(async (_permissions: Permissions) => undefined);
 	const manager: EmailTemplateManager = {
 		list: vi.fn(async () => [campaign, transactional]),
 		get: vi.fn(async () => existing),
@@ -55,7 +56,8 @@ function dependencies(existing: EmailTemplateDetail | null = transactional) {
 		previewDraft: vi.fn(async () => '<html>draft</html>'),
 	};
 	return {
-		enforcePermissions: vi.fn(async (_headers: Headers, _permissions: Permissions) => undefined),
+		authorization: { requirePermissions: enforcePermissions, getCurrentUserId: vi.fn(async () => 'test-user') },
+		enforcePermissions,
 		manager,
 	};
 }
@@ -66,27 +68,26 @@ describe('email-template service boundary', () => {
 		await expect(
 			createAuthorizedEmailTemplate(
 				{ name: '', kind: 'tx', subject: '', body: '<p>body</p>' },
-				new Headers(),
 				deps,
 			),
 		).rejects.toThrow('Enter a template name.');
 		expect(deps.enforcePermissions).not.toHaveBeenCalled();
 		expect(deps.manager.create).not.toHaveBeenCalled();
 
-		await expect(readAuthorizedEmailTemplate(0, new Headers(), deps)).rejects.toThrow('Select a valid email template.');
+		await expect(readAuthorizedEmailTemplate(0, deps)).rejects.toThrow('Select a valid email template.');
 		expect(deps.enforcePermissions).not.toHaveBeenCalled();
 	});
 
 	it('enforces every capability independently before provider access', async () => {
 		const deps = dependencies();
-		await requireAuthorizedEmailTemplateCapability('create', new Headers(), deps);
-		await listAuthorizedEmailTemplates(new Headers(), deps);
-		await readAuthorizedEmailTemplate(5, new Headers(), deps);
-		await createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: 'Subject', body: '<p>body</p>' }, new Headers(), deps);
-		await updateAuthorizedEmailTemplate({ id: 5, name: 'Tx', subject: 'Subject', body: '<p>body</p>' }, new Headers(), deps);
-		await deleteAuthorizedEmailTemplate(5, new Headers(), deps);
+		await requireAuthorizedEmailTemplateCapability('create', deps);
+		await listAuthorizedEmailTemplates(deps);
+		await readAuthorizedEmailTemplate(5, deps);
+		await createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: 'Subject', body: '<p>body</p>' }, deps);
+		await updateAuthorizedEmailTemplate({ id: 5, name: 'Tx', subject: 'Subject', body: '<p>body</p>' }, deps);
+		await deleteAuthorizedEmailTemplate(5, deps);
 
-		expect(deps.enforcePermissions.mock.calls.map(([, permission]) => permission)).toEqual([
+		expect(deps.enforcePermissions.mock.calls.map(([permission]) => permission)).toEqual([
 			{ template: ['create'] },
 			{ template: ['view'] },
 			{ template: ['view'] },
@@ -99,9 +100,9 @@ describe('email-template service boundary', () => {
 	it('never invokes Listmonk after authorization is denied', async () => {
 		const deps = dependencies();
 		deps.enforcePermissions.mockRejectedValue(new Error('forbidden'));
-		await expect(listAuthorizedEmailTemplates(new Headers(), deps)).rejects.toThrow('forbidden');
+		await expect(listAuthorizedEmailTemplates(deps)).rejects.toThrow('forbidden');
 		await expect(
-			createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: 'Subject', body: '<p>body</p>' }, new Headers(), deps),
+			createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: 'Subject', body: '<p>body</p>' }, deps),
 		).rejects.toThrow('forbidden');
 		expect(deps.manager.list).not.toHaveBeenCalled();
 		expect(deps.manager.create).not.toHaveBeenCalled();
@@ -111,34 +112,34 @@ describe('email-template service boundary', () => {
 		for (const body of ['<main>No slot</main>', '{{ template "content" . }}{{ template "content" . }}']) {
 			const deps = dependencies();
 			await expect(
-				createAuthorizedEmailTemplate({ name: 'Campaign', kind: 'campaign', subject: '', body }, new Headers(), deps),
+				createAuthorizedEmailTemplate({ name: 'Campaign', kind: 'campaign', subject: '', body }, deps),
 			).rejects.toThrow('exactly one');
 			expect(deps.enforcePermissions).not.toHaveBeenCalled();
 		}
 
 		const deps = dependencies();
 		await expect(
-			createAuthorizedEmailTemplate({ name: 'Campaign', kind: 'campaign', subject: '', body: campaign.body }, new Headers(), deps),
+			createAuthorizedEmailTemplate({ name: 'Campaign', kind: 'campaign', subject: '', body: campaign.body }, deps),
 		).resolves.toEqual({ id: 9 });
 		await expect(
-			createAuthorizedEmailTemplate({ name: 'Campaign', kind: 'campaign', subject: '', body: '{{template "content".}}' }, new Headers(), deps),
+			createAuthorizedEmailTemplate({ name: 'Campaign', kind: 'campaign', subject: '', body: '{{template "content".}}' }, deps),
 		).resolves.toEqual({ id: 9 });
 		await expect(
-			createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: 'Subject', body: '<p>No slot</p>' }, new Headers(), deps),
+			createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: 'Subject', body: '<p>No slot</p>' }, deps),
 		).resolves.toEqual({ id: 9 });
 	});
 
 	it('requires a nonblank subject for transactional templates', async () => {
 		const createDeps = dependencies();
 		await expect(
-			createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: '   ', body: '<p>body</p>' }, new Headers(), createDeps),
+			createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: '   ', body: '<p>body</p>' }, createDeps),
 		).rejects.toThrow('Enter a subject');
 		expect(createDeps.enforcePermissions).not.toHaveBeenCalled();
 		expect(createDeps.manager.create).not.toHaveBeenCalled();
 
 		const updateDeps = dependencies(transactional);
 		await expect(
-			updateAuthorizedEmailTemplate({ id: 5, name: 'Tx', subject: '', body: '<p>body</p>' }, new Headers(), updateDeps),
+			updateAuthorizedEmailTemplate({ id: 5, name: 'Tx', subject: '', body: '<p>body</p>' }, updateDeps),
 		).rejects.toThrow('Enter a subject');
 		expect(updateDeps.manager.update).not.toHaveBeenCalled();
 	});
@@ -146,67 +147,67 @@ describe('email-template service boundary', () => {
 	it('keeps visual templates read-only and validates edits against immutable kind', async () => {
 		const visualDeps = dependencies(visual);
 		await expect(
-			updateAuthorizedEmailTemplate({ id: 7, name: 'Visual', subject: '', body: '<p>changed</p>' }, new Headers(), visualDeps),
+			updateAuthorizedEmailTemplate({ id: 7, name: 'Visual', subject: '', body: '<p>changed</p>' }, visualDeps),
 		).rejects.toThrow('Visual template content is read-only');
 		expect(visualDeps.manager.update).not.toHaveBeenCalled();
 
 		const campaignDeps = dependencies({ ...campaign, isDefault: false });
 		await expect(
-			updateAuthorizedEmailTemplate({ id: 1, name: 'Campaign', subject: '', body: '<p>missing</p>' }, new Headers(), campaignDeps),
+			updateAuthorizedEmailTemplate({ id: 1, name: 'Campaign', subject: '', body: '<p>missing</p>' }, campaignDeps),
 		).rejects.toThrow('exactly one');
 		expect(campaignDeps.manager.update).not.toHaveBeenCalled();
 	});
 
 	it('prevents default deletion and limits default selection to HTML campaigns', async () => {
 		const defaultDeps = dependencies(campaign);
-		await expect(deleteAuthorizedEmailTemplate(1, new Headers(), defaultDeps)).rejects.toThrow('cannot be deleted');
+		await expect(deleteAuthorizedEmailTemplate(1, defaultDeps)).rejects.toThrow('cannot be deleted');
 		expect(defaultDeps.manager.delete).not.toHaveBeenCalled();
 
 		const txDeps = dependencies(transactional);
-		await expect(setAuthorizedDefaultEmailTemplate(5, new Headers(), txDeps)).rejects.toThrow('Only HTML campaign templates');
+		await expect(setAuthorizedDefaultEmailTemplate(5, txDeps)).rejects.toThrow('Only HTML campaign templates');
 		expect(txDeps.manager.setDefault).not.toHaveBeenCalled();
 
 		const campaignDeps = dependencies({ ...campaign, isDefault: false });
-		await setAuthorizedDefaultEmailTemplate(1, new Headers(), campaignDeps);
-		expect(campaignDeps.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { template: ['set-default'] });
+		await setAuthorizedDefaultEmailTemplate(1, campaignDeps);
+		expect(campaignDeps.enforcePermissions).toHaveBeenCalledWith({ template: ['set-default'] });
 		expect(campaignDeps.manager.setDefault).toHaveBeenCalledWith(1);
 	});
 
 	it('returns stable not-found and conflict errors without provider diagnostics', async () => {
 		const missing = dependencies(null);
-		await expect(readAuthorizedEmailTemplate(99, new Headers(), missing)).rejects.toMatchObject({ status: 404 });
+		await expect(readAuthorizedEmailTemplate(99, missing)).rejects.toMatchObject({ status: 404 });
 
 		const raced = dependencies({ ...transactional, isDefault: false });
 		vi.mocked(raced.manager.delete).mockRejectedValue(new TemplateProviderFailure(409));
-		await expect(deleteAuthorizedEmailTemplate(5, new Headers(), raced)).rejects.toMatchObject({ status: 409 });
+		await expect(deleteAuthorizedEmailTemplate(5, raced)).rejects.toMatchObject({ status: 409 });
 	});
 
 	it('maps provider syntax rejection separately from mutation races', async () => {
 		const createDeps = dependencies();
 		vi.mocked(createDeps.manager.create).mockRejectedValue(new TemplateProviderFailure(400));
 		await expect(
-			createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: 'Subject', body: '{{ invalid }}' }, new Headers(), createDeps),
+			createAuthorizedEmailTemplate({ name: 'Tx', kind: 'tx', subject: 'Subject', body: '{{ invalid }}' }, createDeps),
 		).rejects.toMatchObject({ status: 400, message: 'Listmonk rejected the template HTML or expressions.' });
 
 		const updateDeps = dependencies(transactional);
 		vi.mocked(updateDeps.manager.update).mockRejectedValue(new TemplateProviderFailure(400));
 		await expect(
-			updateAuthorizedEmailTemplate({ id: 5, name: 'Tx', subject: 'Subject', body: '{{ invalid }}' }, new Headers(), updateDeps),
+			updateAuthorizedEmailTemplate({ id: 5, name: 'Tx', subject: 'Subject', body: '{{ invalid }}' }, updateDeps),
 		).rejects.toMatchObject({ status: 400, message: 'Listmonk rejected the template HTML or expressions.' });
 
 		const previewDeps = dependencies(transactional);
 		vi.mocked(previewDeps.manager.previewDraft).mockRejectedValue(new TemplateProviderFailure(400));
 		await expect(
-			previewAuthorizedNewEmailTemplate({ kind: 'tx', body: '{{ invalid }}' }, new Headers(), previewDeps),
+			previewAuthorizedNewEmailTemplate({ kind: 'tx', body: '{{ invalid }}' }, previewDeps),
 		).rejects.toMatchObject({ status: 400, message: 'Listmonk could not render this template. Check its HTML and template expressions.' });
 	});
 
 	it('uses saved preview for viewers and validated draft preview for authors', async () => {
 		const deps = dependencies(campaign);
-		await expect(previewAuthorizedNewEmailTemplate({ kind: 'campaign', body: campaign.body }, new Headers(), deps)).resolves.toBe(
+		await expect(previewAuthorizedNewEmailTemplate({ kind: 'campaign', body: campaign.body }, deps)).resolves.toBe(
 			'<html>draft</html>',
 		);
-		await expect(previewAuthorizedEditedEmailTemplate({ id: 1, body: campaign.body }, new Headers(), deps)).resolves.toBe(
+		await expect(previewAuthorizedEditedEmailTemplate({ id: 1, body: campaign.body }, deps)).resolves.toBe(
 			'<html>draft</html>',
 		);
 		expect(deps.manager.previewDraft).toHaveBeenNthCalledWith(1, { kind: 'campaign', body: campaign.body });

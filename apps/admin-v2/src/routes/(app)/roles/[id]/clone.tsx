@@ -6,6 +6,7 @@ import type { Role } from '~/features/roles/contracts';
 import { RoleForm } from '~/features/roles/form';
 import { decodeRoleRouteId, roleDetailsHref } from '~/features/roles/routing';
 import { createRole, listRoles, requireRoleRouteCapability } from '~/features/roles/server';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 import '../roles.css';
@@ -58,7 +59,7 @@ function CloneRoleEditor(props: { role: Role }) {
 	return (
 		<section class="roles-page">
 			{authorized()}
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/roles">Roles</a><span aria-hidden="true">/</span><a href={roleDetailsHref(props.role.id)}>{props.role.key}</a><span aria-hidden="true">/</span><span>Clone</span></nav>
+			<Breadcrumbs items={[{ href: '/roles', label: 'Roles' }, { href: roleDetailsHref(props.role.id), label: props.role.key }, { label: 'Clone' }]} />
 			<h1>Clone {props.role.key}</h1>
 			<p>Only product permissions are copied. Organization, membership, invitation, team, and role-management authority are never cloned.</p>
 			<RoleForm

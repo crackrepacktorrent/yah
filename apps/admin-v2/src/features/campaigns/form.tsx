@@ -93,7 +93,7 @@ export function CampaignForm(props: {
 
 	return (
 		<form
-			class="campaign-form"
+			class="campaign-form form-grid"
 			onSubmit={(event) => {
 				event.preventDefault();
 				props.onSubmit(values());

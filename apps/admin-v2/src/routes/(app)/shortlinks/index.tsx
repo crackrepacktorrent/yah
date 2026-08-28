@@ -1,8 +1,10 @@
+import { can } from '@yah/admin-core/permissions';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo } from 'solid-js';
 import { shortlinkDetailHref } from '~/features/shortlinks/routing';
 import { listShortlinks } from '~/features/shortlinks/server';
 import { requireSession } from '~/platform/auth/session';
+import { PageHeader } from '~/ui/page-header';
 import './shortlinks.css';
 
 export const route = defineFileRoute('/shortlinks', {
@@ -12,17 +14,13 @@ export const route = defineFileRoute('/shortlinks', {
 export default function ShortlinkListPage() {
 	const links = createMemo(() => listShortlinks());
 	const session = createMemo(() => requireSession());
-	const canCreate = createMemo(() => session().permissions['shortlink']?.includes('create') ?? false);
+	const canCreate = createMemo(() => can(session(), 'shortlink', 'create'));
 
 	return (
 		<section class="shortlinks-page">
-			<header class="page-header">
-				<div>
-					<p class="eyebrow">Redirects</p>
-					<h1>Shortlinks</h1>
-				</div>
+			<PageHeader eyebrow="Redirects" title="Shortlinks">
 				<Show when={canCreate()}><a class="button" href="/shortlinks/new">New shortlink</a></Show>
-			</header>
+			</PageHeader>
 			<div class="data-table-scroll">
 				<table class="data-table">
 					<caption class="visually-hidden">Shortlinks</caption>
@@ -33,7 +31,7 @@ export default function ShortlinkListPage() {
 								<tr>
 									<td><span><a class="short-code" href={shortlinkDetailHref(link.shortCode)}>{link.shortCode}</a><Show when={link.title}>{(title) => <small class="row-title">{title()}</small>}</Show></span></td>
 									<td><span class="destination" title={link.longUrl}>{link.longUrl}</span></td>
-									<td><span class="tag-list"><For each={link.tags}>{(tag) => <span>{tag}</span>}</For></span></td>
+									<td><span class="tag-list"><For each={link.tags}>{(tag) => <span class="badge">{tag}</span>}</For></span></td>
 									<td>{link.visits.total}</td>
 									<td>{new Date(link.dateCreated).toLocaleDateString()}</td>
 								</tr>

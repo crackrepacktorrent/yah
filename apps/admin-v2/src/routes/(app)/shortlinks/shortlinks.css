@@ -8,15 +8,9 @@
 .row-title { display: block; margin-top: 0.2rem; color: var(--admin-text-muted); }
 .destination { display: block; max-width: 26rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-.tag-list > span { padding: 0.2rem 0.45rem; border-radius: 999px; background: var(--admin-surface-selected); font-size: 0.82rem; }
+.tag-list > .badge { background: var(--admin-surface-selected); }
 
 .shortlink-editor-page > p { margin-top: 0.5rem; color: oklch(0.44 0.035 44.2); }
-.shortlink-form {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 1rem;
-	margin-top: 1.5rem;
-}
 .shortlink-options { display: flex; gap: 1.25rem; padding: 1rem; border: 1px solid var(--admin-border); border-radius: var(--admin-radius-control); }
 .shortlink-options legend { padding: 0 0.25rem; font-weight: 700; }
 .shortlink-options label { display: flex; gap: 0.5rem; align-items: center; }
@@ -32,7 +26,7 @@
 	margin: 0 0 1.5rem;
 }
 .shortlink-stats div,
-.detail-card { padding: 1.25rem; border: 1px solid var(--admin-border-panel); border-radius: var(--admin-radius-panel); background: white; }
+.detail-card { padding: 1.25rem; border: 1px solid var(--admin-border-panel); border-radius: var(--admin-radius-panel); background: var(--admin-surface-raised); }
 .shortlink-stats dt { color: oklch(0.45 0.03 44.2); }
 .shortlink-stats dd { margin: 0.25rem 0 0; font-size: 1.8rem; font-weight: 750; }
 .detail-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(17rem, 1fr); gap: 1.25rem; }
@@ -49,7 +43,6 @@
 
 @media (max-width: 48rem) {
 	.detail-actions { justify-content: flex-start; }
-	.shortlink-form,
 	.detail-grid { grid-template-columns: 1fr; }
 	.shortlink-options { flex-direction: column; }
 	.shortlink-stats { grid-template-columns: 1fr; }

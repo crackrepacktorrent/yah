@@ -9,6 +9,7 @@ import {
 	type CampaignType,
 } from '~/features/campaigns/contracts';
 import type { CampaignManager } from '~/features/campaigns/service';
+import { createProviderResponseParser } from '~/integrations/provider-response.server';
 import type { ProductionConfig } from '~/platform/config/production';
 import { createListmonkTransport, ListmonkHttpFailure, type ListmonkRequest } from './transport.server';
 
@@ -68,16 +69,7 @@ const deleteResponseSchema = v.object({ data: v.literal(true) });
 
 type ListmonkConfig = Pick<ProductionConfig, 'LISTMONK_URL' | 'LISTMONK_API_TOKEN'>;
 type CampaignDto = v.InferOutput<typeof campaignSchema>;
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-	endpoint: string,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw new Error(`Listmonk returned an invalid ${endpoint} response.`);
-	return result.output;
-}
+const parse = createProviderResponseParser('Listmonk');
 
 function normalizeSummary(value: CampaignDto): CampaignSummary {
 	return {

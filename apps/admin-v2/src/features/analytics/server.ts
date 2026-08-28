@@ -1,44 +1,29 @@
 import { query } from '@solidjs/router';
 import type { AnalyticsPeriod, AnalyticsSnapshot, SiteOverview } from './contracts';
 import { readAuthorizedAnalytics, readAuthorizedSiteOverview } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
+
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { productionUmamiAnalyticsReader }] = await Promise.all([
+		import('~/platform/auth/authorization.server'),
+		import('~/integrations/umami/production-reader.server'),
+	]);
+	return {
+		authorization: createAuthorizationContext(headers),
+		reader: productionUmamiAnalyticsReader,
+	};
+}
 
 export const getAnalytics = query(async (input: AnalyticsPeriod = '7d'): Promise<AnalyticsSnapshot> => {
 	'use server';
-	const request = getServerRequest();
-
-	try {
-		requireProductionRuntime();
-		const [{ enforcePermissions }, { productionUmamiAnalyticsReader }] = await Promise.all([
-			import('~/platform/auth/authorization.server'),
-			import('~/integrations/umami/production-reader.server'),
-		]);
-		return await readAuthorizedAnalytics(input, request.headers, {
-			enforcePermissions,
-			reader: productionUmamiAnalyticsReader,
-		});
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		readAuthorizedAnalytics(input, await requestDependencies(request.headers)),
+	);
 }, 'analytics');
 
 export const getSiteOverview = query(async (): Promise<SiteOverview> => {
 	'use server';
-	const request = getServerRequest();
-
-	try {
-		requireProductionRuntime();
-		const [{ enforcePermissions }, { productionUmamiAnalyticsReader }] = await Promise.all([
-			import('~/platform/auth/authorization.server'),
-			import('~/integrations/umami/production-reader.server'),
-		]);
-		return await readAuthorizedSiteOverview(request.headers, {
-			enforcePermissions,
-			reader: productionUmamiAnalyticsReader,
-		});
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		readAuthorizedSiteOverview(await requestDependencies(request.headers)),
+	);
 }, 'site-overview');

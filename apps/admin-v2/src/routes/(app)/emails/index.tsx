@@ -1,9 +1,11 @@
+import { can } from '@yah/admin-core/permissions';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo } from 'solid-js';
 import { emailTemplateKindLabel } from '~/features/email-templates/form';
 import { emailTemplateHref } from '~/features/email-templates/routing';
 import { listEmailTemplates } from '~/features/email-templates/server';
 import { requireSession } from '~/platform/auth/session';
+import { PageHeader } from '~/ui/page-header';
 
 export const route = defineFileRoute('/emails', {
 	preload: () => void listEmailTemplates(),
@@ -12,17 +14,13 @@ export const route = defineFileRoute('/emails', {
 export default function EmailTemplateListPage() {
 	const templates = createMemo(() => listEmailTemplates());
 	const session = createMemo(() => requireSession());
-	const canCreate = createMemo(() => session().permissions['template']?.includes('create') ?? false);
+	const canCreate = createMemo(() => can(session(), 'template', 'create'));
 
 	return (
 		<section class="email-templates-page">
-			<header class="page-header">
-				<div>
-					<p class="eyebrow">Email delivery</p>
-					<h1>Email templates</h1>
-				</div>
+			<PageHeader eyebrow="Email delivery" title="Email templates">
 				<Show when={canCreate()}><a class="button" href="/emails/templates/new">New template</a></Show>
-			</header>
+			</PageHeader>
 			<div class="data-table-scroll">
 				<table class="data-table">
 					<caption class="visually-hidden">Email templates</caption>
@@ -34,8 +32,8 @@ export default function EmailTemplateListPage() {
 									<tr>
 										<td><a class="email-template-name" href={emailTemplateHref(template.id)}>{template.name}</a></td>
 										<td>
-											<span class="email-template-kind">{emailTemplateKindLabel(template.kind)}</span>
-											<Show when={template.isDefault}><span class="email-template-default">Default</span></Show>
+											<span class="badge">{emailTemplateKindLabel(template.kind)}</span>
+											<Show when={template.isDefault}><span class="badge email-template-default">Default</span></Show>
 										</td>
 										<td>{template.subject || 'Not used'}</td>
 										<td>{new Date(template.createdAt).toLocaleDateString()}</td>

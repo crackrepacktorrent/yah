@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo, createSignal } from 'solid-js';
@@ -11,6 +12,7 @@ import {
 	removeMember,
 } from '~/features/membership/server';
 import { canManageMember } from '~/features/membership/ui-model';
+import { PageHeader } from '~/ui/page-header';
 import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { toast } from '~/ui/toast';
@@ -37,11 +39,11 @@ export default function MembersPage() {
 	const session = createMemo(() => requireSession());
 	const members = createMemo(() => listMembers());
 	const invitations = createMemo(() => listPendingInvitations());
-	const canInvite = createMemo(() => session().permissions['invitation']?.includes('create') ?? false);
-	const canCancel = createMemo(() => session().permissions['invitation']?.includes('cancel') ?? false);
-	const canUpdate = createMemo(() => session().permissions['member']?.includes('update') ?? false);
-	const canDelete = createMemo(() => session().permissions['member']?.includes('delete') ?? false);
-	const canReadAccessControl = createMemo(() => session().permissions['ac']?.includes('read') ?? false);
+	const canInvite = createMemo(() => can(session(), 'invitation', 'create'));
+	const canCancel = createMemo(() => can(session(), 'invitation', 'cancel'));
+	const canUpdate = createMemo(() => can(session(), 'member', 'update'));
+	const canDelete = createMemo(() => can(session(), 'member', 'delete'));
+	const canReadAccessControl = createMemo(() => can(session(), 'ac', 'read'));
 	const [confirmTarget, setConfirmTarget] = createSignal<ConfirmTarget>(null);
 	const memberDialogTarget = createMemo(() => {
 		const target = confirmTarget();
@@ -91,15 +93,11 @@ export default function MembersPage() {
 
 	return (
 		<section class="membership-page">
-			<header class="page-header">
-				<div>
-					<p class="eyebrow">Organization access</p>
-					<h1>Members</h1>
-				</div>
+			<PageHeader eyebrow="Organization access" title="Members">
 				<Show when={canInvite()}>
 					<a class="button" href="/members/invitations/new">Invite member</a>
 				</Show>
-			</header>
+			</PageHeader>
 
 			<section class="membership-section" aria-labelledby="members-heading">
 				<header class="membership-section__header">

@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
@@ -14,6 +15,8 @@ import {
 	updateEmailTemplate,
 } from '~/features/email-templates/server';
 import { requireSession } from '~/platform/auth/session';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
+import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
@@ -37,14 +40,14 @@ function EmailTemplateDetailView(props: { template: EmailTemplateDetail }) {
 	const navigate = useNavigate();
 	const session = createMemo(() => requireSession());
 	const canEdit = createMemo(
-		() => (session().permissions['template']?.includes('edit') ?? false) && props.template.kind !== 'campaign_visual',
+		() => can(session(), 'template', 'edit') && props.template.kind !== 'campaign_visual',
 	);
 	const canDelete = createMemo(
-		() => (session().permissions['template']?.includes('delete') ?? false) && !props.template.isDefault,
+		() => can(session(), 'template', 'delete') && !props.template.isDefault,
 	);
 	const canSetDefault = createMemo(
 		() =>
-			(session().permissions['template']?.includes('set-default') ?? false) &&
+			can(session(), 'template', 'set-default') &&
 			props.template.kind === 'campaign' &&
 			!props.template.isDefault,
 	);
@@ -101,12 +104,8 @@ function EmailTemplateDetailView(props: { template: EmailTemplateDetail }) {
 
 	return (
 		<section class="email-templates-page">
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/emails">Email templates</a><span aria-hidden="true">/</span><span>{props.template.name}</span></nav>
-			<header class="page-header">
-				<div>
-					<h1>{props.template.name}</h1>
-					<p>{emailTemplateKindLabel(props.template.kind)}{props.template.isDefault ? ' · Default campaign template' : ''}</p>
-				</div>
+			<Breadcrumbs items={[{ href: '/emails', label: 'Email templates' }, { label: props.template.name }]} />
+			<PageHeader title={props.template.name} description={`${emailTemplateKindLabel(props.template.kind)}${props.template.isDefault ? ' · Default campaign template' : ''}`}>
 				<div class="template-detail-actions">
 					<Show when={canSetDefault()}>
 						<button class="button button--secondary" type="button" onClick={() => void handleSetDefault()} disabled={defaultPending()}>
@@ -115,7 +114,7 @@ function EmailTemplateDetailView(props: { template: EmailTemplateDetail }) {
 					</Show>
 					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => setDeleteOpen(true)}>Delete</button></Show>
 				</div>
-			</header>
+			</PageHeader>
 			<Show when={error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 
 			<Show
@@ -174,7 +173,7 @@ function ReadOnlyEmailTemplate(props: { template: EmailTemplateDetail }) {
 			<Show when={props.template.kind === 'campaign_visual'}>
 				<p class="visual-template-note">Visual template content is read-only here. Its builder source must be edited with Listmonk's compatible visual editor.</p>
 			</Show>
-			<dl class="template-metadata">
+			<dl class="template-metadata metadata-list">
 				<div><dt>Type</dt><dd>{emailTemplateKindLabel(props.template.kind)}</dd></div>
 				<div><dt>Subject</dt><dd>{props.template.subject || 'Not used'}</dd></div>
 				<Show when={props.template.kind === 'campaign_visual'}>

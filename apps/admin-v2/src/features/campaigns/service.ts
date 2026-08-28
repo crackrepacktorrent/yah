@@ -1,5 +1,6 @@
-import type { Permissions } from '@yah/admin-core/permissions';
-import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
+import { createPublicError } from '~/platform/errors';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	CampaignCapabilitySchema,
 	CampaignIdSchema,
@@ -17,7 +18,6 @@ import {
 	type TransitionCampaignCommand,
 	type UpdateCampaignCommand,
 } from './contracts';
-import { createPublicError } from '~/platform/errors';
 
 export type CampaignManager = {
 	list(): Promise<CampaignSummary[]>;
@@ -61,20 +61,12 @@ type TemplateCatalog = {
 };
 
 export type CampaignServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	manager: CampaignManager;
 	mailingLists: MailingListCatalog;
 	templates: TemplateCatalog;
 };
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw createPublicError(result.issues[0]?.message ?? 'Invalid campaign data.', 400);
-	return result.output;
-}
+const parse = createPublicInputParser('Invalid campaign data.');
 
 function notFound(): never {
 	throw createPublicError('Campaign not found.', 404);
@@ -99,19 +91,17 @@ function requireRegularContent(type: 'regular' | 'optin', body: string): void {
 }
 
 async function authorize(
-	headers: Headers,
 	capability: CampaignCapability,
 	dependencies: CampaignServiceDependencies,
 ): Promise<void> {
-	await dependencies.enforcePermissions(headers, { campaign: [capability] });
+	await dependencies.authorization.requirePermissions({ campaign: [capability] });
 }
 
 async function authorizeAuthoring(
-	headers: Headers,
 	capability: 'create' | 'edit',
 	dependencies: CampaignServiceDependencies,
 ): Promise<void> {
-	await dependencies.enforcePermissions(headers, { campaign: [capability], list: ['view'] });
+	await dependencies.authorization.requirePermissions({ campaign: [capability], list: ['view'] });
 }
 
 async function requireValidTargets(
@@ -153,40 +143,36 @@ function surfaceProviderFailure(error: unknown, operation: 'create' | 'change' |
 
 export async function requireAuthorizedCampaignCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: CampaignServiceDependencies,
 ): Promise<true> {
 	const capability = parse(CampaignCapabilitySchema, input);
-	await authorize(headers, capability, dependencies);
+	await authorize(capability, dependencies);
 	return true;
 }
 
 export async function listAuthorizedCampaigns(
-	headers: Headers,
 	dependencies: CampaignServiceDependencies,
 ): Promise<CampaignSummary[]> {
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.list();
 }
 
 export async function readAuthorizedCampaign(
 	input: unknown,
-	headers: Headers,
 	dependencies: CampaignServiceDependencies,
 ): Promise<CampaignDetail> {
 	const id = parse(CampaignIdSchema, input);
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return (await dependencies.manager.get(id)) ?? notFound();
 }
 
 export async function createAuthorizedCampaign(
 	input: CreateCampaignCommand,
-	headers: Headers,
 	dependencies: CampaignServiceDependencies,
 ): Promise<{ id: number }> {
 	const command = parse(CreateCampaignCommandSchema, input);
-	await authorizeAuthoring(headers, 'create', dependencies);
-	if (command.templateId !== null) await dependencies.enforcePermissions(headers, { template: ['view'] });
+	await authorizeAuthoring('create', dependencies);
+	if (command.templateId !== null) await dependencies.authorization.requirePermissions({ template: ['view'] });
 	requireRegularContent(command.type, command.body);
 	requireFutureSendAt(command.sendAt);
 	await Promise.all([
@@ -207,11 +193,10 @@ export async function createAuthorizedCampaign(
 
 export async function updateAuthorizedCampaign(
 	input: UpdateCampaignCommand,
-	headers: Headers,
 	dependencies: CampaignServiceDependencies,
 ): Promise<void> {
 	const command = parse(UpdateCampaignCommandSchema, input);
-	await authorizeAuthoring(headers, 'edit', dependencies);
+	await authorizeAuthoring('edit', dependencies);
 	const current = (await dependencies.manager.get(command.id)) ?? notFound();
 	requireCurrentVersion(current, command.expectedUpdatedAt);
 	if (current.status !== 'draft') throw createPublicError('Only draft campaigns can be edited.', 409);
@@ -222,7 +207,7 @@ export async function updateAuthorizedCampaign(
 	requireFutureSendAt(command.sendAt);
 	const templateChanged = command.templateId !== current.templateId;
 	if (templateChanged && command.templateId !== null) {
-		await dependencies.enforcePermissions(headers, { template: ['view'] });
+		await dependencies.authorization.requirePermissions({ template: ['view'] });
 	}
 	await Promise.all([
 		requireValidTargets(command.listIds, current.type, dependencies),
@@ -249,11 +234,10 @@ export async function updateAuthorizedCampaign(
 
 export async function deleteAuthorizedCampaigns(
 	input: DeleteCampaignsCommand,
-	headers: Headers,
 	dependencies: CampaignServiceDependencies,
 ): Promise<void> {
 	const command = parse(DeleteCampaignsCommandSchema, input);
-	await authorize(headers, 'delete', dependencies);
+	await authorize('delete', dependencies);
 	const catalog = new Map((await dependencies.manager.list()).map((campaign) => [campaign.id, campaign]));
 	for (const requested of command.campaigns) {
 		const current = catalog.get(requested.id) ?? notFound();
@@ -303,11 +287,10 @@ function transitionTarget(
 
 export async function transitionAuthorizedCampaign(
 	input: TransitionCampaignCommand,
-	headers: Headers,
 	dependencies: CampaignServiceDependencies,
 ): Promise<void> {
 	const command = parse(TransitionCampaignCommandSchema, input);
-	await authorize(headers, 'send', dependencies);
+	await authorize('send', dependencies);
 	const current = (await dependencies.manager.get(command.id)) ?? notFound();
 	requireCurrentVersion(current, command.expectedUpdatedAt);
 	const target = transitionTarget(current, command.transition);
@@ -320,11 +303,10 @@ export async function transitionAuthorizedCampaign(
 
 export async function previewAuthorizedCampaign(
 	input: unknown,
-	headers: Headers,
 	dependencies: CampaignServiceDependencies,
 ): Promise<string> {
 	const id = parse(CampaignIdSchema, input);
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	try {
 		return await dependencies.manager.preview(id);
 	} catch (error) {

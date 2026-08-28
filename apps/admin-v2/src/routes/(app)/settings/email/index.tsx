@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
@@ -5,6 +6,7 @@ import type { SaveEmailSettingsCommand, TestSmtpCommand } from '~/features/email
 import { EmailSettingsForm } from '~/features/email-settings/form';
 import { getEmailSettings, saveEmailSettings, testSmtp } from '~/features/email-settings/server';
 import { requireSession } from '~/platform/auth/session';
+import { PageHeader } from '~/ui/page-header';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
@@ -15,7 +17,7 @@ export const route = defineFileRoute('/settings/email', {
 export default function EmailSettingsPage() {
 	const settings = createMemo(() => getEmailSettings());
 	const session = createMemo(() => requireSession());
-	const canEdit = createMemo(() => session().permissions['provider']?.includes('manage') ?? false);
+	const canEdit = createMemo(() => can(session(), 'provider', 'manage'));
 	const [pending, setPending] = createSignal(false);
 	const [testingUuid, setTestingUuid] = createSignal('');
 	const [error, setError] = createSignal('');
@@ -53,7 +55,7 @@ export default function EmailSettingsPage() {
 
 	return (
 		<section class="email-settings-page">
-			<header class="page-header"><div><p class="eyebrow">System settings</p><h1>Email delivery</h1><p>Manage Listmonk’s SMTP servers. Unexposed Listmonk settings and custom SMTP headers are preserved on every save.</p></div></header>
+			<PageHeader eyebrow="System settings" title="Email delivery" description="Manage Listmonk’s SMTP servers. Unexposed Listmonk settings and custom SMTP headers are preserved on every save." />
 			<Show when={settings()}>
 				{(resolved) => <EmailSettingsForm initial={resolved().smtp} canEdit={canEdit()} pending={pending()} testingUuid={testingUuid()} error={error()} onSubmit={save} onTest={(command) => void test(command)} />}
 			</Show>

@@ -26,18 +26,16 @@ import {
 	updateAuthorizedSubscriberMemberships,
 	updateAuthorizedSubscriberProfile,
 } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
 
-async function dependencies() {
-	const [{ enforcePermissions }, { productionSubscriberManager }, { productionMailingListManager }] = await Promise.all([
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { productionSubscriberManager }, { productionMailingListManager }] = await Promise.all([
 		import('~/platform/auth/authorization.server'),
 		import('~/integrations/listmonk/production-subscriber-manager.server'),
 		import('~/integrations/listmonk/production-mailing-list-manager.server'),
 	]);
 	return {
-		enforcePermissions,
+		authorization: createAuthorizationContext(headers),
 		manager: productionSubscriberManager,
 		mailingLists: productionMailingListManager,
 	};
@@ -45,121 +43,71 @@ async function dependencies() {
 
 export const listSubscribers = query(async (input: ListSubscribersQuery): Promise<SubscriberPage> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await listAuthorizedSubscribers(input, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => listAuthorizedSubscribers(input, await requestDependencies(request.headers)));
 }, 'subscribers');
 
 export const getSubscriber = query(async (id: number): Promise<SubscriberProfile> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await readAuthorizedSubscriber(id, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => readAuthorizedSubscriber(id, await requestDependencies(request.headers)));
 }, 'subscriber');
 
 export const getSubscriberMemberships = query(async (id: number): Promise<SubscriberMembershipState> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await readAuthorizedSubscriberMemberships(id, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		readAuthorizedSubscriberMemberships(id, await requestDependencies(request.headers)),
+	);
 }, 'subscriber-memberships');
 
 export const getSubscriberActivity = query(async (id: number): Promise<SubscriberActivity> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await readAuthorizedSubscriberActivity(id, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		readAuthorizedSubscriberActivity(id, await requestDependencies(request.headers)),
+	);
 }, 'subscriber-activity');
 
 export const requireSubscriberCapability = query(async (capability: SubscriberCapability): Promise<true> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await requireAuthorizedSubscriberCapability(capability, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		requireAuthorizedSubscriberCapability(capability, await requestDependencies(request.headers)),
+	);
 }, 'subscriber-capability');
 
 export async function createSubscriber(command: CreateSubscriberCommand): Promise<{ id: number }> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await createAuthorizedSubscriber(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => createAuthorizedSubscriber(command, await requestDependencies(request.headers)));
 }
 
 export async function updateSubscriberProfile(command: UpdateSubscriberProfileCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await updateAuthorizedSubscriberProfile(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		updateAuthorizedSubscriberProfile(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function updateSubscriberMemberships(command: UpdateSubscriberMembershipsCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await updateAuthorizedSubscriberMemberships(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		updateAuthorizedSubscriberMemberships(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function deleteSubscribers(command: DeleteSubscribersCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await deleteAuthorizedSubscribers(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		deleteAuthorizedSubscribers(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function blocklistSubscribers(command: BlocklistSubscribersCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await blocklistAuthorizedSubscribers(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		blocklistAuthorizedSubscribers(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function requestSubscriberOptIn(command: RequestSubscriberOptInCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await requestAuthorizedSubscriberOptIn(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		requestAuthorizedSubscriberOptIn(command, await requestDependencies(request.headers)),
+	);
 }

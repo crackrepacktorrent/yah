@@ -65,7 +65,7 @@ export function EmailTemplateForm(props: {
 
 	return (
 		<form
-			class="email-template-form"
+			class="email-template-form form-grid"
 			onSubmit={(event) => {
 				event.preventDefault();
 				props.onSubmit(values());

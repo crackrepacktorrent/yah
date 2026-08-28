@@ -13,58 +13,38 @@ import {
 	requireAuthorizedRoleRouteCapability,
 	updateAuthorizedRole,
 } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
 
-async function dependencies(headers: Headers) {
-	const [{ enforcePermissions }, { createProductionRoleDirectory }] = await Promise.all([
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { createProductionRoleDirectory }] = await Promise.all([
 		import('~/platform/auth/authorization.server'),
 		import('~/platform/auth/role-directory.server'),
 	]);
-	return { enforcePermissions, directory: createProductionRoleDirectory(headers) };
+	return { authorization: createAuthorizationContext(headers), directory: createProductionRoleDirectory(headers) };
 }
 
 export const listRoles = query(async (): Promise<RoleCatalog> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await listAuthorizedRoles(request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => listAuthorizedRoles(await requestDependencies(request.headers)));
 }, 'roles');
 
 export const requireRoleRouteCapability = query(async (capability: RoleRouteCapability): Promise<true> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await requireAuthorizedRoleRouteCapability(capability, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		requireAuthorizedRoleRouteCapability(capability, await requestDependencies(request.headers)),
+	);
 }, 'role-route-capability');
 
 export async function createRole(command: CreateRoleCommand): Promise<CreateRoleOutcome> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await createAuthorizedRole(command, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		createAuthorizedRole(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function updateRole(command: UpdateRoleCommand): Promise<UpdateRoleOutcome> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await updateAuthorizedRole(command, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		updateAuthorizedRole(command, await requestDependencies(request.headers)),
+	);
 }

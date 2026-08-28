@@ -12,7 +12,14 @@ export default function App() {
 			<Errored fallback={(error, reset) => <ErrorView error={error()} reset={reset} onRetry={() => revalidate()} />}>
 				<Router>
 					{(props) => (
-						<Loading fallback={<main class="shell">Loading admin…</main>}>
+						<Loading
+							fallback={
+								<main class="admin-loading" role="status">
+									<span class="admin-spinner" aria-hidden="true" />
+									<span class="visually-hidden">Loading admin…</span>
+								</main>
+							}
+						>
 							{props.children}
 						</Loading>
 					)}

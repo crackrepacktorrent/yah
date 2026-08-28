@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo, createSignal } from 'solid-js';
@@ -9,6 +10,8 @@ import { deleteCampaigns, getCampaign, listCampaigns, previewCampaign, transitio
 import { listEmailTemplates } from '~/features/email-templates/server';
 import { listMailingLists } from '~/features/mailing-lists/server';
 import { requireSession } from '~/platform/auth/session';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
+import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
@@ -50,12 +53,12 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 		() =>
 			props.campaign.status === 'draft' &&
 			props.campaign.contentType !== 'visual' &&
-			(session().permissions['campaign']?.includes('edit') ?? false) &&
-			(session().permissions['list']?.includes('view') ?? false),
+			can(session(), 'campaign', 'edit') &&
+			can(session(), 'list', 'view'),
 	);
-	const canDelete = createMemo(() => props.campaign.status === 'draft' && (session().permissions['campaign']?.includes('delete') ?? false));
-	const canSend = createMemo(() => session().permissions['campaign']?.includes('send') ?? false);
-	const canViewTemplates = createMemo(() => session().permissions['template']?.includes('view') ?? false);
+	const canDelete = createMemo(() => props.campaign.status === 'draft' && can(session(), 'campaign', 'delete'));
+	const canSend = createMemo(() => can(session(), 'campaign', 'send'));
+	const canViewTemplates = createMemo(() => can(session(), 'template', 'view'));
 	const lists = createMemo(() => canEdit() ? listMailingLists() : []);
 	const templates = createMemo(() => canEdit() && canViewTemplates() ? listEmailTemplates() : []);
 	const [pending, setPending] = createSignal(false);
@@ -195,9 +198,11 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 
 	return (
 		<section class="campaigns-page">
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/emails/campaigns">Campaigns</a><span aria-hidden="true">/</span><span>{props.campaign.name}</span></nav>
-			<header class="page-header">
-				<div><h1>{props.campaign.name}</h1><p>{campaignTypeLabel(props.campaign.type)} · <span class={`campaign-status campaign-status--${props.campaign.status}`}>{campaignStatusLabel(props.campaign.status)}</span></p></div>
+			<Breadcrumbs items={[{ href: '/emails/campaigns', label: 'Campaigns' }, { label: props.campaign.name }]} />
+			<PageHeader
+				title={props.campaign.name}
+				description={<>{campaignTypeLabel(props.campaign.type)} · <span class={`badge campaign-status campaign-status--${props.campaign.status}`}>{campaignStatusLabel(props.campaign.status)}</span></>}
+			>
 				<div class="campaign-detail-actions">
 					<button class="button button--secondary" type="button" onClick={() => void loadPreview()} disabled={previewPending()}>{previewPending() ? 'Rendering…' : 'Preview saved campaign'}</button>
 					<Show when={canSend() && props.campaign.status === 'draft' && props.campaign.sendAt === null}><button class="button" type="button" onClick={() => requestTransition('start')}>Send now</button></Show>
@@ -207,7 +212,7 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 					<Show when={canSend() && props.campaign.status === 'paused'}><button class="button" type="button" onClick={() => requestTransition('resume')}>Resume</button><button class="button button--danger-secondary" type="button" onClick={() => requestTransition('cancel')}>Cancel</button></Show>
 					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => setDeleteOpen(true)}>Delete</button></Show>
 				</div>
-			</header>
+			</PageHeader>
 			<Show when={error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 			<Show when={previewError()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 				<Show when={previewDocument()}>{(document) => <div class="campaign-preview"><div class="campaign-preview-header"><h2>Saved preview</h2><button class="button button--secondary" type="button" onClick={clearPreview}>Close preview</button></div><iframe srcdoc={document()} sandbox="" referrerpolicy="no-referrer" title="Rendered saved campaign preview" /></div>}</Show>
@@ -227,13 +232,13 @@ function ReadOnlyCampaign(props: { campaign: CampaignDetail }) {
 		<>
 			<Show when={props.campaign.contentType === 'visual'}><p class="campaign-note">Visual campaign content is read-only here. Its builder source must be edited with Listmonk’s compatible visual editor.</p></Show>
 			<Show when={props.campaign.type === 'optin'}><p class="campaign-note">Listmonk owns this confirmation message and its opt-in URL.</p></Show>
-			<dl class="campaign-metadata">
+			<dl class="campaign-metadata metadata-list">
 				<div><dt>From</dt><dd>{props.campaign.fromEmail}</dd></div><div><dt>Subject</dt><dd>{props.campaign.subject}</dd></div>
 				<div><dt>Content</dt><dd>{props.campaign.contentType}</dd></div><div><dt>Template</dt><dd>{props.campaign.templateId ?? 'Default'}</dd></div>
 				<div><dt>Scheduled</dt><dd>{props.campaign.sendAt ? new Date(props.campaign.sendAt).toLocaleString() : 'Not scheduled'}</dd></div><div><dt>Started</dt><dd>{props.campaign.startedAt ? new Date(props.campaign.startedAt).toLocaleString() : 'Not started'}</dd></div>
-				<div><dt>Lists</dt><dd><For each={props.campaign.lists}>{(list) => <span class="campaign-inline-item">{list.name}</span>}</For></dd></div><div><dt>Tags</dt><dd><Show when={props.campaign.tags.length > 0} fallback="None"><For each={props.campaign.tags}>{(tag) => <span class="campaign-inline-item">{tag}</span>}</For></Show></dd></div>
+				<div><dt>Lists</dt><dd><For each={props.campaign.lists}>{(list) => <span class="badge">{list.name}</span>}</For></dd></div><div><dt>Tags</dt><dd><Show when={props.campaign.tags.length > 0} fallback="None"><For each={props.campaign.tags}>{(tag) => <span class="badge">{tag}</span>}</For></Show></dd></div>
 			</dl>
-			<div class="campaign-stats" aria-label="Campaign delivery statistics"><div><strong>{props.campaign.sent.toLocaleString()}</strong><span>Sent</span></div><div><strong>{props.campaign.views.toLocaleString()}</strong><span>Views</span></div><div><strong>{props.campaign.clicks.toLocaleString()}</strong><span>Clicks</span></div><div><strong>{props.campaign.bounces.toLocaleString()}</strong><span>Bounces</span></div></div>
+			<dl class="campaign-stats" aria-label="Campaign delivery statistics"><div><dt>Sent</dt><dd>{props.campaign.sent.toLocaleString()}</dd></div><div><dt>Views</dt><dd>{props.campaign.views.toLocaleString()}</dd></div><div><dt>Clicks</dt><dd>{props.campaign.clicks.toLocaleString()}</dd></div><div><dt>Bounces</dt><dd>{props.campaign.bounces.toLocaleString()}</dd></div></dl>
 			<div class="campaign-source"><h2>Saved content</h2><pre><code>{props.campaign.body}</code></pre></div>
 		</>
 	);

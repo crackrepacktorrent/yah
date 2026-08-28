@@ -22,7 +22,7 @@ const validCreate: CreateRoleCommand = {
 };
 
 function setup() {
-	const enforcePermissions = vi.fn(async (_headers: Headers, _permissions: Permissions) => undefined);
+	const enforcePermissions = vi.fn(async (_permissions: Permissions) => undefined);
 	const directory: RoleDirectory = {
 		listCustomRoles: vi.fn(async () => [storedRole]),
 		findCustomRole: vi.fn(async (roleId) => (roleId === storedRole.id ? storedRole : null)),
@@ -37,22 +37,29 @@ function setup() {
 			permissions: permissions as Record<string, string[]>,
 		})),
 	};
-	return { dependencies: { enforcePermissions, directory }, directory, enforcePermissions };
+	return {
+		dependencies: {
+			authorization: { requirePermissions: enforcePermissions, getCurrentUserId: vi.fn(async () => 'test-user') },
+			directory,
+		},
+		directory,
+		enforcePermissions,
+	};
 }
 
 describe('roles service boundary', () => {
 	it('validates direct create routes before exact authorization', async () => {
 		const invalid = setup();
 		await expect(
-			requireAuthorizedRoleRouteCapability('edit', new Headers(), invalid.dependencies),
+			requireAuthorizedRoleRouteCapability('edit', invalid.dependencies),
 		).rejects.toThrow();
 		expect(invalid.enforcePermissions).not.toHaveBeenCalled();
 
 		const valid = setup();
 		await expect(
-			requireAuthorizedRoleRouteCapability('create', new Headers(), valid.dependencies),
+			requireAuthorizedRoleRouteCapability('create', valid.dependencies),
 		).resolves.toBe(true);
-		expect(valid.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { ac: ['create'] });
+		expect(valid.enforcePermissions).toHaveBeenCalledWith({ ac: ['create'] });
 	});
 
 	it('validates role keys and product-only permissions before authorization or directory access', async () => {
@@ -64,7 +71,7 @@ describe('roles service boundary', () => {
 		]) {
 			const state = setup();
 			await expect(
-				createAuthorizedRole(input as CreateRoleCommand, new Headers(), state.dependencies),
+				createAuthorizedRole(input as CreateRoleCommand, state.dependencies),
 			).rejects.toThrow();
 			expect(state.enforcePermissions).not.toHaveBeenCalled();
 		expect(state.directory.createCustomRole).not.toHaveBeenCalled();
@@ -79,7 +86,6 @@ describe('roles service boundary', () => {
 					...validCreate,
 					permissions: { analytics: ['view', 'view'], shortlink: [], campaign: ['send', 'view'] },
 				},
-				new Headers(),
 				state.dependencies,
 			),
 		).resolves.toEqual({
@@ -92,8 +98,8 @@ describe('roles service boundary', () => {
 				kind: 'custom',
 			},
 		});
-		expect(state.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { ac: ['create'] });
-		expect(state.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), {
+		expect(state.enforcePermissions).toHaveBeenCalledWith({ ac: ['create'] });
+		expect(state.enforcePermissions).toHaveBeenCalledWith({
 			campaign: ['view', 'send'],
 			analytics: ['view'],
 		});
@@ -106,7 +112,7 @@ describe('roles service boundary', () => {
 	it('returns stable create conflicts for built-ins and provider races', async () => {
 		const builtIn = setup();
 		await expect(
-			createAuthorizedRole({ ...validCreate, key: ' Owner ' }, new Headers(), builtIn.dependencies),
+			createAuthorizedRole({ ...validCreate, key: ' Owner ' }, builtIn.dependencies),
 		).resolves.toEqual({ ok: false, reason: 'key-conflict' });
 		expect(builtIn.directory.createCustomRole).not.toHaveBeenCalled();
 
@@ -115,7 +121,7 @@ describe('roles service boundary', () => {
 			name: 'RoleDirectoryFailure',
 			reason: 'key-conflict',
 		});
-		await expect(createAuthorizedRole(validCreate, new Headers(), raced.dependencies)).resolves.toEqual({
+		await expect(createAuthorizedRole(validCreate, raced.dependencies)).resolves.toEqual({
 			ok: false,
 			reason: 'key-conflict',
 		});
@@ -123,22 +129,21 @@ describe('roles service boundary', () => {
 
 	it('prevents callers from granting product permissions they do not possess', async () => {
 		const create = setup();
-		create.enforcePermissions.mockImplementation(async (_headers, permissions) => {
+		create.enforcePermissions.mockImplementation(async (permissions) => {
 			if ('shortlink' in permissions) throw new Error('grant escalation');
 		});
-		await expect(createAuthorizedRole(validCreate, new Headers(), create.dependencies)).rejects.toThrow(
+		await expect(createAuthorizedRole(validCreate, create.dependencies)).rejects.toThrow(
 			'grant escalation',
 		);
 		expect(create.directory.createCustomRole).not.toHaveBeenCalled();
 
 		const update = setup();
-		update.enforcePermissions.mockImplementation(async (_headers, permissions) => {
+		update.enforcePermissions.mockImplementation(async (permissions) => {
 			if ('shortlink' in permissions) throw new Error('grant escalation');
 		});
 		await expect(
 			updateAuthorizedRole(
 				{ roleId: storedRole.id, permissions: { shortlink: ['delete'] } },
-				new Headers(),
 				update.dependencies,
 			),
 		).rejects.toThrow('grant escalation');
@@ -147,8 +152,8 @@ describe('roles service boundary', () => {
 
 	it('lists inspectable built-ins and normalized custom roles under read authority', async () => {
 		const state = setup();
-		const result = await listAuthorizedRoles(new Headers(), state.dependencies);
-		expect(state.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { ac: ['read'] });
+		const result = await listAuthorizedRoles(state.dependencies);
+		expect(state.enforcePermissions).toHaveBeenCalledWith({ ac: ['read'] });
 		expect(result.roles.map((role) => [role.id, role.kind])).toEqual([
 			['builtin:owner', 'built-in'],
 			['builtin:admin', 'built-in'],
@@ -168,7 +173,7 @@ describe('roles service boundary', () => {
 		vi.mocked(state.directory.listCustomRoles).mockResolvedValue([
 			{ ...storedRole, permissions: { organization: ['update'] } },
 		]);
-		await expect(listAuthorizedRoles(new Headers(), state.dependencies)).rejects.toThrow(
+		await expect(listAuthorizedRoles(state.dependencies)).rejects.toThrow(
 			'Stored custom role role-content is invalid',
 		);
 	});
@@ -177,14 +182,14 @@ describe('roles service boundary', () => {
 		for (const key of ['Content Editor', 'content,owner']) {
 			const state = setup();
 			vi.mocked(state.directory.listCustomRoles).mockResolvedValue([{ ...storedRole, key }]);
-			await expect(listAuthorizedRoles(new Headers(), state.dependencies)).rejects.toThrow('has invalid metadata');
+			await expect(listAuthorizedRoles(state.dependencies)).rejects.toThrow('has invalid metadata');
 		}
 	});
 
 	it('does not cross the directory boundary after authorization is denied', async () => {
 		const state = setup();
 		state.enforcePermissions.mockRejectedValue(new Error('forbidden'));
-		await expect(listAuthorizedRoles(new Headers(), state.dependencies)).rejects.toThrow('forbidden');
+		await expect(listAuthorizedRoles(state.dependencies)).rejects.toThrow('forbidden');
 		expect(state.directory.listCustomRoles).not.toHaveBeenCalled();
 	});
 
@@ -193,7 +198,6 @@ describe('roles service boundary', () => {
 		await expect(
 			updateAuthorizedRole(
 				{ roleId: storedRole.id, key: 'renamed', permissions: {} } as UpdateRoleCommand,
-				new Headers(),
 				state.dependencies,
 			),
 		).rejects.toThrow();
@@ -206,15 +210,14 @@ describe('roles service boundary', () => {
 		await expect(
 			updateAuthorizedRole(
 				{ roleId: ` ${storedRole.id} `, permissions: { shortlink: ['delete', 'view', 'delete'] } },
-				new Headers(),
 				state.dependencies,
 			),
 		).resolves.toMatchObject({
 			ok: true,
 			role: { id: storedRole.id, key: storedRole.key, permissions: { shortlink: ['view', 'delete'] } },
 		});
-		expect(state.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { ac: ['update'] });
-		expect(state.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { shortlink: ['view', 'delete'] });
+		expect(state.enforcePermissions).toHaveBeenCalledWith({ ac: ['update'] });
+		expect(state.enforcePermissions).toHaveBeenCalledWith({ shortlink: ['view', 'delete'] });
 		expect(state.directory.findCustomRole).toHaveBeenCalledWith(storedRole.id);
 		expect(state.directory.updateCustomRole).toHaveBeenCalledWith(storedRole.id, {
 			shortlink: ['view', 'delete'],
@@ -224,13 +227,13 @@ describe('roles service boundary', () => {
 	it('returns stable immutable and missing update outcomes without mutating', async () => {
 		const builtIn = setup();
 		await expect(
-			updateAuthorizedRole({ roleId: 'builtin:owner', permissions: {} }, new Headers(), builtIn.dependencies),
+			updateAuthorizedRole({ roleId: 'builtin:owner', permissions: {} }, builtIn.dependencies),
 		).resolves.toEqual({ ok: false, reason: 'built-in' });
 		expect(builtIn.directory.findCustomRole).not.toHaveBeenCalled();
 
 		const missing = setup();
 		await expect(
-			updateAuthorizedRole({ roleId: 'missing', permissions: {} }, new Headers(), missing.dependencies),
+			updateAuthorizedRole({ roleId: 'missing', permissions: {} }, missing.dependencies),
 		).resolves.toEqual({ ok: false, reason: 'not-found' });
 		expect(missing.directory.updateCustomRole).not.toHaveBeenCalled();
 
@@ -240,7 +243,7 @@ describe('roles service boundary', () => {
 			reason: 'not-found',
 		});
 		await expect(
-			updateAuthorizedRole({ roleId: storedRole.id, permissions: {} }, new Headers(), raced.dependencies),
+			updateAuthorizedRole({ roleId: storedRole.id, permissions: {} }, raced.dependencies),
 		).resolves.toEqual({ ok: false, reason: 'not-found' });
 	});
 

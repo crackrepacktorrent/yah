@@ -8,6 +8,7 @@ import {
 	type SendCampaignTestCommand,
 } from '~/features/campaign-test-sends/contracts';
 import type { CampaignTestSender } from '~/features/campaign-test-sends/service';
+import { createProviderResponseParser } from '~/integrations/provider-response.server';
 import type { ProductionConfig } from '~/platform/config/production';
 import { createListmonkTransport, ListmonkHttpFailure, type ListmonkRequest } from './transport.server';
 
@@ -63,20 +64,11 @@ const configResponseSchema = v.object({
 type ListmonkConfig = Pick<ProductionConfig, 'LISTMONK_URL' | 'LISTMONK_API_TOKEN'>;
 type CampaignDto = v.InferOutput<typeof campaignSchema>;
 type SubscriberDto = v.InferOutput<typeof subscriberSchema>;
+const parse = createProviderResponseParser('Listmonk');
 
 function requireCommand(input: unknown): SendCampaignTestCommand {
 	const result = v.safeParse(SendCampaignTestCommandSchema, input);
 	if (!result.success) throw new Error('Listmonk campaign test-send requires a valid command.');
-	return result.output;
-}
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-	endpoint: string,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw new Error(`Listmonk returned an invalid ${endpoint} response.`);
 	return result.output;
 }
 

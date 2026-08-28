@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo, createSignal } from 'solid-js';
@@ -13,6 +14,7 @@ import {
 	subscriptionEmbedSnippet,
 	subscriptionPageUrl,
 } from '~/features/mailing-lists/subscription-sharing';
+import { PageHeader } from '~/ui/page-header';
 import { requireSession } from '~/platform/auth/session';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
@@ -28,7 +30,7 @@ export default function SubscriptionSharingPage() {
 	const lists = createMemo(() => listMailingLists());
 	const config = createMemo(() => getSubscriptionSharingConfig());
 	const session = createMemo(() => requireSession());
-	const canEdit = createMemo(() => session().permissions['list']?.includes('edit') ?? false);
+	const canEdit = createMemo(() => can(session(), 'list', 'edit'));
 	const publicLists = createMemo(() => lists().filter((list) => list.kind === 'public' && list.status === 'active'));
 	const otherLists = createMemo(() => lists().filter((list) => list.kind !== 'public' || list.status !== 'active'));
 	const [pendingId, setPendingId] = createSignal<number | null>(null);
@@ -61,7 +63,7 @@ export default function SubscriptionSharingPage() {
 
 	return (
 		<section class="subscription-sharing-page">
-			<header class="page-header"><div><p class="eyebrow">Email audiences</p><h1>Subscription forms</h1></div></header>
+			<PageHeader eyebrow="Email audiences" title="Subscription forms" />
 			<p>Public submission stays on the web application. This page controls which active lists are published and generates safe, list-scoped embeds.</p>
 			<p><a href={subscriptionPageUrl(config().publicSiteUrl)} target="_blank" rel="noreferrer">Open the public subscription page</a></p>
 			<Show when={error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>

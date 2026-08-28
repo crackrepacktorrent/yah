@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
@@ -5,6 +6,7 @@ import type { SaveEmailGeneralSettingsCommand } from '~/features/email-settings/
 import { EmailGeneralSettingsForm } from '~/features/email-settings/general-form';
 import { getEmailGeneralSettings, saveEmailGeneralSettings } from '~/features/email-settings/server';
 import { requireSession } from '~/platform/auth/session';
+import { PageHeader } from '~/ui/page-header';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
@@ -15,7 +17,7 @@ export const route = defineFileRoute('/settings/email/general', {
 export default function EmailGeneralSettingsPage() {
 	const settings = createMemo(() => getEmailGeneralSettings());
 	const session = createMemo(() => requireSession());
-	const canEdit = createMemo(() => session().permissions['settings']?.includes('edit') ?? false);
+	const canEdit = createMemo(() => can(session(), 'settings', 'edit'));
 	const [pending, setPending] = createSignal(false);
 	const [error, setError] = createSignal('');
 
@@ -37,7 +39,7 @@ export default function EmailGeneralSettingsPage() {
 
 	return (
 		<section class="email-settings-page">
-			<header class="page-header"><div><p class="eyebrow">System settings</p><h1>General email settings</h1><p>Manage recipient-facing identity, email defaults, and public campaign pages.</p></div></header>
+			<PageHeader eyebrow="System settings" title="General email settings" description="Manage recipient-facing identity, email defaults, and public campaign pages." />
 			<Show when={settings()}>{(resolved) => <>
 				<section class="settings-health" aria-labelledby="provider-invariants-heading">
 					<div><h2 id="provider-invariants-heading">Deployment invariants</h2><p>Read-only values coupled to YAH’s web and Caddy configuration. Change these only through coordinated provider maintenance.</p></div>

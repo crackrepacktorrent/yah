@@ -1,4 +1,4 @@
-import { revalidate, useSearchParams } from '@solidjs/router';
+import { revalidate, useNavigate, useSearchParams } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Errored, For, Loading, Show, createMemo } from 'solid-js';
 import {
@@ -19,6 +19,7 @@ import { getCampaignAnalytics } from '~/features/campaign-analytics/server';
 import { campaignStatusLabel } from '~/features/campaigns/presentation';
 import { listCampaigns } from '~/features/campaigns/server';
 import type { CampaignSummary } from '~/features/campaigns/contracts';
+import { PageHeader } from '~/ui/page-header';
 import { visibleError } from '~/ui/visible-error';
 import './index.css';
 
@@ -47,6 +48,7 @@ function CampaignAnalyticsView(props: {
 	campaigns: CampaignSummary[];
 	location: ReturnType<typeof decodeCampaignAnalyticsLocation>;
 }) {
+	const navigate = useNavigate();
 	const selectedIds = createMemo(() => new Set(props.location.campaignIds));
 	const selectedCampaigns = createMemo(() => props.campaigns.filter(({ id }) => selectedIds().has(id)));
 	const missingCampaigns = createMemo(() => props.location.campaignIds.length - selectedCampaigns().length);
@@ -59,16 +61,25 @@ function CampaignAnalyticsView(props: {
 		};
 	});
 
+	function applyFilters(event: SubmitEvent): void {
+		event.preventDefault();
+		const form = event.currentTarget;
+		if (!(form instanceof HTMLFormElement)) return;
+		const query = new URLSearchParams();
+		for (const [name, value] of new FormData(form)) {
+			if (typeof value === 'string') query.append(name, value);
+		}
+		navigate(`/emails/analytics?${query.toString()}`);
+	}
+
 	return (
 		<section class="campaign-analytics-page">
-			<header class="page-header">
-				<div><p class="eyebrow">Email delivery</p><h1>Campaign analytics</h1></div>
-			</header>
+			<PageHeader eyebrow="Email delivery" title="Campaign analytics" />
 			<p class="campaign-analytics-intro">
 				Compare provider-recorded email views and link clicks. Dates are UTC, and each metric uses one bounded Listmonk request regardless of how many campaigns you select.
 			</p>
 
-			<form class="campaign-analytics-filters" action="/emails/analytics" method="get">
+			<form class="campaign-analytics-filters" action="/emails/analytics" method="get" onSubmit={applyFilters}>
 				<fieldset>
 					<legend>Campaigns</legend>
 					<p>Select up to {MAX_CAMPAIGN_ANALYTICS_IDS} campaigns. Campaigns stay in provider order.</p>
@@ -144,7 +155,7 @@ function CampaignMetricPanel(props: { metric: CampaignAnalyticsMetric; selection
 					</div>
 				)}
 			>
-				<Loading fallback={<p class="campaign-metric-loading" role="status">Loading {labels().title.toLowerCase()}…</p>}>
+				<Loading on={query()} fallback={<p class="campaign-metric-loading" role="status">Loading {labels().title.toLowerCase()}…</p>}>
 					<Show when={points()}>{(resolved) => <CampaignMetricFigure metric={props.metric} points={resolved()} />}</Show>
 				</Loading>
 			</Errored>

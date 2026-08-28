@@ -1,7 +1,9 @@
 import { rolesRequireAccessControl } from '@yah/admin-core/membership-policy';
 import { getBuiltInRolePermissions, type Permissions } from '@yah/admin-core/permissions';
 import { parseMemberRoles, sameRoleSet } from '@yah/admin-core/role-permissions';
-import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
+import { createPublicError } from '~/platform/errors';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	CancelInvitationCommandSchema,
 	InviteMemberCommandSchema,
@@ -17,7 +19,6 @@ import {
 	type RemoveMemberCommand,
 	type UpdateMemberRolesCommand,
 } from './contracts';
-import { createPublicError } from '~/platform/errors';
 
 export type DirectoryMember = {
 	id: string;
@@ -53,19 +54,10 @@ export type MembershipDirectory = {
 };
 
 export type MembershipServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
-	getCurrentUserId(headers: Headers): Promise<string>;
+	authorization: AuthorizationContext;
 	directory: MembershipDirectory;
 };
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw createPublicError(result.issues[0]?.message ?? 'Invalid membership data.', 400);
-	return result.output;
-}
+const parse = createPublicInputParser('Invalid membership data.');
 
 function normalizeEmail(email: string): string {
 	return email.trim();
@@ -98,14 +90,13 @@ function normalizeInvitation(invitation: DirectoryInvitation): PendingAdminInvit
 
 async function validateKnownRoles(
 	roles: string[],
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 	requireRoleAuthority = false,
 ): Promise<void> {
 	const customRoles = roles.filter((role) => !getBuiltInRolePermissions(role));
 	if (!requireRoleAuthority && customRoles.length === 0) return;
 
-	await dependencies.enforcePermissions(headers, { ac: ['read'] });
+	await dependencies.authorization.requirePermissions({ ac: ['read'] });
 	if (customRoles.length === 0) return;
 	const knownRoles = new Set(await dependencies.directory.listCustomRoleNames());
 	const unknownRoles = customRoles.filter((role) => !knownRoles.has(role));
@@ -122,27 +113,24 @@ async function getTargetMember(
 }
 
 export async function listAuthorizedMembers(
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 ): Promise<AdminMember[]> {
-	await dependencies.enforcePermissions(headers, { member: ['create'] });
-	const currentUserId = await dependencies.getCurrentUserId(headers);
+	await dependencies.authorization.requirePermissions({ member: ['create'] });
+	const currentUserId = await dependencies.authorization.getCurrentUserId();
 	const members = await dependencies.directory.listMembers();
 	return members.map((member) => normalizeMember(member, currentUserId));
 }
 
 export async function listAuthorizedPendingInvitations(
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 ): Promise<PendingAdminInvitation[]> {
-	await dependencies.enforcePermissions(headers, { invitation: ['create'] });
+	await dependencies.authorization.requirePermissions({ invitation: ['create'] });
 	const invitations = await dependencies.directory.listInvitations();
 	return invitations.filter((invitation) => invitation.status === 'pending').map(normalizeInvitation);
 }
 
 export async function requireAuthorizedMembershipRouteCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 ): Promise<true> {
 	const capability = parse(MembershipRouteCapabilitySchema, input);
@@ -150,34 +138,32 @@ export async function requireAuthorizedMembershipRouteCapability(
 		invite: { invitation: ['create'] },
 		edit: { member: ['update'] },
 	};
-	await dependencies.enforcePermissions(headers, permissions[capability]);
+	await dependencies.authorization.requirePermissions(permissions[capability]);
 	return true;
 }
 
 export async function readAuthorizedMemberForRoleEdit(
 	input: unknown,
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 ): Promise<AdminMember> {
 	const memberId = parse(MemberIdSchema, input);
-	await dependencies.enforcePermissions(headers, { member: ['update'] });
-	const currentUserId = await dependencies.getCurrentUserId(headers);
+	await dependencies.authorization.requirePermissions({ member: ['update'] });
+	const currentUserId = await dependencies.authorization.getCurrentUserId();
 	const member = await getTargetMember(memberId, dependencies);
 	if (member.userId === currentUserId) throw createPublicError('You cannot change your own roles.', 400);
-	if (rolesRequireAccessControl(member.role ?? '')) await dependencies.enforcePermissions(headers, { ac: ['read'] });
+	if (rolesRequireAccessControl(member.role ?? '')) await dependencies.authorization.requirePermissions({ ac: ['read'] });
 	return normalizeMember(member, currentUserId);
 }
 
 export async function inviteAuthorizedMember(
 	input: InviteMemberCommand,
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 ): Promise<void> {
 	const command = parse(InviteMemberCommandSchema, input);
 	if (command.roles.includes('owner')) throw createPublicError('Owner invitations are not supported.', 400);
 
-	await dependencies.enforcePermissions(headers, { invitation: ['create'] });
-	await validateKnownRoles(command.roles, headers, dependencies);
+	await dependencies.authorization.requirePermissions({ invitation: ['create'] });
+	await validateKnownRoles(command.roles, dependencies);
 
 	const invitations = await dependencies.directory.listInvitations();
 	const existing = invitations.find(
@@ -196,17 +182,15 @@ export async function inviteAuthorizedMember(
 
 export async function updateAuthorizedMemberRoles(
 	input: UpdateMemberRolesCommand,
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 ): Promise<void> {
 	const command = parse(UpdateMemberRolesCommandSchema, input);
-	await dependencies.enforcePermissions(headers, { member: ['update'] });
-	const currentUserId = await dependencies.getCurrentUserId(headers);
+	await dependencies.authorization.requirePermissions({ member: ['update'] });
+	const currentUserId = await dependencies.authorization.getCurrentUserId();
 	const member = await getTargetMember(command.memberId, dependencies);
 	if (member.userId === currentUserId) throw createPublicError('You cannot change your own roles.', 400);
 	await validateKnownRoles(
 		command.roles,
-		headers,
 		dependencies,
 		rolesRequireAccessControl(member.role ?? '') || command.roles.includes('owner'),
 	);
@@ -215,24 +199,22 @@ export async function updateAuthorizedMemberRoles(
 
 export async function removeAuthorizedMember(
 	input: RemoveMemberCommand,
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 ): Promise<void> {
 	const command = parse(RemoveMemberCommandSchema, input);
-	await dependencies.enforcePermissions(headers, { member: ['delete'] });
-	const currentUserId = await dependencies.getCurrentUserId(headers);
+	await dependencies.authorization.requirePermissions({ member: ['delete'] });
+	const currentUserId = await dependencies.authorization.getCurrentUserId();
 	const member = await getTargetMember(command.memberId, dependencies);
 	if (member.userId === currentUserId) throw createPublicError('You cannot remove yourself.', 400);
-	if (rolesRequireAccessControl(member.role ?? '')) await dependencies.enforcePermissions(headers, { ac: ['read'] });
+	if (rolesRequireAccessControl(member.role ?? '')) await dependencies.authorization.requirePermissions({ ac: ['read'] });
 	await dependencies.directory.removeMembership(command.memberId);
 }
 
 export async function cancelAuthorizedInvitation(
 	input: CancelInvitationCommand,
-	headers: Headers,
 	dependencies: MembershipServiceDependencies,
 ): Promise<void> {
 	const command = parse(CancelInvitationCommandSchema, input);
-	await dependencies.enforcePermissions(headers, { invitation: ['cancel'] });
+	await dependencies.authorization.requirePermissions({ invitation: ['cancel'] });
 	await dependencies.directory.cancelInvitation(command.invitationId);
 }

@@ -177,10 +177,12 @@ describe.skipIf(!enabled)('production auth and canonical authorization', () => {
 		expect(projected?.permissions['provider']).toBeUndefined();
 		expect(projected?.permissions['analytics']).toContain('view');
 
-		await expect(authorization.enforcePermissions(headers, { settings: ['edit'] })).resolves.toBeUndefined();
-		await expect(authorization.enforcePermissions(headers, { provider: ['manage'] })).rejects.toMatchObject({ status: 403 });
-		await expect(authorization.enforcePermissions(headers, { settings: ['edit'], analytics: ['view'] })).resolves.toBeUndefined();
-		await expect(authorization.enforcePermissions(headers, { member: ['delete'] })).rejects.toMatchObject({ status: 403 });
+		await expect(authorization.createAuthorizationContext(headers).requirePermissions({ settings: ['edit'] })).resolves.toBeUndefined();
+		await expect(authorization.createAuthorizationContext(headers).requirePermissions({ provider: ['manage'] })).rejects.toMatchObject({ status: 403 });
+		await expect(
+			authorization.createAuthorizationContext(headers).requirePermissions({ settings: ['edit'], analytics: ['view'] }),
+		).resolves.toBeUndefined();
+		await expect(authorization.createAuthorizationContext(headers).requirePermissions({ member: ['delete'] })).rejects.toMatchObject({ status: 403 });
 	});
 
 	it('rejects a verified session that lacks canonical membership', async () => {

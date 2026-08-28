@@ -57,7 +57,7 @@ export function ShortlinkForm(props: {
 	}
 
 	return (
-		<form class="shortlink-form" onSubmit={submit}>
+		<form class="shortlink-form form-grid" onSubmit={submit}>
 			<Show when={props.error}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 			<label class="form-field form-field--wide">
 				<span>Destination URL <span aria-hidden="true">*</span></span>

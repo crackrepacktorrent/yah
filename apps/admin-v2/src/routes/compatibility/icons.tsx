@@ -1,5 +1,6 @@
 import { For } from 'solid-js';
 import { Icon, navIcons, uiIcons, type NavIconName } from '~/ui/icon';
+import './compatibility.css';
 
 const entries = Object.entries(navIcons) as Array<[NavIconName, (typeof navIcons)[NavIconName]]>;
 

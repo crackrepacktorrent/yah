@@ -1,4 +1,5 @@
 import { toast } from '~/ui/toast';
+import './compatibility.css';
 
 export default function ToastCompatibility() {
 	return (

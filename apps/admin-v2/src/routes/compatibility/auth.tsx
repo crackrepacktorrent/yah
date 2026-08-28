@@ -1,5 +1,6 @@
 import { Show, createMemo, createSignal } from 'solid-js';
 import { authClient } from '~/platform/auth/client';
+import './compatibility.css';
 
 type SessionState = { kind: 'idle' | 'pending' | 'signed-out' } | { kind: 'error'; message: string } | { kind: 'signed-in'; email: string };
 

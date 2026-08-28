@@ -1,11 +1,13 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate, useSearchParams } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
-import { For, Show, createEffect, createMemo, createSignal, untrack } from 'solid-js';
+import { For, Loading, Show, createEffect, createMemo, createSignal, untrack } from 'solid-js';
 import { MAX_BULK_SUBSCRIBER_SELECTION, type SubscriberPage, type SubscriberSummary } from '~/features/subscribers/contracts';
 import { decodeSubscriberListLocation, subscriberHref, subscriberListHref } from '~/features/subscribers/routing';
 import { blocklistSubscribers, deleteSubscribers, listSubscribers } from '~/features/subscribers/server';
 import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { PageHeader } from '~/ui/page-header';
 import { SelectionCheckbox } from '~/ui/selection-checkbox';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
@@ -15,28 +17,59 @@ export const route = defineFileRoute('/emails/subscribers', {
 });
 
 export default function SubscriberListPage() {
+	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const request = createMemo(() => decodeSubscriberListLocation(searchParams));
 	const page = createMemo(() => listSubscribers(request()));
-	return <Show when={page()}>{(resolved) => <SubscriberTable page={resolved()} />}</Show>;
+	const session = createMemo(() => requireSession());
+	const canCreate = createMemo(() => can(session(), 'subscriber', 'create'));
+	const [search, setSearch] = createSignal(untrack(() => request().search));
+	const requestIdentity = createMemo(() => subscriberListHref(request()));
+
+	createEffect(
+		() => request().search,
+		(resolvedSearch, previousSearch) => {
+			if (previousSearch !== undefined && resolvedSearch !== previousSearch) setSearch(resolvedSearch);
+		},
+	);
+
+	function submitSearch(event: SubmitEvent): void {
+		event.preventDefault();
+		navigate(subscriberListHref({ search: search() }));
+	}
+
+	return (
+		<section class="subscribers-page">
+			<PageHeader eyebrow="Email delivery" title="Subscribers">
+				<Show when={canCreate()}><a class="button" href="/emails/subscribers/new">New subscriber</a></Show>
+			</PageHeader>
+			<form class="subscriber-search" role="search" action="/emails/subscribers" method="get" onSubmit={submitSearch}>
+				<label class="filter-field"><span>Search subscribers</span><input type="search" name="search" value={search()} onInput={(event) => setSearch(event.currentTarget.value)} maxlength={200} placeholder="Email or name" /></label>
+				<button class="button button--secondary" type="submit">Search</button>
+				<Show when={request().search}><a class="button button--secondary" href="/emails/subscribers">Clear</a></Show>
+			</form>
+			<p class="subscriber-order-note">Newest subscribers first</p>
+			<Loading on={requestIdentity()} fallback={<p class="table-loading" role="status">Loading subscribers…</p>}>
+				<Show when={page()}>{(resolved) => <SubscriberResults page={resolved()} />}</Show>
+			</Loading>
+		</section>
+	);
 }
 
 function statusClass(status: SubscriberSummary['status']): string {
-	return `subscriber-status subscriber-status--${status}`;
+	return `badge subscriber-status subscriber-status--${status}`;
 }
 
-function SubscriberTable(props: { page: SubscriberPage }) {
+function SubscriberResults(props: { page: SubscriberPage }) {
 	const navigate = useNavigate();
 	const session = createMemo(() => requireSession());
-	const canCreate = createMemo(() => session().permissions['subscriber']?.includes('create') ?? false);
-	const canDelete = createMemo(() => session().permissions['subscriber']?.includes('delete') ?? false);
-	const canBlocklist = createMemo(() => session().permissions['subscriber']?.includes('blocklist') ?? false);
+	const canDelete = createMemo(() => can(session(), 'subscriber', 'delete'));
+	const canBlocklist = createMemo(() => can(session(), 'subscriber', 'blocklist'));
 	const [searchParams] = useSearchParams();
 	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
 	const [dialog, setDialog] = createSignal<'delete' | 'blocklist' | null>(null);
 	const [mutationPending, setMutationPending] = createSignal(false);
 	const [mutationError, setMutationError] = createSignal('');
-	const [search, setSearch] = createSignal(untrack(() => props.page.search));
 	const selected = createMemo(() => props.page.items.filter((subscriber) => selectedIds().includes(subscriber.id)));
 	const blocklistSelection = createMemo(() => selected().filter((subscriber) => subscriber.status !== 'blocklisted'));
 	const selectableIds = createMemo(() => props.page.items
@@ -54,16 +87,8 @@ function SubscriberTable(props: { page: SubscriberPage }) {
 		},
 	);
 	createEffect(
-		() => props.page.search,
-		(resolvedSearch, previousSearch) => {
-			// Do not overwrite a draft if the first deferred effect runs after typing.
-			if (previousSearch !== undefined && resolvedSearch !== previousSearch) setSearch(resolvedSearch);
-		},
-	);
-	createEffect(
 		() => ({ requested: decodeSubscriberListLocation(searchParams), resolvedPage: props.page.page, resolvedSearch: props.page.search }),
 		({ requested, resolvedPage, resolvedSearch }) => {
-			// While a new search is loading, props still contains the previous page.
 			// Canonicalize only after the response belongs to the current search.
 			if (requested.search === resolvedSearch && requested.page !== resolvedPage) {
 				navigate(subscriberListHref({ page: resolvedPage, search: resolvedSearch }), { replace: true });
@@ -103,19 +128,9 @@ function SubscriberTable(props: { page: SubscriberPage }) {
 	}
 
 	return (
-		<section class="subscribers-page">
-			<header class="page-header">
-				<div><p class="eyebrow">Email delivery</p><h1>Subscribers</h1></div>
-				<Show when={canCreate()}><a class="button" href="/emails/subscribers/new">New subscriber</a></Show>
-			</header>
-			<form class="subscriber-search" role="search" action="/emails/subscribers" method="get">
-				<label class="filter-field"><span>Search subscribers</span><input type="search" name="search" value={search()} onInput={(event) => setSearch(event.currentTarget.value)} maxlength={200} placeholder="Email or name" /></label>
-				<button class="button button--secondary" type="submit">Search</button>
-				<Show when={props.page.search}><a class="button button--secondary" href="/emails/subscribers">Clear</a></Show>
-			</form>
-			<p class="subscriber-order-note">Newest subscribers first</p>
+		<>
 			<Show when={selected().length > 0}>
-				<div class="subscriber-selection" role="status">
+				<div class="bulk-actions subscriber-selection" role="status">
 					<span>{selected().length} subscriber{selected().length === 1 ? '' : 's'} selected on this page</span>
 					<Show when={canBlocklist() && blocklistSelection().length > 0}><button class="button button--danger-secondary" type="button" onClick={() => { setMutationError(''); setDialog('blocklist'); }}>Blocklist {blocklistSelection().length}</button></Show>
 					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => { setMutationError(''); setDialog('delete'); }}>Delete selected</button></Show>
@@ -133,12 +148,12 @@ function SubscriberTable(props: { page: SubscriberPage }) {
 					</tbody>
 				</table>
 			</div>
-			<nav class="subscriber-pagination" aria-label="Subscriber pages">
+			<nav class="pagination" aria-label="Subscriber pages">
 				<span>Page {props.page.page.toLocaleString()} of {totalPages().toLocaleString()} · {props.page.total.toLocaleString()} total</span>
 				<div><Show when={props.page.page > 1}><a class="button button--secondary" rel="prev" href={subscriberListHref({ page: props.page.page - 1, search: props.page.search })}>Previous</a></Show><Show when={props.page.page < totalPages()}><a class="button button--secondary" rel="next" href={subscriberListHref({ page: props.page.page + 1, search: props.page.search })}>Next</a></Show></div>
 			</nav>
 			<ConfirmDialog open={dialog() === 'blocklist'} title="Blocklist selected subscribers?" description={`Blocklist ${blocklistSelection().length} subscriber${blocklistSelection().length === 1 ? '' : 's'}? Listmonk will unsubscribe all of their memberships. Restoring them requires a separate recovery workflow.`} confirmLabel="Blocklist subscribers" pending={mutationPending()} error={mutationError()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
 			<ConfirmDialog open={dialog() === 'delete'} title="Delete selected subscribers?" description={`Permanently delete ${selected().length} subscriber${selected().length === 1 ? '' : 's'} and their Listmonk history? This cannot be undone.`} confirmLabel="Delete subscribers" pending={mutationPending()} error={mutationError()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
-		</section>
+		</>
 	);
 }

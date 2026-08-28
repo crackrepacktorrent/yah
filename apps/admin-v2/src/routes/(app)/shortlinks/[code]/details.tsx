@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo, createSignal } from 'solid-js';
@@ -5,6 +6,8 @@ import { isPrintedQrShortCode } from '@yah/admin-core/shortlink-policy';
 import { decodeShortlinkRouteCode, shortlinkEditHref } from '~/features/shortlinks/routing';
 import { deleteShortlink, getShortlink, getShortlinkOverview, listShortlinks, resetShortlinkVisits } from '~/features/shortlinks/server';
 import { requireSession } from '~/platform/auth/session';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
+import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { QrCode } from '~/ui/qr-code';
 import { toast } from '~/ui/toast';
@@ -25,8 +28,8 @@ function ShortlinkDetailRoute(props: { shortCode: string }) {
 	const navigate = useNavigate();
 	const session = createMemo(() => requireSession());
 	const detail = createMemo(() => getShortlink(props.shortCode));
-	const canEdit = createMemo(() => session().permissions['shortlink']?.includes('edit') ?? false);
-	const canDelete = createMemo(() => session().permissions['shortlink']?.includes('delete') ?? false);
+	const canEdit = createMemo(() => can(session(), 'shortlink', 'edit'));
+	const canDelete = createMemo(() => can(session(), 'shortlink', 'delete'));
 	const printedQr = createMemo(() => isPrintedQrShortCode(detail().shortlink.shortCode));
 	const [dialog, setDialog] = createSignal<'reset' | 'delete' | null>(null);
 	const [pending, setPending] = createSignal(false);
@@ -64,15 +67,9 @@ function ShortlinkDetailRoute(props: { shortCode: string }) {
 	}
 
 	return (
-		<section class="shortlinks-page shortlink-detail-page">
-			<nav class="breadcrumbs" aria-label="Breadcrumb">
-				<a href="/shortlinks">Shortlinks</a><span aria-hidden="true">/</span><span>{detail().shortlink.shortCode}</span>
-			</nav>
-			<header class="page-header">
-				<div>
-					<p class="eyebrow">Tracked redirect</p>
-					<h1>{detail().shortlink.title || detail().shortlink.shortCode}</h1>
-				</div>
+		<section class="shortlinks-page">
+			<Breadcrumbs items={[{ href: '/shortlinks', label: 'Shortlinks' }, { label: detail().shortlink.shortCode }]} />
+			<PageHeader eyebrow="Tracked redirect" title={detail().shortlink.title || detail().shortlink.shortCode}>
 				<div class="detail-actions">
 					<Show when={canEdit()}>
 						<a class="button button--secondary" href={shortlinkEditHref(detail().shortlink.shortCode)}>Edit</a>
@@ -84,7 +81,7 @@ function ShortlinkDetailRoute(props: { shortCode: string }) {
 						<button type="button" class="button button--danger" onClick={() => { setDialogError(''); setDialog('delete'); }}>Delete</button>
 					</Show>
 				</div>
-			</header>
+			</PageHeader>
 			<Show when={printedQr()}>
 				<p class="table-note">This permanent short URL is printed in QR materials. Its destination can be updated, but the shortlink cannot be deleted.</p>
 			</Show>
@@ -107,7 +104,7 @@ function ShortlinkDetailRoute(props: { shortCode: string }) {
 						<div><dt>Maximum visits</dt><dd>{detail().shortlink.maxVisits?.toLocaleString() ?? 'Unlimited'}</dd></div>
 						<div><dt>Expires</dt><dd><Show when={detail().shortlink.validUntil} fallback="Never">{(date) => new Date(date()).toLocaleString()}</Show></dd></div>
 						<Show when={detail().shortlink.tags.length > 0}>
-							<div><dt>Tags</dt><dd class="tag-list"><For each={detail().shortlink.tags}>{(tag) => <span>{tag}</span>}</For></dd></div>
+							<div><dt>Tags</dt><dd class="tag-list"><For each={detail().shortlink.tags}>{(tag) => <span class="badge">{tag}</span>}</For></dd></div>
 						</Show>
 					</dl>
 				</section>

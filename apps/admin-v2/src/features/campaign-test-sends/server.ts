@@ -1,24 +1,16 @@
 import type { SendCampaignTestCommand } from './contracts';
 import { sendAuthorizedCampaignTest } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
 
-async function dependencies() {
-	const [{ enforcePermissions }, { productionCampaignTestSender }] = await Promise.all([
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { productionCampaignTestSender }] = await Promise.all([
 		import('~/platform/auth/authorization.server'),
 		import('~/integrations/listmonk/production-campaign-test-sender.server'),
 	]);
-	return { enforcePermissions, sender: productionCampaignTestSender };
+	return { authorization: createAuthorizationContext(headers), sender: productionCampaignTestSender };
 }
 
 export async function sendCampaignTest(command: SendCampaignTestCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await sendAuthorizedCampaignTest(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => sendAuthorizedCampaignTest(command, await requestDependencies(request.headers)));
 }

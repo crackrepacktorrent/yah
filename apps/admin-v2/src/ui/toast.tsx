@@ -1,4 +1,5 @@
 import { For, createSignal, onSettled, untrack } from 'solid-js';
+import './toast.css';
 
 const MAX_TOASTS = 4;
 const SUCCESS_DURATION_MS = 8_000;

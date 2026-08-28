@@ -15,6 +15,7 @@ import {
 	type RangeSelection,
 } from 'lexical';
 import { Show, createEffect, createSignal, onSettled, untrack } from 'solid-js';
+import './rich-text-editor.css';
 
 const EXTERNAL_VALUE_TAG = 'admin-external-value';
 
@@ -66,15 +67,15 @@ export function RichTextEditor(props: RichTextEditorProps) {
 			onError: (error) => console.error('[RichTextEditor]', error),
 			theme: {
 				text: {
-					bold: 'compat-editor-bold',
-					italic: 'compat-editor-italic',
-					underline: 'compat-editor-underline',
-					strikethrough: 'compat-editor-strikethrough',
+					bold: 'rich-text-editor-bold',
+					italic: 'rich-text-editor-italic',
+					underline: 'rich-text-editor-underline',
+					strikethrough: 'rich-text-editor-strikethrough',
 				},
-				heading: { h1: 'compat-editor-h1', h2: 'compat-editor-h2', h3: 'compat-editor-h3' },
-				list: { ul: 'compat-editor-ul', ol: 'compat-editor-ol', listitem: 'compat-editor-li' },
-				quote: 'compat-editor-quote',
-				link: 'compat-editor-link',
+				heading: { h1: 'rich-text-editor-h1', h2: 'rich-text-editor-h2', h3: 'rich-text-editor-h3' },
+				list: { ul: 'rich-text-editor-ul', ol: 'rich-text-editor-ol', listitem: 'rich-text-editor-li' },
+				quote: 'rich-text-editor-quote',
+				link: 'rich-text-editor-link',
 			},
 		});
 		editor = instance;
@@ -224,31 +225,31 @@ export function RichTextEditor(props: RichTextEditorProps) {
 	}
 
 	return (
-		<div class="compat-editor">
-			<div class="compat-editor-toolbar" role="toolbar" aria-label={`${props.label} formatting`} onPointerDown={(event) => { if (event.target instanceof Element && event.target.closest('button')) event.preventDefault(); }}>
-				<div class="compat-editor-toolbar-group">
+		<div class="rich-text-editor">
+			<div class="rich-text-editor-toolbar" role="toolbar" aria-label={`${props.label} formatting`} onPointerDown={(event) => { if (event.target instanceof Element && event.target.closest('button')) event.preventDefault(); }}>
+				<div class="rich-text-editor-toolbar-group">
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Bold" aria-pressed={isBold() ? 'true' : 'false'} onClick={() => formatText('bold')}><strong>B</strong></button>
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Italic" aria-pressed={isItalic() ? 'true' : 'false'} onClick={() => formatText('italic')}><em>I</em></button>
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Underline" aria-pressed={isUnderline() ? 'true' : 'false'} onClick={() => formatText('underline')}><u>U</u></button>
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Strikethrough" aria-pressed={isStrikethrough() ? 'true' : 'false'} onClick={() => formatText('strikethrough')}><s>S</s></button>
 				</div>
-				<span class="compat-editor-toolbar-divider" aria-hidden="true" />
-				<div class="compat-editor-toolbar-group">
+				<span class="rich-text-editor-toolbar-divider" aria-hidden="true" />
+				<div class="rich-text-editor-toolbar-group">
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Heading 1" aria-pressed={blockType() === 'h1' ? 'true' : 'false'} onClick={() => formatHeading('h1')}>H1</button>
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Heading 2" aria-pressed={blockType() === 'h2' ? 'true' : 'false'} onClick={() => formatHeading('h2')}>H2</button>
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Heading 3" aria-pressed={blockType() === 'h3' ? 'true' : 'false'} onClick={() => formatHeading('h3')}>H3</button>
 				</div>
-				<span class="compat-editor-toolbar-divider" aria-hidden="true" />
-				<div class="compat-editor-toolbar-group">
+				<span class="rich-text-editor-toolbar-divider" aria-hidden="true" />
+				<div class="rich-text-editor-toolbar-group">
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Bulleted list" aria-pressed={blockType() === 'bullet' ? 'true' : 'false'} onClick={() => insertList('bullet')}>• List</button>
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Numbered list" aria-pressed={blockType() === 'number' ? 'true' : 'false'} onClick={() => insertList('number')}>1. List</button>
 					<button type="button" disabled={!ready() || props.disabled} aria-label="Block quote" aria-pressed={blockType() === 'quote' ? 'true' : 'false'} onClick={formatQuote}>Quote</button>
 				</div>
-				<span class="compat-editor-toolbar-divider" aria-hidden="true" />
+				<span class="rich-text-editor-toolbar-divider" aria-hidden="true" />
 				<button type="button" disabled={!ready() || props.disabled} aria-label={linkActive() ? 'Remove link' : 'Add link'} aria-pressed={linkActive() ? 'true' : 'false'} onClick={editLink}>{linkActive() ? 'Unlink' : 'Link'}</button>
 			</div>
 			<Show when={linkEditorOpen()}>
-				<form class="compat-editor-link-form" onSubmit={(event) => { event.preventDefault(); applyLink(); }}>
+				<form class="rich-text-editor-link-form" onSubmit={(event) => { event.preventDefault(); applyLink(); }}>
 					<label><span>Link URL</span><input type="url" value={linkUrl()} placeholder="https://example.org" required onInput={(event) => { setLinkUrl(event.currentTarget.value); setLinkError(''); }} /></label>
 					<button type="submit">Apply link</button>
 					<button type="button" onClick={() => { setLinkEditorOpen(false); setLinkError(''); editor?.focus(); }}>Cancel</button>
@@ -259,7 +260,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
 				ref={(element) => {
 					rootElement = element;
 				}}
-				class="compat-editor-input"
+				class="rich-text-editor-input"
 				role="textbox"
 				aria-label={props.label}
 				aria-multiline="true"

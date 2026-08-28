@@ -1,11 +1,19 @@
 import { describe, expect, test } from 'bun:test';
 import {
+	can,
 	customRoleStatements,
 	isCustomRolePermissionResource,
 	pickCustomRolePermissions,
 } from './permissions';
 
 describe('custom role permission boundary', () => {
+	test('checks typed UI permission projections without granting absent actions', () => {
+		const session = { permissions: { shortlink: ['view', 'edit'] } };
+		expect(can(session, 'shortlink', 'view')).toBe(true);
+		expect(can(session, 'shortlink', 'delete')).toBe(false);
+		expect(can(null, 'shortlink', 'view')).toBe(false);
+	});
+
 	test('exposes only product resources to custom roles', () => {
 		expect(Object.keys(customRoleStatements)).toEqual([
 			'shortlink',

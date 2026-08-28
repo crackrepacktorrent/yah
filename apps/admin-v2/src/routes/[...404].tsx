@@ -1,10 +1,9 @@
 export default function NotFound() {
 	return (
-		<main class="shell">
+		<main class="error-view">
 			<h1>Page not found</h1>
-			<p>
-				<a href="/compatibility">Return to the compatibility lab</a>
-			</p>
+			<p>The page you requested does not exist.</p>
+			<div class="error-view__actions"><a href="/">Back to Dashboard</a></div>
 		</main>
 	);
 }

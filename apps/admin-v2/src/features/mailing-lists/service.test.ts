@@ -28,7 +28,7 @@ const activePublic: MailingList = {
 
 function dependencies(list: MailingList | null = activePublic): MailingListServiceDependencies {
 	return {
-		enforcePermissions: vi.fn(async () => undefined),
+		authorization: { requirePermissions: vi.fn(async () => undefined), getCurrentUserId: vi.fn(async () => 'test-user') },
 		manager: {
 			list: vi.fn(async () => (list ? [list] : [])),
 			get: vi.fn(async () => list),
@@ -42,11 +42,10 @@ function dependencies(list: MailingList | null = activePublic): MailingListServi
 describe('mailing-list service boundary', () => {
 	it('enforces each exact capability before its provider operation', async () => {
 		const deps = dependencies();
-		await listAuthorizedMailingLists(new Headers(), deps);
-		await readAuthorizedMailingList(7, new Headers(), deps);
+		await listAuthorizedMailingLists(deps);
+		await readAuthorizedMailingList(7, deps);
 		await createAuthorizedMailingList(
 			{ name: 'Private launch', kind: 'private', optIn: 'double', description: '' },
-			new Headers(),
 			deps,
 		);
 		await updateAuthorizedMailingList(
@@ -59,22 +58,20 @@ describe('mailing-list service boundary', () => {
 				status: activePublic.status,
 				description: activePublic.description,
 			},
-			new Headers(),
 			deps,
 		);
 		await setAuthorizedMailingListVisibility(
 			{ id: 7, expectedUpdatedAt: activePublic.updatedAt, public: false },
-			new Headers(),
 			deps,
 		);
-		await deleteAuthorizedMailingList(7, new Headers(), deps);
+		await deleteAuthorizedMailingList(7, deps);
 
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(1, expect.any(Headers), { list: ['view'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(2, expect.any(Headers), { list: ['view'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(3, expect.any(Headers), { list: ['create'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(4, expect.any(Headers), { list: ['edit'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(5, expect.any(Headers), { list: ['edit'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(6, expect.any(Headers), { list: ['delete'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(1, { list: ['view'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(2, { list: ['view'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(3, { list: ['create'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(4, { list: ['edit'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(5, { list: ['edit'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(6, { list: ['delete'] });
 	});
 
 	it('validates commands before authorization or provider access', async () => {
@@ -82,12 +79,11 @@ describe('mailing-list service boundary', () => {
 		await expect(
 			createAuthorizedMailingList(
 				{ name: '', kind: 'public', optIn: 'double', description: '' },
-				new Headers(),
 				deps,
 			),
 		).rejects.toThrow('Enter a list name.');
-		await expect(requireAuthorizedMailingListCapability('admin', new Headers(), deps)).rejects.toThrow();
-		expect(deps.enforcePermissions).not.toHaveBeenCalled();
+		await expect(requireAuthorizedMailingListCapability('admin', deps)).rejects.toThrow();
+		expect(deps.authorization.requirePermissions).not.toHaveBeenCalled();
 		expect(deps.manager.create).not.toHaveBeenCalled();
 	});
 
@@ -103,7 +99,6 @@ describe('mailing-list service boundary', () => {
 				status: 'archived',
 				description: 'Replacement',
 			},
-			new Headers(),
 			deps,
 		);
 
@@ -131,7 +126,6 @@ describe('mailing-list service boundary', () => {
 					status: 'active',
 					description: activePublic.description,
 				},
-				new Headers(),
 				stale,
 			),
 		).rejects.toThrow('changed after you opened it');
@@ -149,7 +143,6 @@ describe('mailing-list service boundary', () => {
 					status: 'active',
 					description: '',
 				},
-				new Headers(),
 				clearing,
 			),
 		).rejects.toThrow('cannot clear an existing list description');
@@ -161,7 +154,6 @@ describe('mailing-list service boundary', () => {
 		const publish = dependencies(privateList);
 		await setAuthorizedMailingListVisibility(
 			{ id: 7, expectedUpdatedAt: privateList.updatedAt, public: true },
-			new Headers(),
 			publish,
 		);
 		expect(publish.manager.update).toHaveBeenCalledWith({
@@ -177,7 +169,6 @@ describe('mailing-list service boundary', () => {
 		const unpublish = dependencies();
 		await setAuthorizedMailingListVisibility(
 			{ id: 7, expectedUpdatedAt: activePublic.updatedAt, public: false },
-			new Headers(),
 			unpublish,
 		);
 		expect(unpublish.manager.update).toHaveBeenCalledWith(expect.objectContaining({ kind: 'private', status: 'active' }));
@@ -188,7 +179,6 @@ describe('mailing-list service boundary', () => {
 		await expect(
 			setAuthorizedMailingListVisibility(
 				{ id: 7, expectedUpdatedAt: activePublic.updatedAt, public: false },
-				new Headers(),
 				archived,
 			),
 		).rejects.toThrow('Reactivate this mailing list');
@@ -200,21 +190,20 @@ describe('mailing-list service boundary', () => {
 		await expect(
 			setAuthorizedMailingListVisibility(
 				{ id: 7, expectedUpdatedAt: activePublic.updatedAt, public: true },
-				new Headers(),
 				temporary,
 			),
 		).rejects.toThrow('Temporary lists must be managed by Listmonk.');
-		await expect(deleteAuthorizedMailingList(7, new Headers(), temporary)).rejects.toThrow('Temporary lists');
+		await expect(deleteAuthorizedMailingList(7, temporary)).rejects.toThrow('Temporary lists');
 		expect(temporary.manager.update).not.toHaveBeenCalled();
 		expect(temporary.manager.delete).not.toHaveBeenCalled();
 	});
 
 	it('normalizes missing records and expected provider rejections', async () => {
-		await expect(readAuthorizedMailingList(77, new Headers(), dependencies(null))).rejects.toThrow('Mailing list not found.');
+		await expect(readAuthorizedMailingList(77, dependencies(null))).rejects.toThrow('Mailing list not found.');
 
 		const rejected = dependencies();
 		vi.mocked(rejected.manager.delete).mockRejectedValueOnce(new MailingListProviderFailure(409));
-		await expect(deleteAuthorizedMailingList(7, new Headers(), rejected)).rejects.toThrow(
+		await expect(deleteAuthorizedMailingList(7, rejected)).rejects.toThrow(
 			'Listmonk rejected the mailing-list change.',
 		);
 	});

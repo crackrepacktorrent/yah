@@ -1,31 +1,27 @@
-import type { Permissions } from '@yah/admin-core/permissions';
-import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	CampaignAnalyticsQuerySchema,
 	type CampaignAnalyticsPoint,
 	type CampaignAnalyticsQuery,
 } from './contracts';
-import { createPublicError } from '~/platform/errors';
 
 export type CampaignAnalyticsReader = {
 	read(query: CampaignAnalyticsQuery): Promise<CampaignAnalyticsPoint[]>;
 };
 
 export type CampaignAnalyticsServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	reader: CampaignAnalyticsReader;
 };
+const parse = createPublicInputParser('Invalid campaign analytics query.');
 
 export async function readAuthorizedCampaignAnalytics(
 	input: unknown,
-	headers: Headers,
 	dependencies: CampaignAnalyticsServiceDependencies,
 ): Promise<CampaignAnalyticsPoint[]> {
-	const result = v.safeParse(CampaignAnalyticsQuerySchema, input);
-	if (!result.success) {
-		throw createPublicError(result.issues[0]?.message ?? 'Invalid campaign analytics query.', 400);
-	}
+	const query = parse(CampaignAnalyticsQuerySchema, input);
 
-	await dependencies.enforcePermissions(headers, { campaign: ['view'] });
-	return dependencies.reader.read(result.output);
+	await dependencies.authorization.requirePermissions({ campaign: ['view'] });
+	return dependencies.reader.read(query);
 }

@@ -113,7 +113,7 @@ const bounceCommand = {
 
 function dependencies(): EmailSettingsServiceDependencies {
 	return {
-		enforcePermissions: vi.fn(async () => undefined),
+		authorization: { requirePermissions: vi.fn(async () => undefined), getCurrentUserId: vi.fn(async () => 'test-user') },
 		manager: {
 			read: vi.fn(async () => ({ smtp: [{ ...server, hasPassword: true }] })),
 			save: vi.fn(async () => ({ needsRestart: false })),
@@ -133,40 +133,40 @@ function dependencies(): EmailSettingsServiceDependencies {
 describe('email settings service boundary', () => {
 	it('separates ordinary settings edits from provider operations', async () => {
 		const deps = dependencies();
-		await readAuthorizedEmailSettings(new Headers(), deps);
-		await readAuthorizedEmailGeneralSettings(new Headers(), deps);
-		await readAuthorizedEmailPerformanceSettings(new Headers(), deps);
-		await readAuthorizedEmailBounceSettings(new Headers(), deps);
-		await readAuthorizedEmailPrivacyPolicy(new Headers(), deps);
-		await saveAuthorizedEmailSettings({ servers: [{ ...server, password: null }] }, new Headers(), deps);
-		await saveAuthorizedEmailGeneralSettings(generalCommand, new Headers(), deps);
-		await saveAuthorizedEmailPerformanceSettings(performance, new Headers(), deps);
-		await saveAuthorizedEmailBounceSettings(bounceCommand, new Headers(), deps);
-		await saveAuthorizedEmailPrivacyPolicy(privacy, new Headers(), deps);
-		await testAuthorizedSmtp({ server: { ...server, password: 'fresh-secret' }, recipient: 'owner@example.test' }, new Headers(), deps);
+		await readAuthorizedEmailSettings(deps);
+		await readAuthorizedEmailGeneralSettings(deps);
+		await readAuthorizedEmailPerformanceSettings(deps);
+		await readAuthorizedEmailBounceSettings(deps);
+		await readAuthorizedEmailPrivacyPolicy(deps);
+		await saveAuthorizedEmailSettings({ servers: [{ ...server, password: null }] }, deps);
+		await saveAuthorizedEmailGeneralSettings(generalCommand, deps);
+		await saveAuthorizedEmailPerformanceSettings(performance, deps);
+		await saveAuthorizedEmailBounceSettings(bounceCommand, deps);
+		await saveAuthorizedEmailPrivacyPolicy(privacy, deps);
+		await testAuthorizedSmtp({ server: { ...server, password: 'fresh-secret' }, recipient: 'owner@example.test' }, deps);
 
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(1, expect.any(Headers), { settings: ['view'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(2, expect.any(Headers), { settings: ['view'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(4, expect.any(Headers), { settings: ['view'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(5, expect.any(Headers), { settings: ['view'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(6, expect.any(Headers), { provider: ['manage'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(7, expect.any(Headers), { settings: ['edit'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(8, expect.any(Headers), { provider: ['manage'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(9, expect.any(Headers), { provider: ['manage'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(10, expect.any(Headers), { settings: ['edit'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(11, expect.any(Headers), { provider: ['manage'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(1, { settings: ['view'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(2, { settings: ['view'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(4, { settings: ['view'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(5, { settings: ['view'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(6, { provider: ['manage'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(7, { settings: ['edit'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(8, { provider: ['manage'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(9, { provider: ['manage'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(10, { settings: ['edit'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(11, { provider: ['manage'] });
 	});
 
 	it('validates before authorization and never permits all SMTP servers to be disabled', async () => {
 		const deps = dependencies();
-		await expect(saveAuthorizedEmailSettings({ servers: [{ ...server, enabled: false, password: null }] }, new Headers(), deps))
+		await expect(saveAuthorizedEmailSettings({ servers: [{ ...server, enabled: false, password: null }] }, deps))
 			.rejects.toThrow('Enable at least one');
-		await expect(testAuthorizedSmtp({ server: { ...server, password: '' }, recipient: 'owner@example.test' }, new Headers(), deps))
+		await expect(testAuthorizedSmtp({ server: { ...server, password: '' }, recipient: 'owner@example.test' }, deps))
 			.rejects.toThrow('Re-enter');
 		await expect(saveAuthorizedEmailSettings({
 			servers: [{ ...server, password: null, messageRetryDelay: 'banana' }],
-		}, new Headers(), deps)).rejects.toThrow('Use a Go duration');
-		expect(deps.enforcePermissions).not.toHaveBeenCalled();
+		}, deps)).rejects.toThrow('Use a Go duration');
+		expect(deps.authorization.requirePermissions).not.toHaveBeenCalled();
 		expect(deps.manager.save).not.toHaveBeenCalled();
 		expect(deps.manager.test).not.toHaveBeenCalled();
 	});
@@ -175,63 +175,63 @@ describe('email settings service boundary', () => {
 		const maximum = dependencies();
 		await saveAuthorizedEmailSettings({
 			servers: [{ ...server, password: null, messageRetryDelay: '2562047h47m16.854775807s' }],
-		}, new Headers(), maximum);
+		}, maximum);
 		expect(maximum.manager.save).toHaveBeenCalledOnce();
 
 		for (const messageRetryDelay of ['99999999h', '2562047h47m16.854775808s']) {
 			const overflow = dependencies();
 			await expect(saveAuthorizedEmailSettings({
 				servers: [{ ...server, password: null, messageRetryDelay }],
-			}, new Headers(), overflow)).rejects.toThrow('exceeds Listmonk’s supported range');
-			expect(overflow.enforcePermissions).not.toHaveBeenCalled();
+			}, overflow)).rejects.toThrow('exceeds Listmonk’s supported range');
+			expect(overflow.authorization.requirePermissions).not.toHaveBeenCalled();
 			expect(overflow.manager.save).not.toHaveBeenCalled();
 		}
 	});
 
 	it('normalizes settings collections and rejects contradictory domain policy before authorization', async () => {
 		const deps = dependencies();
-		await saveAuthorizedEmailGeneralSettings({ ...generalCommand, notifyEmails: [' Operator@Example.test ', 'operator@example.test'] }, new Headers(), deps);
+		await saveAuthorizedEmailGeneralSettings({ ...generalCommand, notifyEmails: [' Operator@Example.test ', 'operator@example.test'] }, deps);
 		expect(deps.manager.saveGeneral).toHaveBeenCalledWith(expect.objectContaining({ notifyEmails: ['Operator@Example.test'] }));
 		await saveAuthorizedEmailPrivacyPolicy({
 			...privacy,
 			exportable: ['profile', 'profile', 'subscriptions'],
 			domainBlocklist: [' BLOCKED.EXAMPLE ', 'blocked.example'],
-		}, new Headers(), deps);
+		}, deps);
 		expect(deps.manager.savePrivacy).toHaveBeenCalledWith(expect.objectContaining({
 			exportable: ['profile', 'subscriptions'],
 			domainBlocklist: ['blocked.example'],
 		}));
 
 		const rejected = dependencies();
-		await expect(saveAuthorizedEmailPrivacyPolicy({ ...privacy, domainAllowlist: ['Blocked.Example'] }, new Headers(), rejected))
+		await expect(saveAuthorizedEmailPrivacyPolicy({ ...privacy, domainAllowlist: ['Blocked.Example'] }, rejected))
 			.rejects.toThrow('cannot be both allowed and blocked');
-		expect(rejected.enforcePermissions).not.toHaveBeenCalled();
+		expect(rejected.authorization.requirePermissions).not.toHaveBeenCalled();
 
 		const missingExportScope = dependencies();
-		await expect(saveAuthorizedEmailPrivacyPolicy({ ...privacy, exportable: [] }, new Headers(), missingExportScope))
+		await expect(saveAuthorizedEmailPrivacyPolicy({ ...privacy, exportable: [] }, missingExportScope))
 			.rejects.toThrow('Select at least one data category');
-		expect(missingExportScope.enforcePermissions).not.toHaveBeenCalled();
+		expect(missingExportScope.authorization.requirePermissions).not.toHaveBeenCalled();
 	});
 
 	it('guards high-impact performance and bounce commands before provider authorization', async () => {
 		const invalidPerformance = dependencies();
-		await expect(saveAuthorizedEmailPerformanceSettings({ ...performance, slidingWindow: true, slidingWindowRate: 0 }, new Headers(), invalidPerformance))
+		await expect(saveAuthorizedEmailPerformanceSettings({ ...performance, slidingWindow: true, slidingWindowRate: 0 }, invalidPerformance))
 			.rejects.toThrow('at least one message');
-		expect(invalidPerformance.enforcePermissions).not.toHaveBeenCalled();
+		expect(invalidPerformance.authorization.requirePermissions).not.toHaveBeenCalled();
 
 		const destructive = dependencies();
 		await expect(saveAuthorizedEmailBounceSettings({
 			...bounceCommand,
 			actions: { ...bounceCommand.actions, hard: { count: 1, action: 'delete' } },
-		}, new Headers(), destructive)).rejects.toThrow('Acknowledge');
-		expect(destructive.enforcePermissions).not.toHaveBeenCalled();
+		}, destructive)).rejects.toThrow('Acknowledge');
+		expect(destructive.authorization.requirePermissions).not.toHaveBeenCalled();
 		const authorizedDestructive = dependencies();
 		await saveAuthorizedEmailBounceSettings({
 			...bounceCommand,
 			actions: { ...bounceCommand.actions, hard: { count: 1, action: 'delete' } },
 			acknowledgeDelete: true,
-		}, new Headers(), authorizedDestructive);
-		expect(authorizedDestructive.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), {
+		}, authorizedDestructive);
+		expect(authorizedDestructive.authorization.requirePermissions).toHaveBeenCalledWith({
 			provider: ['manage'],
 			subscriber: ['delete'],
 		});
@@ -242,23 +242,23 @@ describe('email settings service boundary', () => {
 			tlsEnabled: false, tlsSkipVerify: true, scanInterval: '15m',
 		};
 		const valid = dependencies();
-		await saveAuthorizedEmailBounceSettings({ ...bounceCommand, mailboxes: [mailbox] }, new Headers(), valid);
-		expect(valid.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { provider: ['manage'] });
+		await saveAuthorizedEmailBounceSettings({ ...bounceCommand, mailboxes: [mailbox] }, valid);
+		expect(valid.authorization.requirePermissions).toHaveBeenCalledWith({ provider: ['manage'] });
 		expect(valid.manager.saveBounces).toHaveBeenCalledWith(expect.objectContaining({
 			mailboxes: [expect.objectContaining({ host: 'pop.example.test', tlsSkipVerify: false })],
 		}));
 
 		const tooFrequent = dependencies();
-		await expect(saveAuthorizedEmailBounceSettings({ ...bounceCommand, mailboxes: [{ ...mailbox, enabled: false, scanInterval: '59s' }] }, new Headers(), tooFrequent))
+		await expect(saveAuthorizedEmailBounceSettings({ ...bounceCommand, mailboxes: [{ ...mailbox, enabled: false, scanInterval: '59s' }] }, tooFrequent))
 			.rejects.toThrow('at least one minute');
-		expect(tooFrequent.enforcePermissions).not.toHaveBeenCalled();
+		expect(tooFrequent.authorization.requirePermissions).not.toHaveBeenCalled();
 
 		const unsupportedDay = dependencies();
 		await expect(saveAuthorizedEmailBounceSettings({
 			...bounceCommand,
 			mailboxes: [{ ...mailbox, enabled: false, scanInterval: '1d' }],
-		}, new Headers(), unsupportedDay)).rejects.toThrow('Use a Go duration');
-		expect(unsupportedDay.enforcePermissions).not.toHaveBeenCalled();
+		}, unsupportedDay)).rejects.toThrow('Use a Go duration');
+		expect(unsupportedDay.authorization.requirePermissions).not.toHaveBeenCalled();
 	});
 
 	it('allows an auth-none SMTP test without a password', async () => {
@@ -266,15 +266,15 @@ describe('email settings service boundary', () => {
 		await testAuthorizedSmtp({
 			server: { ...server, authProtocol: 'none', username: '', password: '' },
 			recipient: 'owner@example.test',
-		}, new Headers(), deps);
+		}, deps);
 		expect(deps.manager.test).toHaveBeenCalledOnce();
 	});
 
 	it('does not call Listmonk when authorization fails', async () => {
 		const deps = dependencies();
-		vi.mocked(deps.enforcePermissions).mockRejectedValue(new Error('Forbidden'));
-		await expect(readAuthorizedEmailSettings(new Headers(), deps)).rejects.toThrow('Forbidden');
-		await expect(saveAuthorizedEmailSettings({ servers: [{ ...server, password: null }] }, new Headers(), deps)).rejects.toThrow('Forbidden');
+		vi.mocked(deps.authorization.requirePermissions).mockRejectedValue(new Error('Forbidden'));
+		await expect(readAuthorizedEmailSettings(deps)).rejects.toThrow('Forbidden');
+		await expect(saveAuthorizedEmailSettings({ servers: [{ ...server, password: null }] }, deps)).rejects.toThrow('Forbidden');
 		expect(deps.manager.read).not.toHaveBeenCalled();
 		expect(deps.manager.save).not.toHaveBeenCalled();
 	});

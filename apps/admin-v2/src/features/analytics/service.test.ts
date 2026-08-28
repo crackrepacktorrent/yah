@@ -24,7 +24,12 @@ describe('analytics service boundary', () => {
 		const enforcePermissions = vi.fn(async () => undefined);
 		const getSnapshot = vi.fn(async () => snapshot);
 
-		await expect(readAuthorizedAnalytics('year', new Headers(), { enforcePermissions, reader: { getSnapshot } })).rejects.toThrow(
+		await expect(
+			readAuthorizedAnalytics('year', {
+				authorization: { requirePermissions: enforcePermissions, getCurrentUserId: vi.fn(async () => 'test-user') },
+				reader: { getSnapshot },
+			}),
+		).rejects.toThrow(
 			'Invalid analytics period.',
 		);
 		expect(enforcePermissions).not.toHaveBeenCalled();
@@ -37,10 +42,15 @@ describe('analytics service boundary', () => {
 		});
 		const getSnapshot = vi.fn(async () => snapshot);
 
-		await expect(readAuthorizedAnalytics('7d', new Headers(), { enforcePermissions, reader: { getSnapshot } })).rejects.toThrow(
+		await expect(
+			readAuthorizedAnalytics('7d', {
+				authorization: { requirePermissions: enforcePermissions, getCurrentUserId: vi.fn(async () => 'test-user') },
+				reader: { getSnapshot },
+			}),
+		).rejects.toThrow(
 			'forbidden',
 		);
-		expect(enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { analytics: ['view'] });
+		expect(enforcePermissions).toHaveBeenCalledWith({ analytics: ['view'] });
 		expect(getSnapshot).not.toHaveBeenCalled();
 	});
 
@@ -48,18 +58,27 @@ describe('analytics service boundary', () => {
 		const enforcePermissions = vi.fn(async () => undefined);
 		const getSnapshot = vi.fn(async () => snapshot);
 
-		await expect(readAuthorizedAnalytics('7d', new Headers(), { enforcePermissions, reader: { getSnapshot } })).resolves.toBe(snapshot);
+		await expect(
+			readAuthorizedAnalytics('7d', {
+				authorization: { requirePermissions: enforcePermissions, getCurrentUserId: vi.fn(async () => 'test-user') },
+				reader: { getSnapshot },
+			}),
+		).resolves.toBe(snapshot);
 		expect(getSnapshot).toHaveBeenCalledWith('7d');
 	});
 
 	it('authorizes the narrow site overview independently', async () => {
 		const enforcePermissions = vi.fn(async () => undefined);
 		const getOverview = vi.fn(async () => overview);
-		await expect(readAuthorizedSiteOverview(new Headers(), { enforcePermissions, reader: { getOverview } })).resolves.toBe(overview);
-		expect(enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { analytics: ['view'] });
+		const dependencies = {
+			authorization: { requirePermissions: enforcePermissions, getCurrentUserId: vi.fn(async () => 'test-user') },
+			reader: { getOverview },
+		};
+		await expect(readAuthorizedSiteOverview(dependencies)).resolves.toBe(overview);
+		expect(enforcePermissions).toHaveBeenCalledWith({ analytics: ['view'] });
 
 		enforcePermissions.mockRejectedValueOnce(new Error('forbidden'));
-		await expect(readAuthorizedSiteOverview(new Headers(), { enforcePermissions, reader: { getOverview } })).rejects.toThrow('forbidden');
+		await expect(readAuthorizedSiteOverview(dependencies)).rejects.toThrow('forbidden');
 		expect(getOverview).toHaveBeenCalledOnce();
 	});
 });

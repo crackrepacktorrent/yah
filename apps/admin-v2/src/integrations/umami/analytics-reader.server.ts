@@ -3,6 +3,7 @@ import * as v from 'valibot';
 import type { AnalyticsMetric, AnalyticsPeriod, AnalyticsSnapshot } from '~/features/analytics/contracts';
 import type { SiteOverview, SiteOverviewPeriod } from '~/features/analytics/contracts';
 import { fetchUpstream, parseJsonResponse } from '~/integrations/http';
+import { createProviderResponseParser } from '~/integrations/provider-response.server';
 import type { ProductionConfig } from '~/platform/config/production';
 
 const EARLY_EXPIRY_MS = 5 * 60 * 1000;
@@ -32,6 +33,7 @@ type ReaderDependencies = {
 	request?: RequestUpstream;
 	now?: () => number;
 };
+const parse = createProviderResponseParser('Umami');
 
 type PeriodRange = {
 	startAt: number;
@@ -43,16 +45,6 @@ function periodRange(period: AnalyticsPeriod, endAt: number): PeriodRange {
 	const day = 24 * 60 * 60 * 1000;
 	if (period === '24h') return { startAt: endAt - day, endAt, unit: 'hour' };
 	return { startAt: endAt - (period === '7d' ? 7 : 30) * day, endAt, unit: 'day' };
-}
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-	endpoint: string,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw new Error(`Umami returned an invalid ${endpoint} response.`);
-	return result.output;
 }
 
 function decodeBase64Url(value: string): string {

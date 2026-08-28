@@ -1,14 +1,16 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
-import { createMemo, createSignal } from 'solid-js';
+import { createMemo } from 'solid-js';
 import { CampaignForm, type CampaignFormValues } from '~/features/campaigns/form';
 import { campaignHref } from '~/features/campaigns/routing';
 import { createCampaign, listCampaigns, requireCampaignCapability } from '~/features/campaigns/server';
 import { listEmailTemplates } from '~/features/email-templates/server';
 import { listMailingLists } from '~/features/mailing-lists/server';
 import { requireSession } from '~/platform/auth/session';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
+import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/campaigns/new', {
 	preload: () => {
@@ -22,34 +24,28 @@ export default function NewCampaignPage() {
 	const authorized = createMemo(() => requireCampaignCapability('create'));
 	const session = createMemo(() => requireSession());
 	const lists = createMemo(() => listMailingLists());
-	const canViewCampaigns = createMemo(() => session().permissions['campaign']?.includes('view') ?? false);
-	const canViewTemplates = createMemo(() => session().permissions['template']?.includes('view') ?? false);
+	const canViewCampaigns = createMemo(() => can(session(), 'campaign', 'view'));
+	const canViewTemplates = createMemo(() => can(session(), 'template', 'view'));
 	const templates = createMemo(() => canViewTemplates() ? listEmailTemplates() : []);
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const createTask = createCommandTask();
 
 	async function submit(values: CampaignFormValues): Promise<void> {
-		setError('');
-		setPending(true);
-		try {
+		const canNavigateToCampaign = canViewCampaigns();
+		await createTask.run(async () => {
 			const created = await createCampaign(values);
 			revalidate(listCampaigns.key);
 			toast.success('Campaign draft created.');
-			navigate(canViewCampaigns() ? campaignHref(created.id) : '/');
-		} catch (caught) {
-			setError(visibleError(caught, 'The campaign draft could not be created.'));
-		} finally {
-			setPending(false);
-		}
+			navigate(canNavigateToCampaign ? campaignHref(created.id) : '/');
+		}, 'The campaign draft could not be created.');
 	}
 
 	return (
 		<section class="campaigns-page">
 			{authorized()}
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href={canViewCampaigns() ? '/emails/campaigns' : '/'}>{canViewCampaigns() ? 'Campaigns' : 'Dashboard'}</a><span aria-hidden="true">/</span><span>New</span></nav>
+			<Breadcrumbs items={[{ href: canViewCampaigns() ? '/emails/campaigns' : '/', label: canViewCampaigns() ? 'Campaigns' : 'Dashboard' }, { label: 'New' }]} />
 			<h1>New campaign</h1>
 			<p>Create a reviewable draft. Sending or scheduling remains a separate, confirmed action.</p>
-			<CampaignForm mode="create" lists={lists()} templates={templates()} pending={pending()} error={error()} cancelHref={canViewCampaigns() ? '/emails/campaigns' : '/'} onSubmit={(values) => void submit(values)} />
+			<CampaignForm mode="create" lists={lists()} templates={templates()} pending={createTask.pending()} error={createTask.error()} cancelHref={canViewCampaigns() ? '/emails/campaigns' : '/'} onSubmit={(values) => void submit(values)} />
 		</section>
 	);
 }

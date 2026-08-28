@@ -1,6 +1,7 @@
 import { useSubmissions, type RouteDefinition } from '@solidjs/router';
 import { Show, createMemo } from 'solid-js';
 import { getCompatibilitySnapshot, runCompatibilityCheck } from '~/lib/compatibility';
+import './compatibility.css';
 
 export const route = {
 	preload: () => void getCompatibilitySnapshot(),

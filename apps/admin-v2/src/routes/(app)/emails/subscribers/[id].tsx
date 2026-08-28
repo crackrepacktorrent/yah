@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Errored, For, Loading, Show, createMemo, createSignal } from 'solid-js';
@@ -14,6 +15,8 @@ import { safeActivityLinkHref } from '~/features/subscribers/presentation';
 import { decodeSubscriberRouteId } from '~/features/subscribers/routing';
 import { blocklistSubscribers, deleteSubscribers, getSubscriber, getSubscriberActivity, getSubscriberMemberships, listSubscribers, requestSubscriberOptIn, updateSubscriberMemberships, updateSubscriberProfile } from '~/features/subscribers/server';
 import { requireSession } from '~/platform/auth/session';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
+import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
@@ -36,14 +39,14 @@ function SubscriberRoute(props: { subscriberId: number }) {
 function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 	const navigate = useNavigate();
 	const session = createMemo(() => requireSession());
-	const canEdit = createMemo(() => session().permissions['subscriber']?.includes('edit') ?? false);
-	const canDelete = createMemo(() => session().permissions['subscriber']?.includes('delete') ?? false);
-	const canBlocklist = createMemo(() => (session().permissions['subscriber']?.includes('blocklist') ?? false) && props.subscriber.status !== 'blocklisted');
-	const canViewLists = createMemo(() => session().permissions['list']?.includes('view') ?? false);
-	const canViewCampaigns = createMemo(() => session().permissions['campaign']?.includes('view') ?? false);
-	const canSendCampaignTests = createMemo(() => canViewCampaigns() && (session().permissions['campaign']?.includes('send') ?? false) && props.subscriber.status === 'enabled');
-	const canViewBounces = createMemo(() => session().permissions['bounce']?.includes('view') ?? false);
-	const canClearBounces = createMemo(() => session().permissions['bounce']?.includes('delete') ?? false);
+	const canEdit = createMemo(() => can(session(), 'subscriber', 'edit'));
+	const canDelete = createMemo(() => can(session(), 'subscriber', 'delete'));
+	const canBlocklist = createMemo(() => can(session(), 'subscriber', 'blocklist') && props.subscriber.status !== 'blocklisted');
+	const canViewLists = createMemo(() => can(session(), 'list', 'view'));
+	const canViewCampaigns = createMemo(() => can(session(), 'campaign', 'view'));
+	const canSendCampaignTests = createMemo(() => canViewCampaigns() && can(session(), 'campaign', 'send') && props.subscriber.status === 'enabled');
+	const canViewBounces = createMemo(() => can(session(), 'bounce', 'view'));
+	const canClearBounces = createMemo(() => can(session(), 'bounce', 'delete'));
 	const canEditMemberships = createMemo(() => canEdit() && canViewLists() && props.subscriber.status !== 'blocklisted');
 	const lists = createMemo(() => canViewLists() ? listMailingLists() : []);
 	const membershipState = createMemo(() => canViewLists() ? getSubscriberMemberships(props.subscriber.id) : null);
@@ -161,14 +164,16 @@ function SubscriberDetailView(props: { subscriber: SubscriberProfile }) {
 
 	return (
 		<section class="subscribers-page">
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/emails/subscribers">Subscribers</a><span aria-hidden="true">/</span><span>{props.subscriber.email}</span></nav>
-			<header class="page-header">
-				<div><h1>{props.subscriber.name || props.subscriber.email}</h1><p>{props.subscriber.email} · <span class={`subscriber-status subscriber-status--${props.subscriber.status}`}>{subscriberStatusLabel(props.subscriber.status)}</span></p></div>
+			<Breadcrumbs items={[{ href: '/emails/subscribers', label: 'Subscribers' }, { label: props.subscriber.email }]} />
+			<PageHeader
+				title={props.subscriber.name || props.subscriber.email}
+				description={<>{props.subscriber.email} · <span class={`badge subscriber-status subscriber-status--${props.subscriber.status}`}>{subscriberStatusLabel(props.subscriber.status)}</span></>}
+			>
 				<div class="subscriber-detail-actions">
 					<Show when={canBlocklist()}><button class="button button--danger-secondary" type="button" onClick={() => openDialog('blocklist')}>Blocklist</button></Show>
 					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => openDialog('delete')}>Delete</button></Show>
 				</div>
-			</header>
+			</PageHeader>
 
 			<section class="subscriber-section" aria-labelledby="subscriber-profile-heading">
 				<h2 id="subscriber-profile-heading">Profile</h2>
@@ -260,7 +265,7 @@ function CampaignTestSendControls(props: { subscriber: SubscriberProfile; campai
 	return <div class="campaign-test-send-panel">
 		<p class="campaign-test-send-warning">This sends a real email with live subscriber-bound links. Opening it may add campaign views, clicks, or subscriber activity, and its unsubscribe link remains active.</p>
 		<Show when={campaigns().length > 0} fallback={<p>No ordinary draft email campaigns are available.</p>}>
-			<label class="campaign-test-send-field"><span>Draft campaign</span><select value={selectedId()} onChange={(event) => { setSelectedId(event.currentTarget.value); setAccepted(''); }}><option value="">Select a campaign</option><For each={campaigns()}>{(campaign: CampaignSummary) => <option value={campaign.id}>{campaign.name} — {campaign.subject}</option>}</For></select></label>
+			<label class="form-field"><span>Draft campaign</span><select value={selectedId()} onChange={(event) => { setSelectedId(event.currentTarget.value); setAccepted(''); }}><option value="">Select a campaign</option><For each={campaigns()}>{(campaign: CampaignSummary) => <option value={campaign.id}>{campaign.name} — {campaign.subject}</option>}</For></select></label>
 			<div class="subscriber-detail-actions"><button class="button" type="button" disabled={!selectedCampaign()} onClick={requestSend}>Review test email</button></div>
 		</Show>
 		<Show when={accepted()}>{(message) => <p class="campaign-test-send-accepted" role="status">{message()}</p>}</Show>
@@ -279,7 +284,7 @@ function CampaignTestSendControls(props: { subscriber: SubscriberProfile; campai
 }
 
 function ReadOnlyProfile(props: { subscriber: SubscriberProfile }) {
-	return <dl class="subscriber-metadata"><div><dt>Email</dt><dd>{props.subscriber.email}</dd></div><div><dt>Name</dt><dd>{props.subscriber.name || 'None'}</dd></div><div><dt>Status</dt><dd>{subscriberStatusLabel(props.subscriber.status)}</dd></div><div><dt>Created</dt><dd>{new Date(props.subscriber.createdAt).toLocaleString()}</dd></div><div><dt>Updated</dt><dd>{new Date(props.subscriber.updatedAt).toLocaleString()}</dd></div><div><dt>Provider UUID</dt><dd>{props.subscriber.uuid}</dd></div><div class="subscriber-attributes"><dt>Attributes</dt><dd><pre><code>{JSON.stringify(props.subscriber.attributes, null, 2)}</code></pre></dd></div></dl>;
+	return <dl class="subscriber-metadata metadata-list"><div><dt>Email</dt><dd>{props.subscriber.email}</dd></div><div><dt>Name</dt><dd>{props.subscriber.name || 'None'}</dd></div><div><dt>Status</dt><dd>{subscriberStatusLabel(props.subscriber.status)}</dd></div><div><dt>Created</dt><dd>{new Date(props.subscriber.createdAt).toLocaleString()}</dd></div><div><dt>Updated</dt><dd>{new Date(props.subscriber.updatedAt).toLocaleString()}</dd></div><div><dt>Provider UUID</dt><dd>{props.subscriber.uuid}</dd></div><div class="subscriber-attributes"><dt>Attributes</dt><dd><pre><code>{JSON.stringify(props.subscriber.attributes, null, 2)}</code></pre></dd></div></dl>;
 }
 
 function ReadOnlyMemberships(props: { subscriber: SubscriberMembershipState }) {
@@ -318,7 +323,7 @@ function SubscriberBounceHistory(props: { subscriberId: number; email: string; c
 			<table class="data-table">
 				<caption class="visually-hidden">Bounce history for {props.email}</caption>
 				<thead><tr><th scope="col">Campaign</th><th scope="col">Type</th><th scope="col">Source</th><th scope="col">Date</th></tr></thead>
-				<tbody><Show when={resolved().length > 0} fallback={<tr><td colspan="4">No bounce records for this subscriber.</td></tr>}><For each={resolved()}>{(bounce: BounceSummary) => <tr><td>{bounce.campaignName ?? '—'}</td><td><span class={`bounce-type bounce-type--${bounce.type}`}>{bounceTypeLabel(bounce.type)}</span></td><td>{bounce.source || '—'}</td><td>{new Date(bounce.createdAt).toLocaleString()}</td></tr>}</For></Show></tbody>
+				<tbody><Show when={resolved().length > 0} fallback={<tr><td colspan="4">No bounce records for this subscriber.</td></tr>}><For each={resolved()}>{(bounce: BounceSummary) => <tr><td>{bounce.campaignName ?? '—'}</td><td><span class={`badge bounce-type bounce-type--${bounce.type}`}>{bounceTypeLabel(bounce.type)}</span></td><td>{bounce.source || '—'}</td><td>{new Date(bounce.createdAt).toLocaleString()}</td></tr>}</For></Show></tbody>
 			</table>
 		</div>
 		<ConfirmDialog open={confirmOpen()} title="Clear subscriber bounce history?" description={`Permanently clear every bounce record for ${props.email}? This does not restore subscriber or membership state and cannot be undone.`} confirmLabel="Clear bounce history" pending={pending()} error={error()} onConfirm={() => void clearHistory()} onOpenChange={setConfirmOpen} />

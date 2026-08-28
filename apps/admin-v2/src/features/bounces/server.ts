@@ -7,69 +7,41 @@ import {
 	listAuthorizedBounces,
 	listAuthorizedSubscriberBounces,
 } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
 
-async function dependencies() {
-	const [{ enforcePermissions }, { productionBounceManager }] = await Promise.all([
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { productionBounceManager }] = await Promise.all([
 		import('~/platform/auth/authorization.server'),
 		import('~/integrations/listmonk/production-bounce-manager.server'),
 	]);
-	return { enforcePermissions, manager: productionBounceManager };
+	return { authorization: createAuthorizationContext(headers), manager: productionBounceManager };
 }
 
 export const listBounces = query(async (input: ListBouncesQuery): Promise<BouncePage> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await listAuthorizedBounces(input, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => listAuthorizedBounces(input, await requestDependencies(request.headers)));
 }, 'bounces');
 
 export const listSubscriberBounces = query(async (subscriberId: number): Promise<BounceSummary[]> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await listAuthorizedSubscriberBounces(subscriberId, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		listAuthorizedSubscriberBounces(subscriberId, await requestDependencies(request.headers)),
+	);
 }, 'subscriber-bounces');
 
 export async function deleteBounces(command: DeleteBouncesCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await deleteAuthorizedBounces(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => deleteAuthorizedBounces(command, await requestDependencies(request.headers)));
 }
 
 export async function clearAllBounces(): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await clearAuthorizedBounces(request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => clearAuthorizedBounces(await requestDependencies(request.headers)));
 }
 
 export async function clearSubscriberBounces(subscriberId: number): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await clearAuthorizedSubscriberBounces(subscriberId, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		clearAuthorizedSubscriberBounces(subscriberId, await requestDependencies(request.headers)),
+	);
 }

@@ -1,6 +1,6 @@
-import type { Permissions } from '@yah/admin-core/permissions';
-import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
 import { createPublicError } from '~/platform/errors';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	isCampaignTestSendAmbiguousFailure,
 	isCampaignTestSendPreconditionFailure,
@@ -13,15 +13,10 @@ export interface CampaignTestSender {
 }
 
 export type CampaignTestSendServiceDependencies = {
-	enforcePermissions: (headers: Headers, requirement: Permissions) => Promise<void>;
+	authorization: AuthorizationContext;
 	sender: CampaignTestSender;
 };
-
-function parse(input: unknown): SendCampaignTestCommand {
-	const result = v.safeParse(SendCampaignTestCommandSchema, input);
-	if (!result.success) throw createPublicError(result.issues[0]?.message ?? 'Invalid campaign test-send request.', 400);
-	return result.output;
-}
+const parse = createPublicInputParser('Invalid campaign test-send request.');
 
 function surfaceSendFailure(error: unknown): never {
 	if (isCampaignTestSendAmbiguousFailure(error)) {
@@ -47,11 +42,10 @@ function surfaceSendFailure(error: unknown): never {
 
 export async function sendAuthorizedCampaignTest(
 	input: unknown,
-	headers: Headers,
 	dependencies: CampaignTestSendServiceDependencies,
 ): Promise<void> {
-	const command = parse(input);
-	await dependencies.enforcePermissions(headers, { campaign: ['send'], subscriber: ['view'] });
+	const command = parse(SendCampaignTestCommandSchema, input);
+	await dependencies.authorization.requirePermissions({ campaign: ['send'], subscriber: ['view'] });
 	try {
 		await dependencies.sender.send(command);
 	} catch (error) {

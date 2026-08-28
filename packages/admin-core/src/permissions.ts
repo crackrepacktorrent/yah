@@ -27,6 +27,19 @@ export type Permissions = {
 	[Resource in PermissionResource]?: PermissionAction<Resource>[];
 };
 
+export type PermissionSession = {
+	permissions?: Partial<Record<PermissionResource, readonly string[]>>;
+};
+
+/** UI discoverability only. Every server operation must authorize independently. */
+export function can<Resource extends PermissionResource>(
+	session: PermissionSession | null | undefined,
+	resource: Resource,
+	action: PermissionAction<Resource>,
+): boolean {
+	return session?.permissions?.[resource]?.includes(action) ?? false;
+}
+
 export function isPermissionResource(resource: string): resource is PermissionResource {
 	return Object.hasOwn(statements, resource);
 }

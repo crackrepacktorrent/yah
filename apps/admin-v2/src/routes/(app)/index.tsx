@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { Errored, For, Loading, Show, createMemo } from 'solid-js';
 import { getSiteOverview } from '~/features/analytics/server';
@@ -16,15 +17,15 @@ function PanelError(props: { title: string; retry: () => void }) {
 		<section class="dashboard-panel dashboard-panel--error" role="alert">
 			<h2>{props.title}</h2>
 			<p>This dashboard section could not be loaded. The other sections remain available.</p>
-			<button class="dashboard-retry" type="button" onClick={() => props.retry()}>Try again</button>
+			<button class="button button--secondary" type="button" onClick={() => props.retry()}>Try again</button>
 		</section>
 	);
 }
 
 export default function DashboardPage() {
 	const session = createMemo(() => requireSession());
-	const canViewShortlinks = createMemo(() => session().permissions['shortlink']?.includes('view') ?? false);
-	const canViewAnalytics = createMemo(() => session().permissions['analytics']?.includes('view') ?? false);
+	const canViewShortlinks = createMemo(() => can(session(), 'shortlink', 'view'));
+	const canViewAnalytics = createMemo(() => can(session(), 'analytics', 'view'));
 	const shortlinks = createMemo(() => (canViewShortlinks() ? getShortlinkOverview() : null));
 	const site = createMemo(() => (canViewAnalytics() ? getSiteOverview() : null));
 
@@ -57,8 +58,8 @@ export default function DashboardPage() {
 									</dl>
 									<section class="dashboard-panel" aria-labelledby="recent-shortlinks-heading">
 										<h2 id="recent-shortlinks-heading">Recent shortlinks</h2>
-										<div class="dashboard-table-scroll">
-											<table>
+										<div class="data-table-scroll">
+											<table class="data-table">
 												<caption class="visually-hidden">Five most recently created shortlinks</caption>
 												<thead><tr><th scope="col">Short URL</th><th scope="col">Destination</th><th scope="col">Clicks</th><th scope="col">Created</th></tr></thead>
 												<tbody>

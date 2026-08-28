@@ -1,19 +1,23 @@
 import { useLocation } from '@solidjs/router';
 import type { ParentProps } from 'solid-js';
+import { SectionNavigation } from '~/ui/section-navigation';
 import './email.css';
 
 export default function EmailSettingsLayout(props: ParentProps) {
 	const location = useLocation();
 	return (
 		<>
-			<nav class="settings-navigation" aria-label="Email settings">
-				<a href="/settings/email/general" data-selected={location.pathname === '/settings/email/general' || undefined}>General</a>
-				<a href="/settings/email" data-selected={location.pathname === '/settings/email' || undefined}>SMTP delivery</a>
-				<a href="/settings/email/performance" data-selected={location.pathname === '/settings/email/performance' || undefined}>Performance</a>
-				<a href="/settings/email/bounces" data-selected={location.pathname === '/settings/email/bounces' || undefined}>Bounces</a>
-				<a href="/settings/email/privacy" data-selected={location.pathname === '/settings/email/privacy' || undefined}>Privacy</a>
-				<a href="/settings/email/provider" data-selected={location.pathname === '/settings/email/provider' || undefined}>Provider</a>
-			</nav>
+			<SectionNavigation
+				label="Email settings"
+				items={[
+					{ href: '/settings/email/general', label: 'General', selected: location.pathname === '/settings/email/general' },
+					{ href: '/settings/email', label: 'SMTP delivery', selected: location.pathname === '/settings/email' },
+					{ href: '/settings/email/performance', label: 'Performance', selected: location.pathname === '/settings/email/performance' },
+					{ href: '/settings/email/bounces', label: 'Bounces', selected: location.pathname === '/settings/email/bounces' },
+					{ href: '/settings/email/privacy', label: 'Privacy', selected: location.pathname === '/settings/email/privacy' },
+					{ href: '/settings/email/provider', label: 'Provider', selected: location.pathname === '/settings/email/provider' },
+				]}
+			/>
 			{props.children}
 		</>
 	);

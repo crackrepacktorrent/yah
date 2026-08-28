@@ -20,124 +20,76 @@ import {
 	setAuthorizedDefaultEmailTemplate,
 	updateAuthorizedEmailTemplate,
 } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
 
-async function dependencies() {
-	const [{ enforcePermissions }, { productionEmailTemplateManager }] = await Promise.all([
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { productionEmailTemplateManager }] = await Promise.all([
 		import('~/platform/auth/authorization.server'),
 		import('~/integrations/listmonk/production-template-manager.server'),
 	]);
-	return { enforcePermissions, manager: productionEmailTemplateManager };
+	return { authorization: createAuthorizationContext(headers), manager: productionEmailTemplateManager };
 }
 
 export const listEmailTemplates = query(async (): Promise<EmailTemplateSummary[]> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await listAuthorizedEmailTemplates(request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => listAuthorizedEmailTemplates(await requestDependencies(request.headers)));
 }, 'email-templates');
 
 export const getEmailTemplate = query(async (id: number): Promise<EmailTemplateDetail> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await readAuthorizedEmailTemplate(id, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => readAuthorizedEmailTemplate(id, await requestDependencies(request.headers)));
 }, 'email-template');
 
 export const requireEmailTemplateCapability = query(async (capability: EmailTemplateCapability): Promise<true> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await requireAuthorizedEmailTemplateCapability(capability, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		requireAuthorizedEmailTemplateCapability(capability, await requestDependencies(request.headers)),
+	);
 }, 'email-template-capability');
 
 export const previewSavedEmailTemplate = query(async (id: number): Promise<string> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await previewAuthorizedSavedEmailTemplate(id, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		previewAuthorizedSavedEmailTemplate(id, await requestDependencies(request.headers)),
+	);
 }, 'email-template-preview');
 
 export async function createEmailTemplate(command: CreateEmailTemplateCommand): Promise<{ id: number }> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await createAuthorizedEmailTemplate(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		createAuthorizedEmailTemplate(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function updateEmailTemplate(command: UpdateEmailTemplateCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await updateAuthorizedEmailTemplate(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		updateAuthorizedEmailTemplate(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function deleteEmailTemplate(id: number): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await deleteAuthorizedEmailTemplate(id, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => deleteAuthorizedEmailTemplate(id, await requestDependencies(request.headers)));
 }
 
 export async function setDefaultEmailTemplate(id: number): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await setAuthorizedDefaultEmailTemplate(id, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		setAuthorizedDefaultEmailTemplate(id, await requestDependencies(request.headers)),
+	);
 }
 
 export async function previewNewEmailTemplate(command: PreviewNewEmailTemplateCommand): Promise<string> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await previewAuthorizedNewEmailTemplate(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		previewAuthorizedNewEmailTemplate(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function previewEditedEmailTemplate(command: PreviewEditedEmailTemplateCommand): Promise<string> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await previewAuthorizedEditedEmailTemplate(command, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		previewAuthorizedEditedEmailTemplate(command, await requestDependencies(request.headers)),
+	);
 }

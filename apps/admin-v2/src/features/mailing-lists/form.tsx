@@ -36,7 +36,7 @@ export function MailingListForm(props: {
 
 	return (
 		<form
-			class="mailing-list-form"
+			class="mailing-list-form form-grid"
 			onSubmit={(event) => {
 				event.preventDefault();
 				props.onSubmit({ name: name(), kind: kind(), optIn: optIn(), status: status(), description: description() });

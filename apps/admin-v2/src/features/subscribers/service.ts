@@ -1,5 +1,6 @@
-import type { Permissions } from '@yah/admin-core/permissions';
-import * as v from 'valibot';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
+import { createPublicError } from '~/platform/errors';
+import { createPublicInputParser } from '~/platform/public-input';
 import {
 	BlocklistSubscribersCommandSchema,
 	CreateSubscriberCommandSchema,
@@ -31,7 +32,6 @@ import {
 	type UpdateSubscriberMembershipsCommand,
 	type UpdateSubscriberProfileCommand,
 } from './contracts';
-import { createPublicError } from '~/platform/errors';
 
 export type SubscriberManager = {
 	list(input: { page: number; search: string }): Promise<SubscriberPage>;
@@ -72,30 +72,21 @@ type SubscriberMailingListCatalog = {
 };
 
 export type SubscriberServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	manager: SubscriberManager;
 	mailingLists: SubscriberMailingListCatalog;
 };
-
-function parse<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
-	schema: TSchema,
-	input: unknown,
-): v.InferOutput<TSchema> {
-	const result = v.safeParse(schema, input);
-	if (!result.success) throw createPublicError(result.issues[0]?.message ?? 'Invalid subscriber data.', 400);
-	return result.output;
-}
+const parse = createPublicInputParser('Invalid subscriber data.');
 
 function notFound(): never {
 	throw createPublicError('Subscriber not found.', 404);
 }
 
 async function authorize(
-	headers: Headers,
 	capability: SubscriberCapability,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<void> {
-	await dependencies.enforcePermissions(headers, { subscriber: [capability] });
+	await dependencies.authorization.requirePermissions({ subscriber: [capability] });
 }
 
 function requireCurrentVersion(subscriber: SubscriberDetail, expectedUpdatedAt: string): void {
@@ -200,31 +191,28 @@ function surfaceMutationFailure(error: unknown, operation: 'create' | 'change'):
 
 export async function requireAuthorizedSubscriberCapability(
 	input: unknown,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<true> {
 	const capability = parse(SubscriberCapabilitySchema, input);
-	await authorize(headers, capability, dependencies);
+	await authorize(capability, dependencies);
 	return true;
 }
 
 export async function listAuthorizedSubscribers(
 	input: ListSubscribersQuery,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<SubscriberPage> {
 	const query = parse(ListSubscribersQuerySchema, input);
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	return dependencies.manager.list(query);
 }
 
 export async function readAuthorizedSubscriber(
 	input: unknown,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<SubscriberProfile> {
 	const id = parse(SubscriberIdSchema, input);
-	await authorize(headers, 'view', dependencies);
+	await authorize('view', dependencies);
 	const { memberships: _memberships, membershipVersion: _membershipVersion, canRequestOptIn: _canRequestOptIn, ...profile } =
 		(await dependencies.manager.get(id)) ?? notFound();
 	return profile;
@@ -232,24 +220,22 @@ export async function readAuthorizedSubscriber(
 
 export async function readAuthorizedSubscriberMemberships(
 	input: unknown,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<SubscriberMembershipState> {
 	const id = parse(SubscriberIdSchema, input);
-	await dependencies.enforcePermissions(headers, { subscriber: ['view'], list: ['view'] });
+	await dependencies.authorization.requirePermissions({ subscriber: ['view'], list: ['view'] });
 	const { memberships, membershipVersion, canRequestOptIn } = (await dependencies.manager.get(id)) ?? notFound();
 	return { memberships, membershipVersion, canRequestOptIn };
 }
 
 export async function createAuthorizedSubscriber(
 	input: CreateSubscriberCommand,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<{ id: number }> {
 	const command = parse(CreateSubscriberCommandSchema, input);
-	await authorize(headers, 'create', dependencies);
+	await authorize('create', dependencies);
 	if (command.listIds.length > 0) {
-		await dependencies.enforcePermissions(headers, { list: ['view'] });
+		await dependencies.authorization.requirePermissions({ list: ['view'] });
 		const targets = await requireValidMembershipTargets(command.listIds, new Set(), dependencies);
 		if (
 			command.status === 'disabled' &&
@@ -271,11 +257,10 @@ export async function createAuthorizedSubscriber(
 
 export async function updateAuthorizedSubscriberProfile(
 	input: UpdateSubscriberProfileCommand,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<void> {
 	const command = parse(UpdateSubscriberProfileCommandSchema, input);
-	await authorize(headers, 'edit', dependencies);
+	await authorize('edit', dependencies);
 	const current = (await dependencies.manager.get(command.id)) ?? notFound();
 	requireCurrentVersion(current, command.expectedUpdatedAt);
 	requireEditableStatus(current, command.status);
@@ -292,11 +277,10 @@ export async function updateAuthorizedSubscriberProfile(
 
 export async function updateAuthorizedSubscriberMemberships(
 	input: UpdateSubscriberMembershipsCommand,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<void> {
 	const command = parse(UpdateSubscriberMembershipsCommandSchema, input);
-	await dependencies.enforcePermissions(headers, { subscriber: ['edit'], list: ['view'] });
+	await dependencies.authorization.requirePermissions({ subscriber: ['edit'], list: ['view'] });
 	const current = (await dependencies.manager.get(command.id)) ?? notFound();
 	requireCurrentVersion(current, command.expectedUpdatedAt);
 	requireCurrentMembershipVersion(current, command.expectedMembershipVersion);
@@ -338,11 +322,10 @@ export async function updateAuthorizedSubscriberMemberships(
 
 export async function deleteAuthorizedSubscribers(
 	input: DeleteSubscribersCommand,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<void> {
 	const command = parse(DeleteSubscribersCommandSchema, input);
-	await authorize(headers, 'delete', dependencies);
+	await authorize('delete', dependencies);
 	try {
 		await dependencies.manager.delete(command.subscribers);
 	} catch (error) {
@@ -352,11 +335,10 @@ export async function deleteAuthorizedSubscribers(
 
 export async function blocklistAuthorizedSubscribers(
 	input: BlocklistSubscribersCommand,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<void> {
 	const command = parse(BlocklistSubscribersCommandSchema, input);
-	await authorize(headers, 'blocklist', dependencies);
+	await authorize('blocklist', dependencies);
 	try {
 		await dependencies.manager.blocklist(command.subscribers);
 	} catch (error) {
@@ -366,21 +348,19 @@ export async function blocklistAuthorizedSubscribers(
 
 export async function readAuthorizedSubscriberActivity(
 	input: unknown,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<SubscriberActivity> {
 	const id = parse(SubscriberIdSchema, input);
-	await dependencies.enforcePermissions(headers, { subscriber: ['view'], campaign: ['view'] });
+	await dependencies.authorization.requirePermissions({ subscriber: ['view'], campaign: ['view'] });
 	return (await dependencies.manager.activity(id)) ?? notFound();
 }
 
 export async function requestAuthorizedSubscriberOptIn(
 	input: RequestSubscriberOptInCommand,
-	headers: Headers,
 	dependencies: SubscriberServiceDependencies,
 ): Promise<void> {
 	const command = parse(RequestSubscriberOptInCommandSchema, input);
-	await dependencies.enforcePermissions(headers, { subscriber: ['edit'], list: ['view'] });
+	await dependencies.authorization.requirePermissions({ subscriber: ['edit'], list: ['view'] });
 	const current = (await dependencies.manager.get(command.id)) ?? notFound();
 	requireCurrentVersion(current, command.expectedUpdatedAt);
 	requireCurrentMembershipVersion(current, command.expectedMembershipVersion);

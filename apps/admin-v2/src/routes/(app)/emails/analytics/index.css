@@ -53,7 +53,7 @@
 	align-items: start;
 	padding: 0.65rem;
 	border-radius: 0.45rem;
-	background: white;
+	background: var(--admin-surface-raised);
 	cursor: pointer;
 }
 
@@ -84,7 +84,7 @@
 	border: 1px solid var(--admin-control-border);
 	border-radius: var(--admin-radius-control);
 	color: inherit;
-	background: white;
+	background: var(--admin-surface-raised);
 	font: inherit;
 }
 

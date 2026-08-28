@@ -4,6 +4,7 @@ import { customRoleStatements } from '@yah/admin-core/permissions';
 import { createMemo, createSignal } from 'solid-js';
 import { RoleForm } from '~/features/roles/form';
 import { createRole, listRoles, requireRoleRouteCapability } from '~/features/roles/server';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 import './roles.css';
@@ -40,7 +41,7 @@ export default function NewRolePage() {
 	return (
 		<section class="roles-page">
 			{authorized()}
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/roles">Roles</a><span aria-hidden="true">/</span><span>New</span></nav>
+			<Breadcrumbs items={[{ href: '/roles', label: 'Roles' }, { label: 'New' }]} />
 			<h1>New role</h1>
 			<p>Create a stable role key, then grant only the product permissions this role needs.</p>
 			<RoleForm

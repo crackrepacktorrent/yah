@@ -1,28 +1,22 @@
 import { query } from '@solidjs/router';
 import type { CampaignAnalyticsPoint, CampaignAnalyticsQuery } from './contracts';
 import { readAuthorizedCampaignAnalytics } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
 
-async function dependencies() {
-	const [{ enforcePermissions }, { productionCampaignAnalyticsReader }] = await Promise.all([
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { productionCampaignAnalyticsReader }] = await Promise.all([
 		import('~/platform/auth/authorization.server'),
 		import('~/integrations/listmonk/production-campaign-analytics-reader.server'),
 	]);
-	return { enforcePermissions, reader: productionCampaignAnalyticsReader };
+	return { authorization: createAuthorizationContext(headers), reader: productionCampaignAnalyticsReader };
 }
 
 export const getCampaignAnalytics = query(
 	async (input: CampaignAnalyticsQuery): Promise<CampaignAnalyticsPoint[]> => {
 		'use server';
-		const request = getServerRequest();
-		try {
-			requireProductionRuntime();
-			return await readAuthorizedCampaignAnalytics(input, request.headers, await dependencies());
-		} catch (error) {
-			surfaceError(error);
-		}
+		return runProductionRequest(async (request) =>
+			readAuthorizedCampaignAnalytics(input, await requestDependencies(request.headers)),
+		);
 	},
 	'campaign-analytics',
 );

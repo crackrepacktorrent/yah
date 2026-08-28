@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { createMemo, createSignal } from 'solid-js';
@@ -5,6 +6,7 @@ import { ShortlinkForm } from '~/features/shortlinks/form';
 import { shortlinkDetailHref } from '~/features/shortlinks/routing';
 import { createShortlink, getShortlinkOverview, listShortlinks, requireShortlinkCapability } from '~/features/shortlinks/server';
 import { requireSession } from '~/platform/auth/session';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 import './shortlinks.css';
@@ -17,7 +19,7 @@ export default function NewShortlinkPage() {
 	const navigate = useNavigate();
 	const authorized = createMemo(() => requireShortlinkCapability('create'));
 	const session = createMemo(() => requireSession());
-	const canView = createMemo(() => session().permissions['shortlink']?.includes('view') ?? false);
+	const canView = createMemo(() => can(session(), 'shortlink', 'view'));
 	const [pending, setPending] = createSignal(false);
 	const [error, setError] = createSignal('');
 
@@ -43,7 +45,7 @@ export default function NewShortlinkPage() {
 	return (
 		<section class="shortlinks-page shortlink-editor-page">
 			{authorized()}
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href={canView() ? '/shortlinks' : '/'}>{canView() ? 'Shortlinks' : 'Dashboard'}</a><span aria-hidden="true">/</span><span>New</span></nav>
+			<Breadcrumbs items={[{ href: canView() ? '/shortlinks' : '/', label: canView() ? 'Shortlinks' : 'Dashboard' }, { label: 'New' }]} />
 			<h1>New shortlink</h1>
 			<p>Create a tracked redirect with an automatic or custom short code.</p>
 			<ShortlinkForm

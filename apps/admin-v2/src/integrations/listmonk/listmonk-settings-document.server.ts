@@ -1,10 +1,19 @@
 import 'server-only';
 import * as v from 'valibot';
+import {
+	assertStableSettingsIdentifiers,
+	parseListmonkValue,
+	type ListmonkSettingsDocument,
+} from './listmonk-settings-protocol';
+import {
+	isListmonkMaskedSecret,
+	prepareMaskedSettingsForWrite,
+} from './listmonk-settings-secret-policy';
+import type { ListmonkTransport } from './transport.server';
 
 const MAX_PROVIDER_ITEMS = 100;
 const MAX_SETTINGS_LIST_ITEMS = 10_000;
 const MAX_OBJECT_ENTRIES = 100;
-const maskedSecretPattern = /^(?:|\u2022+)$/u;
 
 const integerSchema = v.pipe(v.number(), v.safeInteger());
 const stringListSchema = v.pipe(v.array(v.string()), v.maxLength(MAX_SETTINGS_LIST_ITEMS));
@@ -17,8 +26,18 @@ const exportableSchema = v.pipe(
 );
 const maskedSecretSchema = v.pipe(
 	v.string(),
-	v.regex(maskedSecretPattern, 'Expected an empty or Listmonk-masked secret.'),
+	v.check((value) => isListmonkMaskedSecret(value), 'Expected an empty or Listmonk-masked secret.'),
 );
+const settingsEnvelopeSchema = v.object({
+	data: v.record(v.string(), v.unknown()),
+});
+const settingsAckSchema = v.object({
+	data: v.union([
+		v.literal(true),
+		v.object({ needs_restart: v.literal(true) }),
+	]),
+});
+const settingsWriteQueues = new Map<string, Promise<void>>();
 
 function isPlainRecord(input: unknown): input is Record<string, unknown> {
 	return typeof input === 'object' && input !== null && !Array.isArray(input);
@@ -205,7 +224,11 @@ const settingsDocumentSchema = v.object({
 	'appearance.public.custom_js': v.string(),
 });
 
-export type ListmonkV62SettingsDocument = Record<string, unknown>;
+export type ListmonkV62SettingsDocument = ListmonkSettingsDocument;
+export type ListmonkSettingsPatch = (
+	writable: ListmonkV62SettingsDocument,
+	current: ListmonkV62SettingsDocument,
+) => void;
 
 /**
  * Validates the complete document returned by Listmonk v6.2's GET /settings.
@@ -227,3 +250,54 @@ export function validateListmonkV62SettingsDocument(input: unknown): ListmonkV62
 
 	return input as ListmonkV62SettingsDocument;
 }
+
+async function serializeSettingsWrite<T>(
+	key: string,
+	operation: () => Promise<T>,
+): Promise<T> {
+	const previous = settingsWriteQueues.get(key) ?? Promise.resolve();
+	const run = previous.catch(() => undefined).then(operation);
+	const settled = run.then(() => undefined, () => undefined);
+	settingsWriteQueues.set(key, settled);
+	try {
+		return await run;
+	} finally {
+		if (settingsWriteQueues.get(key) === settled) settingsWriteQueues.delete(key);
+	}
+}
+
+/**
+ * Owns Listmonk's full settings document lifecycle. Every mutation is one
+ * serialized fresh GET, allowlisted in-memory patch, and full PUT.
+ */
+export function createListmonkSettingsDocumentCoordinator(
+	queueKey: string,
+	transport: ListmonkTransport,
+) {
+	async function read(): Promise<ListmonkSettingsDocument> {
+		return parseListmonkValue(
+			settingsEnvelopeSchema,
+			await transport.json('/settings'),
+			'settings',
+		).data;
+	}
+
+	return {
+		read,
+		async write(patch: ListmonkSettingsPatch): Promise<{ needsRestart: boolean }> {
+			return serializeSettingsWrite(queueKey.replace(/\/+$/u, ''), async () => {
+				const current = validateListmonkV62SettingsDocument(await read());
+				assertStableSettingsIdentifiers(current);
+				const writable = prepareMaskedSettingsForWrite(current);
+				patch(writable, current);
+				const response = parseListmonkValue(settingsAckSchema, await transport.json('/settings', {
+					method: 'PUT',
+					body: JSON.stringify(writable),
+				}), 'updated settings');
+				return { needsRestart: response.data !== true };
+			});
+		},
+	};
+}
+
+export { prepareMaskedSettingsForWrite } from './listmonk-settings-secret-policy';

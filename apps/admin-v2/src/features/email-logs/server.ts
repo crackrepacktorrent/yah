@@ -1,25 +1,17 @@
 import { query } from '@solidjs/router';
 import type { EmailLogPage, EmailLogPageQuery } from './contracts';
 import { listAuthorizedEmailLogs } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
 
-async function dependencies() {
-	const [{ enforcePermissions }, { productionEmailLogManager }] = await Promise.all([
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { productionEmailLogManager }] = await Promise.all([
 		import('~/platform/auth/authorization.server'),
 		import('~/integrations/listmonk/production-email-log-manager.server'),
 	]);
-	return { enforcePermissions, manager: productionEmailLogManager };
+	return { authorization: createAuthorizationContext(headers), manager: productionEmailLogManager };
 }
 
 export const listEmailLogs = query(async (input: EmailLogPageQuery): Promise<EmailLogPage> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await listAuthorizedEmailLogs(input, request.headers, await dependencies());
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) => listAuthorizedEmailLogs(input, await requestDependencies(request.headers)));
 }, 'email-logs');

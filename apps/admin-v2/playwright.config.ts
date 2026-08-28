@@ -9,7 +9,7 @@ if (!/^[\w./-]+$/.test(bunExecutable)) throw new Error('ADMIN_V2_E2E_BUN_EXECUTA
 
 export default defineConfig({
 	testDir: './e2e',
-	testIgnore: 'production.spec.ts',
+	testIgnore: '**/*.production.spec.ts',
 	fullyParallel: true,
 	forbidOnly: !!process.env['CI'],
 	retries: process.env['CI'] ? 1 : 0,

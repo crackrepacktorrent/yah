@@ -28,7 +28,7 @@ const firstPage: BouncePage = {
 
 function dependencies(): BounceServiceDependencies {
 	return {
-		enforcePermissions: vi.fn(async () => undefined),
+		authorization: { requirePermissions: vi.fn(async () => undefined), getCurrentUserId: vi.fn(async () => 'test-user') },
 		manager: {
 			list: vi.fn(async () => firstPage),
 			listForSubscriber: vi.fn(async () => [hardBounce]),
@@ -42,17 +42,17 @@ function dependencies(): BounceServiceDependencies {
 describe('bounce service boundary', () => {
 	it('enforces the exact capability before every provider operation', async () => {
 		const deps = dependencies();
-		await listAuthorizedBounces({ page: 1 }, new Headers(), deps);
-		await listAuthorizedSubscriberBounces(42, new Headers(), deps);
-		await deleteAuthorizedBounces({ ids: [7, 8] }, new Headers(), deps);
-		await clearAuthorizedBounces(new Headers(), deps);
-		await clearAuthorizedSubscriberBounces(42, new Headers(), deps);
+		await listAuthorizedBounces({ page: 1 }, deps);
+		await listAuthorizedSubscriberBounces(42, deps);
+		await deleteAuthorizedBounces({ ids: [7, 8] }, deps);
+		await clearAuthorizedBounces(deps);
+		await clearAuthorizedSubscriberBounces(42, deps);
 
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(1, expect.any(Headers), { bounce: ['view'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(2, expect.any(Headers), { bounce: ['view'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(3, expect.any(Headers), { bounce: ['delete'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(4, expect.any(Headers), { bounce: ['clear-all'] });
-		expect(deps.enforcePermissions).toHaveBeenNthCalledWith(5, expect.any(Headers), { bounce: ['delete'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(1, { bounce: ['view'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(2, { bounce: ['view'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(3, { bounce: ['delete'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(4, { bounce: ['clear-all'] });
+		expect(deps.authorization.requirePermissions).toHaveBeenNthCalledWith(5, { bounce: ['delete'] });
 		expect(deps.manager.list).toHaveBeenCalledWith({ page: 1 });
 		expect(deps.manager.listForSubscriber).toHaveBeenCalledWith(42);
 		expect(deps.manager.delete).toHaveBeenCalledWith([7, 8]);
@@ -62,22 +62,21 @@ describe('bounce service boundary', () => {
 
 	it('validates all inputs before authorization or provider access', async () => {
 		const invalidInputs: Array<(deps: BounceServiceDependencies) => Promise<unknown>> = [
-			(deps) => listAuthorizedBounces({ page: 10_001 }, new Headers(), deps),
-			(deps) => listAuthorizedSubscriberBounces(0, new Headers(), deps),
-			(deps) => deleteAuthorizedBounces({ ids: [] }, new Headers(), deps),
-			(deps) => deleteAuthorizedBounces({ ids: [7, 7] }, new Headers(), deps),
+			(deps) => listAuthorizedBounces({ page: 10_001 }, deps),
+			(deps) => listAuthorizedSubscriberBounces(0, deps),
+			(deps) => deleteAuthorizedBounces({ ids: [] }, deps),
+			(deps) => deleteAuthorizedBounces({ ids: [7, 7] }, deps),
 			(deps) => deleteAuthorizedBounces(
 				{ ids: Array.from({ length: 101 }, (_, index) => index + 1) },
-				new Headers(),
 				deps,
 			),
-			(deps) => clearAuthorizedSubscriberBounces(-1, new Headers(), deps),
+			(deps) => clearAuthorizedSubscriberBounces(-1, deps),
 		];
 
 		for (const invoke of invalidInputs) {
 			const deps = dependencies();
 			await expect(invoke(deps)).rejects.toThrow();
-			expect(deps.enforcePermissions).not.toHaveBeenCalled();
+			expect(deps.authorization.requirePermissions).not.toHaveBeenCalled();
 			expect(deps.manager.list).not.toHaveBeenCalled();
 			expect(deps.manager.listForSubscriber).not.toHaveBeenCalled();
 			expect(deps.manager.delete).not.toHaveBeenCalled();
@@ -87,13 +86,13 @@ describe('bounce service boundary', () => {
 
 	it('does not reach the provider when authorization fails', async () => {
 		const deps = dependencies();
-		vi.mocked(deps.enforcePermissions).mockRejectedValue(new Error('Forbidden'));
+		vi.mocked(deps.authorization.requirePermissions).mockRejectedValue(new Error('Forbidden'));
 
-		await expect(listAuthorizedBounces({ page: 1 }, new Headers(), deps)).rejects.toThrow('Forbidden');
-		await expect(listAuthorizedSubscriberBounces(42, new Headers(), deps)).rejects.toThrow('Forbidden');
-		await expect(deleteAuthorizedBounces({ ids: [7] }, new Headers(), deps)).rejects.toThrow('Forbidden');
-		await expect(clearAuthorizedBounces(new Headers(), deps)).rejects.toThrow('Forbidden');
-		await expect(clearAuthorizedSubscriberBounces(42, new Headers(), deps)).rejects.toThrow('Forbidden');
+		await expect(listAuthorizedBounces({ page: 1 }, deps)).rejects.toThrow('Forbidden');
+		await expect(listAuthorizedSubscriberBounces(42, deps)).rejects.toThrow('Forbidden');
+		await expect(deleteAuthorizedBounces({ ids: [7] }, deps)).rejects.toThrow('Forbidden');
+		await expect(clearAuthorizedBounces(deps)).rejects.toThrow('Forbidden');
+		await expect(clearAuthorizedSubscriberBounces(42, deps)).rejects.toThrow('Forbidden');
 
 		expect(deps.manager.list).not.toHaveBeenCalled();
 		expect(deps.manager.listForSubscriber).not.toHaveBeenCalled();

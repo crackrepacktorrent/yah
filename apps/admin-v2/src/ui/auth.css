@@ -1,10 +1,10 @@
 .auth-page {
 	--auth-primary: var(--admin-action);
 	--auth-primary-hover: var(--admin-action-hover);
-	--auth-foreground: oklch(0.26 0.044 44.2);
+	--auth-foreground: var(--admin-text);
 	--auth-muted: oklch(0.5 0.023 67.7);
-	--auth-surface: oklch(0.995 0.004 67.7);
-	--auth-page: oklch(0.948 0.016 67.7);
+	--auth-surface: var(--admin-surface);
+	--auth-page: var(--admin-page);
 	--auth-input: oklch(0.99 0.007 67.7);
 	--auth-border: oklch(0.74 0.027 67.7);
 	--auth-danger: oklch(0.427 0.177 351.4);

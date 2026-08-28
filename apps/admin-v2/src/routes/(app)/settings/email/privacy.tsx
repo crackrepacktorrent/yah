@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
@@ -5,6 +6,7 @@ import type { SaveEmailPrivacyPolicyCommand } from '~/features/email-settings/co
 import { EmailPrivacyForm } from '~/features/email-settings/privacy-form';
 import { getEmailPrivacyPolicy, saveEmailPrivacyPolicy } from '~/features/email-settings/server';
 import { requireSession } from '~/platform/auth/session';
+import { PageHeader } from '~/ui/page-header';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
@@ -15,7 +17,7 @@ export const route = defineFileRoute('/settings/email/privacy', {
 export default function EmailPrivacyPage() {
 	const policy = createMemo(() => getEmailPrivacyPolicy());
 	const session = createMemo(() => requireSession());
-	const canEdit = createMemo(() => session().permissions['settings']?.includes('edit') ?? false);
+	const canEdit = createMemo(() => can(session(), 'settings', 'edit'));
 	const [pending, setPending] = createSignal(false);
 	const [error, setError] = createSignal('');
 
@@ -37,7 +39,7 @@ export default function EmailPrivacyPage() {
 
 	return (
 		<section class="email-settings-page">
-			<header class="page-header"><div><p class="eyebrow">System settings</p><h1>Email privacy</h1><p>Control tracking, recipient self-service, and the domains accepted by subscriptions and imports.</p></div></header>
+			<PageHeader eyebrow="System settings" title="Email privacy" description="Control tracking, recipient self-service, and the domains accepted by subscriptions and imports." />
 			<Show when={policy()}>{(resolved) => <EmailPrivacyForm initial={resolved()} canEdit={canEdit()} pending={pending()} error={error()} onSubmit={(command) => void save(command)} />}</Show>
 		</section>
 	);

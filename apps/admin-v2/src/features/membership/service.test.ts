@@ -35,8 +35,8 @@ const pendingInvitation: DirectoryInvitation = {
 };
 
 function setup() {
-	const enforcePermissions = vi.fn(async (_headers: Headers, _permissions: Permissions) => undefined);
-	const getCurrentUserId = vi.fn(async (_headers: Headers) => 'user-self');
+	const enforcePermissions = vi.fn(async (_permissions: Permissions) => undefined);
+	const getCurrentUserId = vi.fn(async () => 'user-self');
 	const directory: MembershipDirectory = {
 		listMembers: vi.fn(async () => [selfMember, otherMember]),
 		getMember: vi.fn(async (memberId) =>
@@ -65,7 +65,7 @@ function setup() {
 		cancelInvitation: vi.fn(async () => undefined),
 	};
 	return {
-		dependencies: { enforcePermissions, getCurrentUserId, directory },
+		dependencies: { authorization: { requirePermissions: enforcePermissions, getCurrentUserId }, directory },
 		enforcePermissions,
 		getCurrentUserId,
 		directory,
@@ -84,7 +84,7 @@ describe('membership service boundary', () => {
 			{ ...otherMember, providerSecret: 'not-public' } as DirectoryMember,
 		]);
 
-		await expect(listAuthorizedMembers(new Headers(), state.dependencies)).resolves.toEqual([
+		await expect(listAuthorizedMembers(state.dependencies)).resolves.toEqual([
 			{
 				id: 'membership-self',
 				name: 'Current Admin',
@@ -100,7 +100,7 @@ describe('membership service boundary', () => {
 				isSelf: false,
 			},
 		]);
-		expect(state.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { member: ['create'] });
+		expect(state.enforcePermissions).toHaveBeenCalledWith({ member: ['create'] });
 		expect(state.getCurrentUserId).toHaveBeenCalledOnce();
 	});
 
@@ -117,7 +117,7 @@ describe('membership service boundary', () => {
 			},
 		]);
 
-		await expect(listAuthorizedPendingInvitations(new Headers(), state.dependencies)).resolves.toEqual([
+		await expect(listAuthorizedPendingInvitations(state.dependencies)).resolves.toEqual([
 			{
 				id: 'invitation-pending',
 				email: 'invited@example.test',
@@ -125,7 +125,7 @@ describe('membership service boundary', () => {
 				expiresAt: '2026-09-30T17:00:00.000Z',
 			},
 		]);
-		expect(state.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { invitation: ['create'] });
+		expect(state.enforcePermissions).toHaveBeenCalledWith({ invitation: ['create'] });
 	});
 
 	it('normalizes string invitation expirations and hides malformed provider values', async () => {
@@ -133,7 +133,7 @@ describe('membership service boundary', () => {
 		vi.mocked(valid.directory.listInvitations).mockResolvedValue([
 			{ ...pendingInvitation, expiresAt: '2026-09-30T12:00:00-05:00' },
 		]);
-		await expect(listAuthorizedPendingInvitations(new Headers(), valid.dependencies)).resolves.toEqual([
+		await expect(listAuthorizedPendingInvitations(valid.dependencies)).resolves.toEqual([
 			{
 				id: 'invitation-pending',
 				email: 'invited@example.test',
@@ -146,7 +146,7 @@ describe('membership service boundary', () => {
 		vi.mocked(invalid.directory.listInvitations).mockResolvedValue([
 			{ ...pendingInvitation, expiresAt: 'provider diagnostic: database value was corrupt' },
 		]);
-		await expect(listAuthorizedPendingInvitations(new Headers(), invalid.dependencies)).rejects.toMatchObject({
+		await expect(listAuthorizedPendingInvitations(invalid.dependencies)).rejects.toMatchObject({
 			message: 'Invitation data is unavailable.',
 			status: 500,
 		});
@@ -156,7 +156,7 @@ describe('membership service boundary', () => {
 		for (const operation of [listAuthorizedMembers, listAuthorizedPendingInvitations]) {
 			const state = setup();
 			state.enforcePermissions.mockRejectedValue(new Error('forbidden'));
-			await expect(operation(new Headers(), state.dependencies)).rejects.toThrow('forbidden');
+			await expect(operation(state.dependencies)).rejects.toThrow('forbidden');
 			expect(state.getCurrentUserId).not.toHaveBeenCalled();
 			expectNoDirectoryAccess(state.directory);
 		}
@@ -165,29 +165,27 @@ describe('membership service boundary', () => {
 	it('validates every command before authorization or directory access', async () => {
 		const invalidOperations = [
 			(state: ReturnType<typeof setup>) =>
-				inviteAuthorizedMember({ email: 'not-an-email', roles: ['member'] }, new Headers(), state.dependencies),
+				inviteAuthorizedMember({ email: 'not-an-email', roles: ['member'] }, state.dependencies),
 			(state: ReturnType<typeof setup>) =>
-				inviteAuthorizedMember({ email: 'user@example.test', roles: [] }, new Headers(), state.dependencies),
+				inviteAuthorizedMember({ email: 'user@example.test', roles: [] }, state.dependencies),
 			(state: ReturnType<typeof setup>) =>
 				inviteAuthorizedMember(
 					{ email: 'user@example.test', roles: Array.from({ length: 21 }, (_, index) => `role-${index}`) },
-					new Headers(),
 					state.dependencies,
 				),
 			(state: ReturnType<typeof setup>) =>
-				inviteAuthorizedMember({ email: 'user@example.test', roles: ['bad,role'] }, new Headers(), state.dependencies),
+				inviteAuthorizedMember({ email: 'user@example.test', roles: ['bad,role'] }, state.dependencies),
 			(state: ReturnType<typeof setup>) =>
 				inviteAuthorizedMember(
 					{ email: 'user@example.test', roles: ['member'], unexpected: true } as never,
-					new Headers(),
 					state.dependencies,
 				),
 			(state: ReturnType<typeof setup>) =>
-				updateAuthorizedMemberRoles({ memberId: ' ', roles: ['member'] }, new Headers(), state.dependencies),
+				updateAuthorizedMemberRoles({ memberId: ' ', roles: ['member'] }, state.dependencies),
 			(state: ReturnType<typeof setup>) =>
-				removeAuthorizedMember({ memberId: '' }, new Headers(), state.dependencies),
+				removeAuthorizedMember({ memberId: '' }, state.dependencies),
 			(state: ReturnType<typeof setup>) =>
-				cancelAuthorizedInvitation({ invitationId: '' }, new Headers(), state.dependencies),
+				cancelAuthorizedInvitation({ invitationId: '' }, state.dependencies),
 		];
 
 		for (const operation of invalidOperations) {
@@ -202,7 +200,7 @@ describe('membership service boundary', () => {
 	it('rejects owner invitations before authorization or provider access', async () => {
 		const state = setup();
 		await expect(
-			inviteAuthorizedMember({ email: 'owner@example.test', roles: ['owner'] }, new Headers(), state.dependencies),
+			inviteAuthorizedMember({ email: 'owner@example.test', roles: ['owner'] }, state.dependencies),
 		).rejects.toMatchObject({ message: 'Owner invitations are not supported.', status: 400 });
 		expect(state.enforcePermissions).not.toHaveBeenCalled();
 		expectNoDirectoryAccess(state.directory);
@@ -212,7 +210,6 @@ describe('membership service boundary', () => {
 		const state = setup();
 		await inviteAuthorizedMember(
 			{ email: ' new@example.test ', roles: [' member ', 'member', 'admin'] },
-			new Headers(),
 			state.dependencies,
 		);
 		expect(state.directory.invite).toHaveBeenCalledWith({
@@ -226,10 +223,9 @@ describe('membership service boundary', () => {
 		const invite = setup();
 		await inviteAuthorizedMember(
 			{ email: 'editor@example.test', roles: ['member', 'editor'] },
-			new Headers(),
 			invite.dependencies,
 		);
-		expect(invite.enforcePermissions.mock.calls.map((call) => call[1])).toEqual([
+		expect(invite.enforcePermissions.mock.calls.map((call) => call[0])).toEqual([
 			{ invitation: ['create'] },
 			{ ac: ['read'] },
 		]);
@@ -238,10 +234,9 @@ describe('membership service boundary', () => {
 		const update = setup();
 		await updateAuthorizedMemberRoles(
 			{ memberId: otherMember.id, roles: ['reviewer'] },
-			new Headers(),
 			update.dependencies,
 		);
-		expect(update.enforcePermissions.mock.calls.map((call) => call[1])).toEqual([
+		expect(update.enforcePermissions.mock.calls.map((call) => call[0])).toEqual([
 			{ member: ['update'] },
 			{ ac: ['read'] },
 		]);
@@ -250,24 +245,24 @@ describe('membership service boundary', () => {
 	it('validates direct invite/edit route capabilities before exact authorization', async () => {
 		const invite = setup();
 		await expect(
-			requireAuthorizedMembershipRouteCapability('invite', new Headers(), invite.dependencies),
+			requireAuthorizedMembershipRouteCapability('invite', invite.dependencies),
 		).resolves.toBe(true);
-		expect(invite.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { invitation: ['create'] });
+		expect(invite.enforcePermissions).toHaveBeenCalledWith({ invitation: ['create'] });
 
 		const edit = setup();
-		await expect(requireAuthorizedMembershipRouteCapability('edit', new Headers(), edit.dependencies)).resolves.toBe(true);
-		expect(edit.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { member: ['update'] });
+		await expect(requireAuthorizedMembershipRouteCapability('edit', edit.dependencies)).resolves.toBe(true);
+		expect(edit.enforcePermissions).toHaveBeenCalledWith({ member: ['update'] });
 
 		const invalid = setup();
 		await expect(
-			requireAuthorizedMembershipRouteCapability('delete', new Headers(), invalid.dependencies),
+			requireAuthorizedMembershipRouteCapability('delete', invalid.dependencies),
 		).rejects.toThrow();
 		expect(invalid.enforcePermissions).not.toHaveBeenCalled();
 		expectNoDirectoryAccess(invalid.directory);
 
 		const invalidTarget = setup();
 		await expect(
-			readAuthorizedMemberForRoleEdit(' ', new Headers(), invalidTarget.dependencies),
+			readAuthorizedMemberForRoleEdit(' ', invalidTarget.dependencies),
 		).rejects.toThrow();
 		expect(invalidTarget.enforcePermissions).not.toHaveBeenCalled();
 		expect(invalidTarget.getCurrentUserId).not.toHaveBeenCalled();
@@ -277,7 +272,7 @@ describe('membership service boundary', () => {
 	it('reads one normalized role-edit target with member:update rather than list authority', async () => {
 		const state = setup();
 		await expect(
-			readAuthorizedMemberForRoleEdit(` ${otherMember.id} `, new Headers(), state.dependencies),
+			readAuthorizedMemberForRoleEdit(` ${otherMember.id} `, state.dependencies),
 		).resolves.toEqual({
 			id: otherMember.id,
 			name: null,
@@ -285,20 +280,19 @@ describe('membership service boundary', () => {
 			roles: ['member'],
 			isSelf: false,
 		});
-		expect(state.enforcePermissions.mock.calls.map((call) => call[1])).toEqual([{ member: ['update'] }]);
+		expect(state.enforcePermissions.mock.calls.map((call) => call[0])).toEqual([{ member: ['update'] }]);
 		expect(state.directory.getMember).toHaveBeenCalledWith(otherMember.id);
 		expect(state.directory.listMembers).not.toHaveBeenCalled();
 	});
 
 	it('does not inspect role names or mutate after ac:read is denied', async () => {
 		const state = setup();
-		state.enforcePermissions.mockImplementation(async (_headers, permissions) => {
+		state.enforcePermissions.mockImplementation(async (permissions) => {
 			if ('ac' in permissions) throw new Error('no role visibility');
 		});
 		await expect(
 			inviteAuthorizedMember(
 				{ email: 'editor@example.test', roles: ['editor'] },
-				new Headers(),
 				state.dependencies,
 			),
 		).rejects.toThrow('no role visibility');
@@ -312,7 +306,6 @@ describe('membership service boundary', () => {
 		await expect(
 			updateAuthorizedMemberRoles(
 				{ memberId: otherMember.id, roles: ['missing-role'] },
-				new Headers(),
 				state.dependencies,
 			),
 		).rejects.toMatchObject({ message: 'Role not found: missing-role', status: 404 });
@@ -323,17 +316,16 @@ describe('membership service boundary', () => {
 
 	it('requires ac:read before assigning owner even though owner is built in', async () => {
 		const state = setup();
-		state.enforcePermissions.mockImplementation(async (_headers, permissions) => {
+		state.enforcePermissions.mockImplementation(async (permissions) => {
 			if ('ac' in permissions) throw new Error('no role management authority');
 		});
 		await expect(
 			updateAuthorizedMemberRoles(
 				{ memberId: otherMember.id, roles: ['owner'] },
-				new Headers(),
 				state.dependencies,
 			),
 		).rejects.toThrow('no role management authority');
-		expect(state.enforcePermissions.mock.calls.map((call) => call[1])).toEqual([
+		expect(state.enforcePermissions.mock.calls.map((call) => call[0])).toEqual([
 			{ member: ['update'] },
 			{ ac: ['read'] },
 		]);
@@ -345,17 +337,16 @@ describe('membership service boundary', () => {
 		for (const role of ['owner', 'member,editor']) {
 			const update = setup();
 			vi.mocked(update.directory.getMember).mockResolvedValue({ ...otherMember, role });
-			update.enforcePermissions.mockImplementation(async (_headers, permissions) => {
+			update.enforcePermissions.mockImplementation(async (permissions) => {
 				if ('ac' in permissions) throw new Error('no role management authority');
 			});
 			await expect(
 				updateAuthorizedMemberRoles(
 					{ memberId: otherMember.id, roles: ['member'] },
-					new Headers(),
 					update.dependencies,
 				),
 			).rejects.toThrow('no role management authority');
-			expect(update.enforcePermissions.mock.calls.map((call) => call[1])).toEqual([
+			expect(update.enforcePermissions.mock.calls.map((call) => call[0])).toEqual([
 				{ member: ['update'] },
 				{ ac: ['read'] },
 			]);
@@ -363,13 +354,13 @@ describe('membership service boundary', () => {
 
 			const remove = setup();
 			vi.mocked(remove.directory.getMember).mockResolvedValue({ ...otherMember, role });
-			remove.enforcePermissions.mockImplementation(async (_headers, permissions) => {
+			remove.enforcePermissions.mockImplementation(async (permissions) => {
 				if ('ac' in permissions) throw new Error('no role management authority');
 			});
 			await expect(
-				removeAuthorizedMember({ memberId: otherMember.id }, new Headers(), remove.dependencies),
+				removeAuthorizedMember({ memberId: otherMember.id }, remove.dependencies),
 			).rejects.toThrow('no role management authority');
-			expect(remove.enforcePermissions.mock.calls.map((call) => call[1])).toEqual([
+			expect(remove.enforcePermissions.mock.calls.map((call) => call[0])).toEqual([
 				{ member: ['delete'] },
 				{ ac: ['read'] },
 			]);
@@ -380,13 +371,13 @@ describe('membership service boundary', () => {
 	it('guards a privileged role-edit target with ac:read', async () => {
 		const state = setup();
 		vi.mocked(state.directory.getMember).mockResolvedValue({ ...otherMember, role: 'reviewer' });
-		state.enforcePermissions.mockImplementation(async (_headers, permissions) => {
+		state.enforcePermissions.mockImplementation(async (permissions) => {
 			if ('ac' in permissions) throw new Error('no role management authority');
 		});
 		await expect(
-			readAuthorizedMemberForRoleEdit(otherMember.id, new Headers(), state.dependencies),
+			readAuthorizedMemberForRoleEdit(otherMember.id, state.dependencies),
 		).rejects.toThrow('no role management authority');
-		expect(state.enforcePermissions.mock.calls.map((call) => call[1])).toEqual([
+		expect(state.enforcePermissions.mock.calls.map((call) => call[0])).toEqual([
 			{ member: ['update'] },
 			{ ac: ['read'] },
 		]);
@@ -396,7 +387,6 @@ describe('membership service boundary', () => {
 		const state = setup();
 		await inviteAuthorizedMember(
 			{ email: 'INVITED@example.test', roles: ['admin', 'member', 'admin'] },
-			new Headers(),
 			state.dependencies,
 		);
 		expect(state.directory.invite).toHaveBeenCalledWith({
@@ -411,7 +401,6 @@ describe('membership service boundary', () => {
 		await expect(
 			inviteAuthorizedMember(
 				{ email: 'invited@example.test', roles: ['member'] },
-				new Headers(),
 				state.dependencies,
 			),
 		).rejects.toMatchObject({
@@ -434,7 +423,6 @@ describe('membership service boundary', () => {
 		]);
 		await inviteAuthorizedMember(
 			{ email: 'returning@example.test', roles: ['member'] },
-			new Headers(),
 			state.dependencies,
 		);
 		expect(state.directory.invite).toHaveBeenCalledOnce();
@@ -444,40 +432,38 @@ describe('membership service boundary', () => {
 		const update = setup();
 		await updateAuthorizedMemberRoles(
 			{ memberId: ` ${otherMember.id} `, roles: [' member ', 'member', 'admin'] },
-			new Headers(),
 			update.dependencies,
 		);
-		expect(update.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { member: ['update'] });
+		expect(update.enforcePermissions).toHaveBeenCalledWith({ member: ['update'] });
 		expect(update.directory.updateMemberRoles).toHaveBeenCalledWith({
 			memberId: otherMember.id,
 			roles: ['member', 'admin'],
 		});
 
 		const remove = setup();
-		await removeAuthorizedMember({ memberId: ` ${otherMember.id} ` }, new Headers(), remove.dependencies);
-		expect(remove.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { member: ['delete'] });
+		await removeAuthorizedMember({ memberId: ` ${otherMember.id} ` }, remove.dependencies);
+		expect(remove.enforcePermissions).toHaveBeenCalledWith({ member: ['delete'] });
 		expect(remove.directory.removeMembership).toHaveBeenCalledWith(otherMember.id);
 
 		const cancel = setup();
 		await cancelAuthorizedInvitation(
 			{ invitationId: ' invitation-pending ' },
-			new Headers(),
 			cancel.dependencies,
 		);
-		expect(cancel.enforcePermissions).toHaveBeenCalledWith(expect.any(Headers), { invitation: ['cancel'] });
+		expect(cancel.enforcePermissions).toHaveBeenCalledWith({ invitation: ['cancel'] });
 		expect(cancel.directory.cancelInvitation).toHaveBeenCalledWith('invitation-pending');
 	});
 
 	it('never reaches the directory after a mutation permission denial', async () => {
 		const operations = [
 			(state: ReturnType<typeof setup>) =>
-				inviteAuthorizedMember({ email: 'new@example.test', roles: ['member'] }, new Headers(), state.dependencies),
+				inviteAuthorizedMember({ email: 'new@example.test', roles: ['member'] }, state.dependencies),
 			(state: ReturnType<typeof setup>) =>
-				updateAuthorizedMemberRoles({ memberId: otherMember.id, roles: ['member'] }, new Headers(), state.dependencies),
+				updateAuthorizedMemberRoles({ memberId: otherMember.id, roles: ['member'] }, state.dependencies),
 			(state: ReturnType<typeof setup>) =>
-				removeAuthorizedMember({ memberId: otherMember.id }, new Headers(), state.dependencies),
+				removeAuthorizedMember({ memberId: otherMember.id }, state.dependencies),
 			(state: ReturnType<typeof setup>) =>
-				cancelAuthorizedInvitation({ invitationId: 'invitation-pending' }, new Headers(), state.dependencies),
+				cancelAuthorizedInvitation({ invitationId: 'invitation-pending' }, state.dependencies),
 		];
 
 		for (const operation of operations) {
@@ -492,14 +478,13 @@ describe('membership service boundary', () => {
 	it('rejects self role mutation and self removal on server-owned user IDs', async () => {
 		const read = setup();
 		await expect(
-			readAuthorizedMemberForRoleEdit(selfMember.id, new Headers(), read.dependencies),
+			readAuthorizedMemberForRoleEdit(selfMember.id, read.dependencies),
 		).rejects.toMatchObject({ message: 'You cannot change your own roles.', status: 400 });
 
 		const update = setup();
 		await expect(
 			updateAuthorizedMemberRoles(
 				{ memberId: selfMember.id, roles: ['member'] },
-				new Headers(),
 				update.dependencies,
 			),
 		).rejects.toMatchObject({ message: 'You cannot change your own roles.', status: 400 });
@@ -507,7 +492,7 @@ describe('membership service boundary', () => {
 
 		const remove = setup();
 		await expect(
-			removeAuthorizedMember({ memberId: selfMember.id }, new Headers(), remove.dependencies),
+			removeAuthorizedMember({ memberId: selfMember.id }, remove.dependencies),
 		).rejects.toMatchObject({ message: 'You cannot remove yourself.', status: 400 });
 		expect(remove.directory.removeMembership).not.toHaveBeenCalled();
 	});
@@ -518,7 +503,6 @@ describe('membership service boundary', () => {
 		await expect(
 			updateAuthorizedMemberRoles(
 				{ memberId: 'missing', roles: ['member'] },
-				new Headers(),
 				update.dependencies,
 			),
 		).rejects.toMatchObject({ message: 'Member not found.', status: 404 });
@@ -527,14 +511,14 @@ describe('membership service boundary', () => {
 		const remove = setup();
 		vi.mocked(remove.directory.getMember).mockResolvedValue(null);
 		await expect(
-			removeAuthorizedMember({ memberId: 'missing' }, new Headers(), remove.dependencies),
+			removeAuthorizedMember({ memberId: 'missing' }, remove.dependencies),
 		).rejects.toMatchObject({ message: 'Member not found.', status: 404 });
 		expect(remove.directory.removeMembership).not.toHaveBeenCalled();
 	});
 
 	it('removes only the membership through the narrow directory port', async () => {
 		const state = setup();
-		await removeAuthorizedMember({ memberId: otherMember.id }, new Headers(), state.dependencies);
+		await removeAuthorizedMember({ memberId: otherMember.id }, state.dependencies);
 		expect(state.directory.removeMembership).toHaveBeenCalledWith(otherMember.id);
 		expect(Object.keys(state.directory)).not.toContain('deleteUser');
 	});

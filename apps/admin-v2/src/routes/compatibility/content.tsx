@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js';
 import { QrCode } from '~/ui/qr-code';
 import { RichTextEditor } from '~/ui/rich-text-editor';
+import './compatibility.css';
 
 const INITIAL_HTML = '<p>Solid 2 keeps Lexical framework-neutral.</p>';
 

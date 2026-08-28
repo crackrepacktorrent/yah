@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
@@ -6,6 +7,8 @@ import { MailingListForm, mailingListKindLabel, mailingListStatusLabel, type Mai
 import { decodeMailingListRouteId } from '~/features/mailing-lists/routing';
 import { deleteMailingList, getMailingList, listMailingLists, updateMailingList } from '~/features/mailing-lists/server';
 import { requireSession } from '~/platform/auth/session';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
+import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
@@ -28,8 +31,8 @@ function MailingListRoute(props: { listId: number }) {
 function MailingListDetail(props: { list: MailingList }) {
 	const navigate = useNavigate();
 	const session = createMemo(() => requireSession());
-	const canEdit = createMemo(() => (session().permissions['list']?.includes('edit') ?? false) && props.list.kind !== 'temporary');
-	const canDelete = createMemo(() => (session().permissions['list']?.includes('delete') ?? false) && props.list.kind !== 'temporary');
+	const canEdit = createMemo(() => can(session(), 'list', 'edit') && props.list.kind !== 'temporary');
+	const canDelete = createMemo(() => can(session(), 'list', 'delete') && props.list.kind !== 'temporary');
 	const [pending, setPending] = createSignal(false);
 	const [error, setError] = createSignal('');
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
@@ -74,11 +77,10 @@ function MailingListDetail(props: { list: MailingList }) {
 
 	return (
 		<section class="mailing-lists-page">
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/emails/lists">Mailing lists</a><span aria-hidden="true">/</span><span>{props.list.name}</span></nav>
-			<header class="page-header">
-				<div><h1>{props.list.name}</h1><p>{mailingListKindLabel(props.list.kind)} · {mailingListStatusLabel(props.list.status)} · {props.list.optIn === 'double' ? 'Double' : 'Single'} opt-in</p></div>
+			<Breadcrumbs items={[{ href: '/emails/lists', label: 'Mailing lists' }, { label: props.list.name }]} />
+			<PageHeader title={props.list.name} description={`${mailingListKindLabel(props.list.kind)} · ${mailingListStatusLabel(props.list.status)} · ${props.list.optIn === 'double' ? 'Double' : 'Single'} opt-in`}>
 				<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => setDeleteOpen(true)}>Delete</button></Show>
-			</header>
+			</PageHeader>
 			<Show when={canEdit()} fallback={<ReadOnlyMailingList list={props.list} />}>
 				<MailingListForm
 					mode="edit"
@@ -107,7 +109,7 @@ function ReadOnlyMailingList(props: { list: MailingList }) {
 	return (
 		<>
 			<Show when={props.list.kind === 'temporary'}><p class="mailing-list-note">Temporary lists are provider-managed and read-only here.</p></Show>
-			<dl class="mailing-list-metadata">
+			<dl class="mailing-list-metadata metadata-list">
 				<div><dt>Visibility</dt><dd>{mailingListKindLabel(props.list.kind)}</dd></div>
 				<div><dt>Status</dt><dd>{mailingListStatusLabel(props.list.status)}</dd></div>
 				<div><dt>Opt-in</dt><dd>{props.list.optIn === 'double' ? 'Double' : 'Single'}</dd></div>

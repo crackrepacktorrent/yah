@@ -2,6 +2,7 @@ import 'server-only';
 import { getBuiltInRolePermissions, type Permissions } from '@yah/admin-core/permissions';
 import { mergePermissionSets, parseMemberRoles, parseStoredPermissionSet } from '@yah/admin-core/role-permissions';
 import { createPublicError } from '~/platform/errors';
+import type { AuthorizationContext } from './authorization-context';
 import { auth, canonicalOrganizationId } from './production-server';
 
 type AuthSession = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
@@ -99,21 +100,43 @@ export async function requireCanonicalSession(headers: Headers): Promise<Canonic
 	return { ...state, member: state.member };
 }
 
-/** Enforce server authority through Better Auth; projected permissions are UI-only. */
-export async function enforcePermissions(headers: Headers, permissions: Permissions): Promise<void> {
-	await requireCanonicalSession(headers);
-	// Better Auth authorizes a multi-resource request only when one of a member's
-	// comma-separated roles satisfies the whole request. YAH projects and edits
-	// the documented union of all assigned roles, so enforce each atomic grant
-	// through Better Auth to keep server authority aligned with that model.
-	for (const [resource, actions] of Object.entries(permissions)) {
-		for (const action of new Set(actions)) {
+/** Create one isolated authorization cache for one server-function invocation. */
+export function createAuthorizationContext(headers: Headers): AuthorizationContext {
+	let canonicalSession: ReturnType<typeof requireCanonicalSession> | undefined;
+	const atomicPermissions = new Map<string, Promise<void>>();
+
+	const requireSession = () => (canonicalSession ??= requireCanonicalSession(headers));
+	const requireAtomicPermission = (resource: string, action: string): Promise<void> => {
+		const key = JSON.stringify([resource, action]);
+		const cached = atomicPermissions.get(key);
+		if (cached) return cached;
+
+		const pending = (async () => {
 			const requirement = { [resource]: [action] } as Permissions;
 			const result = await auth.api.hasPermission({
 				headers,
 				body: { organizationId: canonicalOrganizationId, permissions: requirement },
 			});
 			if (!result.success) throw createPublicError(result.error ?? 'Insufficient permissions', 403);
-		}
-	}
+		})();
+		atomicPermissions.set(key, pending);
+		return pending;
+	};
+
+	return {
+		async getCurrentUserId() {
+			return (await requireSession()).session.user.id;
+		},
+		async requirePermissions(permissions) {
+			await requireSession();
+			const requirements: Array<readonly [resource: string, action: string]> = [];
+			for (const [resource, actions] of Object.entries(permissions)) {
+				for (const action of new Set(actions)) requirements.push([resource, action]);
+			}
+			// Better Auth applies one member role to a compound requirement, while
+			// YAH intentionally authorizes the union of assigned roles. Keep Better
+			// Auth authoritative by checking each atomic grant, in parallel.
+			await Promise.all(requirements.map(([resource, action]) => requireAtomicPermission(resource, action)));
+		},
+	};
 }

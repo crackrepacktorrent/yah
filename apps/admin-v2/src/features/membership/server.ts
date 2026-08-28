@@ -18,106 +18,71 @@ import {
 	requireAuthorizedMembershipRouteCapability,
 	updateAuthorizedMemberRoles,
 } from './service';
-import { surfaceError } from '~/platform/errors';
-import { getServerRequest } from '~/platform/request';
-import { requireProductionRuntime } from '~/platform/runtime.server';
+import { runProductionRequest } from '~/platform/production-request.server';
 
-async function dependencies(headers: Headers) {
-	const [{ enforcePermissions, requireCanonicalSession }, { createProductionMembershipDirectory }] = await Promise.all([
+async function requestDependencies(headers: Headers) {
+	const [{ createAuthorizationContext }, { createProductionMembershipDirectory }] = await Promise.all([
 		import('~/platform/auth/authorization.server'),
 		import('~/platform/auth/membership-directory.server'),
 	]);
 	return {
-		enforcePermissions,
-		getCurrentUserId: async (requestHeaders: Headers) => (await requireCanonicalSession(requestHeaders)).session.user.id,
+		authorization: createAuthorizationContext(headers),
 		directory: createProductionMembershipDirectory(headers),
 	};
 }
 
 export const listMembers = query(async (): Promise<AdminMember[]> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await listAuthorizedMembers(request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		listAuthorizedMembers(await requestDependencies(request.headers)),
+	);
 }, 'members');
 
 export const listPendingInvitations = query(async (): Promise<PendingAdminInvitation[]> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await listAuthorizedPendingInvitations(request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		listAuthorizedPendingInvitations(await requestDependencies(request.headers)),
+	);
 }, 'pending-admin-invitations');
 
 export const getMemberForRoleEdit = query(async (memberId: string): Promise<AdminMember> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await readAuthorizedMemberForRoleEdit(memberId, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		readAuthorizedMemberForRoleEdit(memberId, await requestDependencies(request.headers)),
+	);
 }, 'member-role-edit');
 
 export const requireMembershipRouteCapability = query(async (capability: MembershipRouteCapability): Promise<true> => {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		return await requireAuthorizedMembershipRouteCapability(capability, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		requireAuthorizedMembershipRouteCapability(capability, await requestDependencies(request.headers)),
+	);
 }, 'membership-route-capability');
 
 export async function inviteMember(command: InviteMemberCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await inviteAuthorizedMember(command, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		inviteAuthorizedMember(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function updateMemberRoles(command: UpdateMemberRolesCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await updateAuthorizedMemberRoles(command, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		updateAuthorizedMemberRoles(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function removeMember(command: RemoveMemberCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await removeAuthorizedMember(command, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		removeAuthorizedMember(command, await requestDependencies(request.headers)),
+	);
 }
 
 export async function cancelInvitation(command: CancelInvitationCommand): Promise<void> {
 	'use server';
-	const request = getServerRequest();
-	try {
-		requireProductionRuntime();
-		await cancelAuthorizedInvitation(command, request.headers, await dependencies(request.headers));
-	} catch (error) {
-		surfaceError(error);
-	}
+	return runProductionRequest(async (request) =>
+		cancelAuthorizedInvitation(command, await requestDependencies(request.headers)),
+	);
 }

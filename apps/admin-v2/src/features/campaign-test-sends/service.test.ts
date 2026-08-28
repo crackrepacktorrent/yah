@@ -19,7 +19,7 @@ const validCommand: SendCampaignTestCommand = {
 
 function dependencies(): CampaignTestSendServiceDependencies {
 	return {
-		enforcePermissions: vi.fn(async () => undefined),
+		authorization: { requirePermissions: vi.fn(async () => undefined), getCurrentUserId: vi.fn(async () => 'test-user') },
 		sender: { send: vi.fn(async () => undefined) },
 	};
 }
@@ -44,17 +44,16 @@ const publicFailures: ReadonlyArray<{
 describe('campaign test-send service boundary', () => {
 	it('enforces the exact campaign:send and subscriber:view requirement before one sender call', async () => {
 		const deps = dependencies();
-		const headers = new Headers({ cookie: 'session=owner' });
 
-		await expect(sendAuthorizedCampaignTest(validCommand, headers, deps)).resolves.toBeUndefined();
-		expect(deps.enforcePermissions).toHaveBeenCalledOnce();
-		expect(deps.enforcePermissions).toHaveBeenCalledWith(headers, {
+		await expect(sendAuthorizedCampaignTest(validCommand, deps)).resolves.toBeUndefined();
+		expect(deps.authorization.requirePermissions).toHaveBeenCalledOnce();
+		expect(deps.authorization.requirePermissions).toHaveBeenCalledWith({
 			campaign: ['send'],
 			subscriber: ['view'],
 		});
 		expect(deps.sender.send).toHaveBeenCalledOnce();
 		expect(deps.sender.send).toHaveBeenCalledWith(validCommand);
-		expect(vi.mocked(deps.enforcePermissions).mock.invocationCallOrder[0]).toBeLessThan(
+		expect(vi.mocked(deps.authorization.requirePermissions).mock.invocationCallOrder[0]).toBeLessThan(
 			vi.mocked(deps.sender.send).mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
 		);
 	});
@@ -69,21 +68,21 @@ describe('campaign test-send service boundary', () => {
 
 		for (const input of invalidInputs) {
 			const deps = dependencies();
-			await expect(sendAuthorizedCampaignTest(input, new Headers(), deps)).rejects.toMatchObject({
+			await expect(sendAuthorizedCampaignTest(input, deps)).rejects.toMatchObject({
 				name: 'PublicError',
 				status: 400,
 			});
-			expect(deps.enforcePermissions).not.toHaveBeenCalled();
+			expect(deps.authorization.requirePermissions).not.toHaveBeenCalled();
 			expect(deps.sender.send).not.toHaveBeenCalled();
 		}
 	});
 
 	it('does not reach Listmonk when either required permission is denied', async () => {
 		const deps = dependencies();
-		vi.mocked(deps.enforcePermissions).mockRejectedValue(new Error('Forbidden'));
+		vi.mocked(deps.authorization.requirePermissions).mockRejectedValue(new Error('Forbidden'));
 
-		await expect(sendAuthorizedCampaignTest(validCommand, new Headers(), deps)).rejects.toThrow('Forbidden');
-		expect(deps.enforcePermissions).toHaveBeenCalledOnce();
+		await expect(sendAuthorizedCampaignTest(validCommand, deps)).rejects.toThrow('Forbidden');
+		expect(deps.authorization.requirePermissions).toHaveBeenCalledOnce();
 		expect(deps.sender.send).not.toHaveBeenCalled();
 	});
 
@@ -91,7 +90,7 @@ describe('campaign test-send service boundary', () => {
 		const deps = dependencies();
 		vi.mocked(deps.sender.send).mockRejectedValue(new CampaignTestSendPreconditionFailure(reason));
 
-		await expect(sendAuthorizedCampaignTest(validCommand, new Headers(), deps)).rejects.toMatchObject({
+		await expect(sendAuthorizedCampaignTest(validCommand, deps)).rejects.toMatchObject({
 			name: 'PublicError',
 			status,
 			message,
@@ -103,7 +102,7 @@ describe('campaign test-send service boundary', () => {
 		const deps = dependencies();
 		vi.mocked(deps.sender.send).mockRejectedValue(new CampaignTestSendAmbiguousFailure());
 
-		await expect(sendAuthorizedCampaignTest(validCommand, new Headers(), deps)).rejects.toMatchObject({
+		await expect(sendAuthorizedCampaignTest(validCommand, deps)).rejects.toMatchObject({
 			name: 'PublicError',
 			status: 409,
 			message: 'Listmonk may have queued this test email. Wait and check the inbox before trying again to avoid a duplicate message.',
@@ -119,7 +118,7 @@ describe('campaign test-send service boundary', () => {
 			const deps = dependencies();
 			vi.mocked(deps.sender.send).mockRejectedValue(failure);
 
-			await expect(sendAuthorizedCampaignTest(validCommand, new Headers(), deps)).rejects.toBe(failure);
+			await expect(sendAuthorizedCampaignTest(validCommand, deps)).rejects.toBe(failure);
 			expect(deps.sender.send).toHaveBeenCalledOnce();
 		}
 	});

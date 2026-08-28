@@ -55,18 +55,17 @@ export function ConfirmDialog(props: {
 		>
 			<h2 id={titleId}>{props.title}</h2>
 			<p id={descriptionId}>{props.description}</p>
-			<Show when={props.error}>{(message) => <p class="confirm-dialog__error" role="alert">{message()}</p>}</Show>
+			<Show when={props.error}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 			<div class="confirm-dialog__actions">
-				<button type="button" class="confirm-dialog__button confirm-dialog__button--secondary" onClick={close} disabled={props.pending} autofocus>
+				<button type="button" class="button button--secondary confirm-dialog__button" onClick={close} disabled={props.pending} autofocus>
 					Cancel
 				</button>
 				<button
 					type="button"
 					class={[
-						'confirm-dialog__button',
+						'button confirm-dialog__button',
 						{
-							'confirm-dialog__button--danger': (props.confirmTone ?? 'danger') === 'danger',
-							'confirm-dialog__button--primary': props.confirmTone === 'primary',
+							'button--danger': (props.confirmTone ?? 'danger') === 'danger',
 						},
 					]}
 					onClick={() => props.onConfirm()}

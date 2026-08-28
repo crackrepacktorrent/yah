@@ -4,12 +4,9 @@
 .role-key { font-family: ui-monospace, monospace; font-weight: 700; }
 .role-type,
 .role-date { color: var(--admin-text-muted); }
-.role-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-.role-actions a:not(.button) { font-weight: 650; }
 
 .role-form {
 	display: grid;
-	max-width: 58rem;
 	gap: 1.25rem;
 	margin-top: 1.5rem;
 }

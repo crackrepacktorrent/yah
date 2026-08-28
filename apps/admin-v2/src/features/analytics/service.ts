@@ -1,4 +1,4 @@
-import type { Permissions } from '@yah/admin-core/permissions';
+import type { AuthorizationContext } from '~/platform/auth/authorization-context';
 import * as v from 'valibot';
 import { ANALYTICS_PERIODS, type AnalyticsPeriod, type AnalyticsSnapshot, type SiteOverview } from './contracts';
 import { createPublicError } from '~/platform/errors';
@@ -10,30 +10,28 @@ export type AnalyticsReader = {
 };
 
 export type AnalyticsServiceDependencies = {
-	enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+	authorization: AuthorizationContext;
 	reader: AnalyticsReader;
 };
 
 /** Validate, authorize, and only then cross the provider boundary. */
 export async function readAuthorizedAnalytics(
 	input: unknown,
-	headers: Headers,
 	dependencies: AnalyticsServiceDependencies,
 ): Promise<AnalyticsSnapshot> {
 	const result = v.safeParse(periodSchema, input);
 	if (!result.success) throw createPublicError('Invalid analytics period.', 400);
 
-	await dependencies.enforcePermissions(headers, { analytics: ['view'] });
+	await dependencies.authorization.requirePermissions({ analytics: ['view'] });
 	return dependencies.reader.getSnapshot(result.output);
 }
 
 export async function readAuthorizedSiteOverview(
-	headers: Headers,
 	dependencies: {
-		enforcePermissions(headers: Headers, permissions: Permissions): Promise<void>;
+		authorization: AuthorizationContext;
 		reader: { getOverview(): Promise<SiteOverview> };
 	},
 ): Promise<SiteOverview> {
-	await dependencies.enforcePermissions(headers, { analytics: ['view'] });
+	await dependencies.authorization.requirePermissions({ analytics: ['view'] });
 	return dependencies.reader.getOverview();
 }

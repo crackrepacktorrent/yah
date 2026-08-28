@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo, createSignal } from 'solid-js';
@@ -7,6 +8,7 @@ import { deleteCampaigns, listCampaigns } from '~/features/campaigns/server';
 import { MAX_BULK_CAMPAIGN_DELETIONS, type CampaignSummary } from '~/features/campaigns/contracts';
 import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { PageHeader } from '~/ui/page-header';
 import { SelectionCheckbox } from '~/ui/selection-checkbox';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
@@ -16,7 +18,7 @@ export const route = defineFileRoute('/emails/campaigns', {
 });
 
 function statusClass(status: CampaignSummary['status']): string {
-	return `campaign-status campaign-status--${status}`;
+	return `badge campaign-status campaign-status--${status}`;
 }
 
 export default function CampaignListPage() {
@@ -28,10 +30,10 @@ function CampaignTable(props: { campaigns: CampaignSummary[] }) {
 	const session = createMemo(() => requireSession());
 	const canCreate = createMemo(
 		() =>
-			(session().permissions['campaign']?.includes('create') ?? false) &&
-			(session().permissions['list']?.includes('view') ?? false),
+			can(session(), 'campaign', 'create') &&
+			can(session(), 'list', 'view'),
 	);
-	const canDelete = createMemo(() => session().permissions['campaign']?.includes('delete') ?? false);
+	const canDelete = createMemo(() => can(session(), 'campaign', 'delete'));
 	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 	const [deletePending, setDeletePending] = createSignal(false);
@@ -68,12 +70,11 @@ function CampaignTable(props: { campaigns: CampaignSummary[] }) {
 
 	return (
 		<section class="campaigns-page">
-			<header class="page-header">
-				<div><p class="eyebrow">Email delivery</p><h1>Campaigns</h1></div>
+			<PageHeader eyebrow="Email delivery" title="Campaigns">
 				<Show when={canCreate()}><a class="button" href="/emails/campaigns/new">New campaign</a></Show>
-			</header>
+			</PageHeader>
 			<Show when={selected().length > 0}>
-				<div class="campaign-selection" role="status"><span>{selected().length} draft campaign{selected().length === 1 ? '' : 's'} selected</span><button class="button button--danger-secondary" type="button" onClick={() => setDeleteOpen(true)}>Delete selected</button><button class="button button--secondary" type="button" onClick={() => setSelectedIds([])}>Clear</button></div>
+				<div class="bulk-actions campaign-selection" role="status"><span>{selected().length} draft campaign{selected().length === 1 ? '' : 's'} selected</span><button class="button button--danger-secondary" type="button" onClick={() => setDeleteOpen(true)}>Delete selected</button><button class="button button--secondary" type="button" onClick={() => setSelectedIds([])}>Clear</button></div>
 			</Show>
 			<div class="data-table-scroll">
 				<table class="data-table">
@@ -81,7 +82,7 @@ function CampaignTable(props: { campaigns: CampaignSummary[] }) {
 						<thead><tr><th scope="col"><SelectionCheckbox label={`Select up to ${MAX_BULK_CAMPAIGN_DELETIONS} draft campaigns`} checked={allBulkDraftsSelected()} indeterminate={someDraftsSelected()} disabled={!canDelete() || drafts().length === 0} onChange={(event) => setSelectedIds(event.currentTarget.checked ? bulkDraftIds() : [])} /></th><th scope="col">Campaign</th><th scope="col">Status</th><th scope="col">Type</th><th scope="col">Lists</th><th scope="col">Progress</th><th scope="col">Updated</th></tr></thead>
 					<tbody>
 						<Show when={props.campaigns.length > 0} fallback={<tr><td colspan="7">No campaigns are available.</td></tr>}>
-								<For each={props.campaigns}>{(campaign) => <tr><td><SelectionCheckbox label={`Select ${campaign.name}`} checked={selectedIds().includes(campaign.id)} disabled={!canDelete() || campaign.status !== 'draft' || (selected().length >= MAX_BULK_CAMPAIGN_DELETIONS && !selectedIds().includes(campaign.id))} onChange={(event) => toggleCampaign(campaign.id, event.currentTarget.checked)} /></td><td><div class="campaign-name-cell"><a href={campaignHref(campaign.id)}>{campaign.name}</a><small>{campaign.subject}</small></div></td><td><span class={statusClass(campaign.status)}>{campaignStatusLabel(campaign.status)}</span></td><td>{campaignTypeLabel(campaign.type)}</td><td><Show when={campaign.lists.length > 0} fallback="Deleted list"><div class="campaign-list-badges"><For each={campaign.lists}>{(list) => <span>{list.name}</span>}</For></div></Show></td><td>{campaign.sent.toLocaleString()} / {campaign.toSend.toLocaleString()}</td><td>{new Date(campaign.updatedAt).toLocaleString()}</td></tr>}</For>
+								<For each={props.campaigns}>{(campaign) => <tr><td><SelectionCheckbox label={`Select ${campaign.name}`} checked={selectedIds().includes(campaign.id)} disabled={!canDelete() || campaign.status !== 'draft' || (selected().length >= MAX_BULK_CAMPAIGN_DELETIONS && !selectedIds().includes(campaign.id))} onChange={(event) => toggleCampaign(campaign.id, event.currentTarget.checked)} /></td><td><div class="campaign-name-cell"><a href={campaignHref(campaign.id)}>{campaign.name}</a><small>{campaign.subject}</small></div></td><td><span class={statusClass(campaign.status)}>{campaignStatusLabel(campaign.status)}</span></td><td>{campaignTypeLabel(campaign.type)}</td><td><Show when={campaign.lists.length > 0} fallback="Deleted list"><div class="campaign-list-badges"><For each={campaign.lists}>{(list) => <span class="badge">{list.name}</span>}</For></div></Show></td><td>{campaign.sent.toLocaleString()} / {campaign.toSend.toLocaleString()}</td><td>{new Date(campaign.updatedAt).toLocaleString()}</td></tr>}</For>
 						</Show>
 					</tbody>
 				</table>

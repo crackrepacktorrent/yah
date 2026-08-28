@@ -1,3 +1,4 @@
+import { can } from '@yah/admin-core/permissions';
 import { revalidate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
@@ -6,6 +7,8 @@ import { RoleForm, RolePermissionDetails } from '~/features/roles/form';
 import { decodeRoleRouteId, roleCloneHref } from '~/features/roles/routing';
 import { listRoles, updateRole } from '~/features/roles/server';
 import { requireSession } from '~/platform/auth/session';
+import { Breadcrumbs } from '~/ui/breadcrumbs';
+import { PageHeader } from '~/ui/page-header';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 import '../roles.css';
@@ -32,8 +35,8 @@ function EditRoleRoute(props: { roleId: string }) {
 
 function RoleEditor(props: { role: Role; catalog: RoleCatalog }) {
 	const session = createMemo(() => requireSession());
-	const canCreate = createMemo(() => session().permissions['ac']?.includes('create') ?? false);
-	const canUpdate = createMemo(() => session().permissions['ac']?.includes('update') ?? false);
+	const canCreate = createMemo(() => can(session(), 'ac', 'create'));
+	const canUpdate = createMemo(() => can(session(), 'ac', 'update'));
 	const [pending, setPending] = createSignal(false);
 	const [error, setError] = createSignal('');
 
@@ -58,14 +61,10 @@ function RoleEditor(props: { role: Role; catalog: RoleCatalog }) {
 	const editable = () => props.role.kind === 'custom' && canUpdate();
 	return (
 		<section class="roles-page">
-			<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/roles">Roles</a><span aria-hidden="true">/</span><span>{props.role.key}</span></nav>
-			<header class="page-header">
-				<div>
-					<h1>{props.role.key}</h1>
-					<p>{props.role.kind === 'built-in' ? 'Built-in role · read only' : 'Custom role'}</p>
-				</div>
+			<Breadcrumbs items={[{ href: '/roles', label: 'Roles' }, { label: props.role.key }]} />
+			<PageHeader title={props.role.key} description={props.role.kind === 'built-in' ? 'Built-in role · read only' : 'Custom role'}>
 				<Show when={canCreate()}><a class="button button--secondary" href={roleCloneHref(props.role.id)}>Clone product permissions</a></Show>
-			</header>
+			</PageHeader>
 
 			<Show when={editable()} fallback={<RolePermissionDetails permissions={props.role.permissions} />}>
 				<RoleForm

@@ -1,9 +1,21 @@
-import { For, Show, createSignal, untrack } from 'solid-js';
+import { For, Show, createSignal, createStore, untrack } from 'solid-js';
 import { GO_DURATION_HTML_PATTERN, type BounceMailbox, type EmailBounceSettings, type SaveEmailBounceSettingsCommand } from './contracts';
 import { SettingToggle } from './setting-toggle';
 
 type MailboxDraft = Omit<BounceMailbox, 'hasPassword'> & { hasPassword: boolean; password: string };
 type BounceKind = keyof EmailBounceSettings['actions'];
+type BounceSettingsDraft = {
+	enabled: boolean;
+	actions: EmailBounceSettings['actions'];
+	webhooksEnabled: boolean;
+	sesEnabled: boolean;
+	azure: { enabled: boolean; hasSecret: boolean; secret: string; secretHeader: string };
+	sendgrid: { enabled: boolean; hasKey: boolean; key: string };
+	postmark: { enabled: boolean; hasPassword: boolean; username: string; password: string };
+	forwardEmail: { enabled: boolean; hasKey: boolean; key: string };
+	lettermint: { enabled: boolean; hasKey: boolean; key: string };
+	acknowledgeDelete: boolean;
+};
 
 const bounceKinds: Array<{ key: BounceKind; label: string }> = [
 	{ key: 'soft', label: 'Soft bounce' },
@@ -47,34 +59,27 @@ export function EmailBounceSettingsForm(props: {
 	onSubmit: (command: SaveEmailBounceSettingsCommand) => Promise<boolean>;
 }) {
 	const initial = untrack(() => props.initial);
-	const [enabled, setEnabled] = createSignal(initial.enabled);
-	const [actions, setActions] = createSignal(structuredClone(initial.actions));
-	const [webhooksEnabled, setWebhooksEnabled] = createSignal(initial.webhooksEnabled);
-	const [sesEnabled, setSesEnabled] = createSignal(initial.sesEnabled);
-	const [azureEnabled, setAzureEnabled] = createSignal(initial.azure.enabled);
-	const [azureHasSecret, setAzureHasSecret] = createSignal(initial.azure.hasSharedSecret);
-	const [azureSecret, setAzureSecret] = createSignal('');
-	const [azureSecretHeader, setAzureSecretHeader] = createSignal(initial.azure.sharedSecretHeader);
-	const [sendgridEnabled, setSendgridEnabled] = createSignal(initial.sendgrid.enabled);
-	const [sendgridHasKey, setSendgridHasKey] = createSignal(initial.sendgrid.hasKey);
-	const [sendgridKey, setSendgridKey] = createSignal('');
-	const [postmarkEnabled, setPostmarkEnabled] = createSignal(initial.postmark.enabled);
-	const [postmarkHasPassword, setPostmarkHasPassword] = createSignal(initial.postmark.hasPassword);
-	const [postmarkUsername, setPostmarkUsername] = createSignal(initial.postmark.username);
-	const [postmarkPassword, setPostmarkPassword] = createSignal('');
-	const [forwardEmailEnabled, setForwardEmailEnabled] = createSignal(initial.forwardEmail.enabled);
-	const [forwardEmailHasKey, setForwardEmailHasKey] = createSignal(initial.forwardEmail.hasKey);
-	const [forwardEmailKey, setForwardEmailKey] = createSignal('');
-	const [lettermintEnabled, setLettermintEnabled] = createSignal(initial.lettermint.enabled);
-	const [lettermintHasKey, setLettermintHasKey] = createSignal(initial.lettermint.hasKey);
-	const [lettermintKey, setLettermintKey] = createSignal('');
+	const [draft, setDraft] = createStore<BounceSettingsDraft>({
+		enabled: initial.enabled,
+		actions: structuredClone(initial.actions),
+		webhooksEnabled: initial.webhooksEnabled,
+		sesEnabled: initial.sesEnabled,
+		azure: { enabled: initial.azure.enabled, hasSecret: initial.azure.hasSharedSecret, secret: '', secretHeader: initial.azure.sharedSecretHeader },
+		sendgrid: { enabled: initial.sendgrid.enabled, hasKey: initial.sendgrid.hasKey, key: '' },
+		postmark: { enabled: initial.postmark.enabled, hasPassword: initial.postmark.hasPassword, username: initial.postmark.username, password: '' },
+		forwardEmail: { enabled: initial.forwardEmail.enabled, hasKey: initial.forwardEmail.hasKey, key: '' },
+		lettermint: { enabled: initial.lettermint.enabled, hasKey: initial.lettermint.hasKey, key: '' },
+		acknowledgeDelete: false,
+	});
 	const [mailboxes, setMailboxes] = createSignal<MailboxDraft[]>(initial.mailboxes.map((mailbox) => ({ ...mailbox, password: '' })));
-	const [acknowledgeDelete, setAcknowledgeDelete] = createSignal(false);
 	const disabled = () => !props.canManage || props.pending;
-	const hasDeleteAction = () => Object.values(actions()).some(({ action }) => action === 'delete');
+	const hasDeleteAction = () => Object.values(draft.actions).some(({ action }) => action === 'delete');
 
 	function updateAction(kind: BounceKind, field: 'count' | 'action', value: number | EmailBounceSettings['actions'][BounceKind]['action']): void {
-		setActions((current) => ({ ...current, [kind]: { ...current[kind], [field]: value } }));
+		setDraft((next) => {
+			if (field === 'count') next.actions[kind].count = value as number;
+			else next.actions[kind].action = value as EmailBounceSettings['actions'][BounceKind]['action'];
+		});
 	}
 
 	function updateMailbox(index: number, update: Partial<MailboxDraft>): void {
@@ -103,42 +108,48 @@ export function EmailBounceSettingsForm(props: {
 
 	async function submit(): Promise<void> {
 		const replacements = {
-			azure: azureSecret(),
-			sendgrid: sendgridKey(),
-			postmark: postmarkPassword(),
-			forwardEmail: forwardEmailKey(),
-			lettermint: lettermintKey(),
+			azure: draft.azure.secret,
+			sendgrid: draft.sendgrid.key,
+			postmark: draft.postmark.password,
+			forwardEmail: draft.forwardEmail.key,
+			lettermint: draft.lettermint.key,
 		};
 		const saved = await props.onSubmit({
-			enabled: enabled(),
-			actions: actions(),
-			webhooksEnabled: webhooksEnabled(),
-			sesEnabled: sesEnabled(),
-			azure: { enabled: azureEnabled(), sharedSecret: replacements.azure || null, sharedSecretHeader: azureSecretHeader() },
-			sendgrid: { enabled: sendgridEnabled(), key: replacements.sendgrid || null },
-			postmark: { enabled: postmarkEnabled(), username: postmarkUsername(), password: replacements.postmark || null },
-			forwardEmail: { enabled: forwardEmailEnabled(), key: replacements.forwardEmail || null },
-			lettermint: { enabled: lettermintEnabled(), key: replacements.lettermint || null },
+			enabled: draft.enabled,
+			actions: {
+				soft: { ...draft.actions.soft },
+				hard: { ...draft.actions.hard },
+				complaint: { ...draft.actions.complaint },
+			},
+			webhooksEnabled: draft.webhooksEnabled,
+			sesEnabled: draft.sesEnabled,
+			azure: { enabled: draft.azure.enabled, sharedSecret: replacements.azure || null, sharedSecretHeader: draft.azure.secretHeader },
+			sendgrid: { enabled: draft.sendgrid.enabled, key: replacements.sendgrid || null },
+			postmark: { enabled: draft.postmark.enabled, username: draft.postmark.username, password: replacements.postmark || null },
+			forwardEmail: { enabled: draft.forwardEmail.enabled, key: replacements.forwardEmail || null },
+			lettermint: { enabled: draft.lettermint.enabled, key: replacements.lettermint || null },
 			mailboxes: mailboxes().map(({ hasPassword: _hasPassword, password, ...mailbox }) => ({ ...mailbox, password: password || null })),
-			acknowledgeDelete: acknowledgeDelete(),
+			acknowledgeDelete: draft.acknowledgeDelete,
 		});
 		if (!saved) return;
-		if (replacements.azure) setAzureHasSecret(true);
-		if (replacements.sendgrid) setSendgridHasKey(true);
-		if (replacements.postmark) setPostmarkHasPassword(true);
-		if (replacements.forwardEmail) setForwardEmailHasKey(true);
-		if (replacements.lettermint) setLettermintHasKey(true);
-		setAzureSecret('');
-		setSendgridKey('');
-		setPostmarkPassword('');
-		setForwardEmailKey('');
-		setLettermintKey('');
+		setDraft((next) => {
+			if (replacements.azure) next.azure.hasSecret = true;
+			if (replacements.sendgrid) next.sendgrid.hasKey = true;
+			if (replacements.postmark) next.postmark.hasPassword = true;
+			if (replacements.forwardEmail) next.forwardEmail.hasKey = true;
+			if (replacements.lettermint) next.lettermint.hasKey = true;
+			next.azure.secret = '';
+			next.sendgrid.key = '';
+			next.postmark.password = '';
+			next.forwardEmail.key = '';
+			next.lettermint.key = '';
+			next.acknowledgeDelete = false;
+		});
 		setMailboxes((current) => current.map((mailbox) => ({
 			...mailbox,
 			hasPassword: mailbox.hasPassword || mailbox.password.length > 0,
 			password: '',
 		})));
-		setAcknowledgeDelete(false);
 	}
 
 	return (
@@ -149,18 +160,18 @@ export function EmailBounceSettingsForm(props: {
 			<Show when={props.error}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 			<fieldset class="settings-card" disabled={disabled()}>
 				<legend>Processing policy</legend>
-				<SettingToggle label="Enable bounce processing" help="Processes delivery failures received through the configured webhook or POP channels." checked={enabled()} disabled={disabled()} onChange={setEnabled} />
+				<SettingToggle label="Enable bounce processing" help="Processes delivery failures received through the configured webhook or POP channels." checked={draft.enabled} disabled={disabled()} onChange={(enabled) => setDraft((next) => { next.enabled = enabled; })} />
 				<div class="bounce-action-grid" role="group" aria-label="Bounce actions">
 					<For each={bounceKinds}>{({ key, label }) => (
 						<div class="bounce-action-row">
 							<strong>{label}</strong>
 							<label class="form-field">
 								<span>Count</span>
-								<input type="number" min="1" max="1000" required value={actions()[key].count} disabled={disabled() || !enabled()} onInput={(event) => updateAction(key, 'count', Number(event.currentTarget.value))} />
+								<input type="number" min="1" max="1000" required value={draft.actions[key].count} disabled={disabled() || !draft.enabled} onInput={(event) => updateAction(key, 'count', Number(event.currentTarget.value))} />
 							</label>
 							<label class="form-field">
 								<span>Action</span>
-								<select value={actions()[key].action} disabled={disabled() || !enabled()} onChange={(event) => updateAction(key, 'action', event.currentTarget.value as EmailBounceSettings['actions'][BounceKind]['action'])}>
+								<select value={draft.actions[key].action} disabled={disabled() || !draft.enabled} onChange={(event) => updateAction(key, 'action', event.currentTarget.value as EmailBounceSettings['actions'][BounceKind]['action'])}>
 									<option value="none">Do nothing</option>
 									<option value="unsubscribe">Unsubscribe</option>
 									<option value="blocklist">Blocklist</option>
@@ -172,7 +183,7 @@ export function EmailBounceSettingsForm(props: {
 				</div>
 				<Show when={hasDeleteAction()}>
 					<label class="settings-danger-ack">
-						<input type="checkbox" checked={acknowledgeDelete()} required disabled={disabled()} onChange={(event) => setAcknowledgeDelete(event.currentTarget.checked)} />
+						<input type="checkbox" checked={draft.acknowledgeDelete} required disabled={disabled()} onChange={(event) => setDraft((next) => { next.acknowledgeDelete = event.currentTarget.checked; })} />
 						<span><strong>I understand that “Delete subscriber” is permanent.</strong><small>Future matching bounces will erase subscriber records, not merely unsubscribe or blocklist them.</small></span>
 					</label>
 				</Show>
@@ -181,42 +192,42 @@ export function EmailBounceSettingsForm(props: {
 			<fieldset class="settings-card" disabled={disabled()}>
 				<legend>Webhook providers</legend>
 				<p class="settings-note settings-note--flush">Disabling a provider retains its saved credential. Listmonk’s full settings API does not support an unambiguous credential-clear operation.</p>
-				<SettingToggle label="Accept bounce webhooks" help="Enables Listmonk’s provider-specific webhook handlers." checked={webhooksEnabled()} disabled={disabled() || !enabled()} onChange={setWebhooksEnabled} />
-				<div class="settings-provider-list" aria-disabled={webhooksEnabled() ? undefined : 'true'}>
-					<SettingToggle label="Amazon SES" help="Accept Amazon SES bounce notifications." checked={sesEnabled()} disabled={disabled() || !enabled() || !webhooksEnabled()} onChange={setSesEnabled} />
-					<section class="settings-provider-card">
-						<SettingToggle label="Azure Communication Services" help="Authenticate Azure event-grid webhook requests with a shared secret." checked={azureEnabled()} disabled={disabled() || !enabled() || !webhooksEnabled()} onChange={setAzureEnabled} />
+				<SettingToggle label="Accept bounce webhooks" help="Enables Listmonk’s provider-specific webhook handlers." checked={draft.webhooksEnabled} disabled={disabled() || !draft.enabled} onChange={(enabled) => setDraft((next) => { next.webhooksEnabled = enabled; })} />
+				<div class="settings-provider-list" aria-disabled={draft.webhooksEnabled ? undefined : 'true'}>
+					<SettingToggle label="Amazon SES" help="Accept Amazon SES bounce notifications." checked={draft.sesEnabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.sesEnabled = enabled; })} />
+					<div class="settings-provider-card">
+						<SettingToggle label="Azure Communication Services" help="Authenticate Azure event-grid webhook requests with a shared secret." checked={draft.azure.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.azure.enabled = enabled; })} />
 						<div class="settings-domain-grid">
-					<SecretField label="Shared secret" value={azureSecret()} hasSaved={azureHasSecret()} disabled={disabled() || !azureEnabled()} onInput={setAzureSecret} />
+							<SecretField label="Shared secret" value={draft.azure.secret} hasSaved={draft.azure.hasSecret} disabled={disabled() || !draft.azure.enabled} onInput={(secret) => setDraft((next) => { next.azure.secret = secret; })} />
 							<label class="form-field">
 								<span>Secret header</span>
-								<input value={azureSecretHeader()} maxlength="255" disabled={disabled() || !azureEnabled()} onInput={(event) => setAzureSecretHeader(event.currentTarget.value)} />
+								<input value={draft.azure.secretHeader} maxlength="255" disabled={disabled() || !draft.azure.enabled} onInput={(event) => setDraft((next) => { next.azure.secretHeader = event.currentTarget.value; })} />
 								<small>HTTP header containing the shared secret.</small>
 							</label>
 						</div>
-					</section>
-					<section class="settings-provider-card">
-						<SettingToggle label="SendGrid" help="Accept signed SendGrid bounce events." checked={sendgridEnabled()} disabled={disabled() || !enabled() || !webhooksEnabled()} onChange={setSendgridEnabled} />
-						<SecretField label="Verification key" value={sendgridKey()} hasSaved={sendgridHasKey()} disabled={disabled() || !sendgridEnabled()} onInput={setSendgridKey} />
-					</section>
-					<section class="settings-provider-card">
-						<SettingToggle label="Postmark" help="Accept Postmark bounce events with basic authentication." checked={postmarkEnabled()} disabled={disabled() || !enabled() || !webhooksEnabled()} onChange={setPostmarkEnabled} />
+					</div>
+					<div class="settings-provider-card">
+						<SettingToggle label="SendGrid" help="Accept signed SendGrid bounce events." checked={draft.sendgrid.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.sendgrid.enabled = enabled; })} />
+						<SecretField label="Verification key" value={draft.sendgrid.key} hasSaved={draft.sendgrid.hasKey} disabled={disabled() || !draft.sendgrid.enabled} onInput={(key) => setDraft((next) => { next.sendgrid.key = key; })} />
+					</div>
+					<div class="settings-provider-card">
+						<SettingToggle label="Postmark" help="Accept Postmark bounce events with basic authentication." checked={draft.postmark.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.postmark.enabled = enabled; })} />
 						<div class="settings-domain-grid">
 							<label class="form-field">
 								<span>Username</span>
-								<input value={postmarkUsername()} maxlength="1000" disabled={disabled() || !postmarkEnabled()} onInput={(event) => setPostmarkUsername(event.currentTarget.value)} />
+								<input value={draft.postmark.username} maxlength="1000" disabled={disabled() || !draft.postmark.enabled} onInput={(event) => setDraft((next) => { next.postmark.username = event.currentTarget.value; })} />
 							</label>
-							<SecretField label="Password" value={postmarkPassword()} hasSaved={postmarkHasPassword()} disabled={disabled() || !postmarkEnabled()} onInput={setPostmarkPassword} />
+							<SecretField label="Password" value={draft.postmark.password} hasSaved={draft.postmark.hasPassword} disabled={disabled() || !draft.postmark.enabled} onInput={(password) => setDraft((next) => { next.postmark.password = password; })} />
 						</div>
-					</section>
-					<section class="settings-provider-card">
-						<SettingToggle label="Forward Email" help="Accept Forward Email bounce webhooks." checked={forwardEmailEnabled()} disabled={disabled() || !enabled() || !webhooksEnabled()} onChange={setForwardEmailEnabled} />
-						<SecretField label="API key" value={forwardEmailKey()} hasSaved={forwardEmailHasKey()} disabled={disabled() || !forwardEmailEnabled()} onInput={setForwardEmailKey} />
-					</section>
-					<section class="settings-provider-card">
-						<SettingToggle label="Lettermint" help="Accept Lettermint bounce webhooks." checked={lettermintEnabled()} disabled={disabled() || !enabled() || !webhooksEnabled()} onChange={setLettermintEnabled} />
-						<SecretField label="API key" value={lettermintKey()} hasSaved={lettermintHasKey()} disabled={disabled() || !lettermintEnabled()} onInput={setLettermintKey} />
-					</section>
+					</div>
+					<div class="settings-provider-card">
+						<SettingToggle label="Forward Email" help="Accept Forward Email bounce webhooks." checked={draft.forwardEmail.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.forwardEmail.enabled = enabled; })} />
+						<SecretField label="API key" value={draft.forwardEmail.key} hasSaved={draft.forwardEmail.hasKey} disabled={disabled() || !draft.forwardEmail.enabled} onInput={(key) => setDraft((next) => { next.forwardEmail.key = key; })} />
+					</div>
+					<div class="settings-provider-card">
+						<SettingToggle label="Lettermint" help="Accept Lettermint bounce webhooks." checked={draft.lettermint.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.lettermint.enabled = enabled; })} />
+						<SecretField label="API key" value={draft.lettermint.key} hasSaved={draft.lettermint.hasKey} disabled={disabled() || !draft.lettermint.enabled} onInput={(key) => setDraft((next) => { next.lettermint.key = key; })} />
+					</div>
 				</div>
 			</fieldset>
 
@@ -224,9 +235,9 @@ export function EmailBounceSettingsForm(props: {
 				<legend>POP bounce mailbox</legend>
 				<p class="settings-note settings-note--flush">Listmonk processes at most one enabled mailbox. Additional saved mailbox records are preserved and can be enabled here one at a time.</p>
 				<For each={mailboxes()} keyed={(mailbox) => mailbox.uuid}>{(mailbox, index) => (
-					<fieldset class="settings-provider-card bounce-mailbox-card">
+					<fieldset class="settings-provider-card">
 						<legend>Mailbox {index() + 1}</legend>
-						<SettingToggle label="Enable this mailbox" help="Enabling it disables any other mailbox in this draft." checked={mailbox().enabled} disabled={disabled() || !enabled()} onChange={(value) => updateMailbox(index(), { enabled: value })} />
+						<SettingToggle label="Enable this mailbox" help="Enabling it disables any other mailbox in this draft." checked={mailbox().enabled} disabled={disabled() || !draft.enabled} onChange={(value) => updateMailbox(index(), { enabled: value })} />
 						<div class="smtp-fields">
 							<label class="form-field smtp-wide">
 								<span>Host</span>
