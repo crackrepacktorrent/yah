@@ -17,7 +17,7 @@
 		"test:auth-integration": "vitest run src/platform/auth/production-auth.integration.test.ts",
 		"test:listmonk-integration": "vitest run src/integrations/listmonk/*.integration.test.ts",
 		"install:e2e": "playwright install --with-deps chromium",
-		"test:e2e": "env ADMIN_V2_RUNTIME=compatibility-lab ADMIN_V2_COMPATIBILITY_AUTH_SECRET=solid-2-compatibility-e2e-secret bun run build && playwright test",
+		"test:e2e": "env ADMIN_V2_RUNTIME=platform-disabled bun run build && playwright test",
 		"test:e2e:production": "env ADMIN_V2_RUNTIME=production bun run build && playwright test --config playwright.production.config.ts"
 	},
 	"dependencies": {

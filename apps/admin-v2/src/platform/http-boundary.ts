@@ -7,7 +7,7 @@ import { decodeRoleRouteId } from '~/features/roles/routing';
 import { decodeShortlinkRouteCode } from '~/features/shortlinks/routing';
 import { decodeSubscriberRouteId } from '~/features/subscribers/routing';
 
-export type AdminV2Runtime = 'compatibility-lab' | 'production' | 'platform-disabled';
+export type AdminV2Runtime = 'production' | 'platform-disabled';
 
 function hasPathPrefix(pathname: string, prefix: string): boolean {
 	return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -104,7 +104,6 @@ function methodNotAllowed(allowed: string): Response {
  * Disabled mode exposes only health. Production exposes only completed
  * product slices, their server-function transport, and the real auth API.
  * Every callable function still owns its runtime, validation, and auth checks.
- * Compatibility mode retains the isolated migration harness.
  */
 export function createAdminRuntimeGuard(runtime: AdminV2Runtime): FetchMiddleware {
 	return (request, next) => {

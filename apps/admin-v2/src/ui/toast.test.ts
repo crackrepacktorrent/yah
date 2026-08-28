@@ -118,4 +118,54 @@ describe('toast facade', () => {
 		expect(messages).not.toContain('Error 2');
 		expect(container.querySelector('[role="status"]')?.textContent).toContain('Newest feedback');
 	});
+
+	test('dismisses a notification and returns focus to the control that triggered it', async () => {
+		const trigger = document.createElement('button');
+		document.body.append(trigger);
+		disposers.push(() => trigger.remove());
+		trigger.focus();
+
+		const container = mountToaster();
+		toast.success('Settings saved.');
+		flush();
+
+		// The region is a passive landmark: each notification announces itself
+		// through its own status/alert role, so the region must not also be live.
+		const region = container.querySelector('[role="region"]');
+		expect(region?.getAttribute('aria-label')).toBe('Notifications');
+		expect(region?.hasAttribute('aria-live')).toBe(false);
+
+		const dismiss = container.querySelector<HTMLButtonElement>(
+			'[aria-label="Dismiss success notification: Settings saved."]',
+		);
+		expect(dismiss).not.toBeNull();
+		dismiss?.focus();
+		dismiss?.click();
+		flush();
+
+		expect(container.querySelectorAll('[role="status"]')).toHaveLength(0);
+		await new Promise<void>((resolve) => queueMicrotask(resolve));
+		expect(document.activeElement).toBe(trigger);
+	});
+
+	test('keeps errors dismissible and does not steal focus from an unrelated control', async () => {
+		const container = mountToaster();
+		const elsewhere = document.createElement('button');
+		document.body.append(elsewhere);
+		disposers.push(() => elsewhere.remove());
+
+		toast.error('Settings could not be saved.');
+		flush();
+		elsewhere.focus();
+
+		const dismiss = container.querySelector<HTMLButtonElement>(
+			'[aria-label="Dismiss error notification: Settings could not be saved."]',
+		);
+		dismiss?.click();
+		flush();
+
+		expect(container.querySelectorAll('[role="alert"]')).toHaveLength(0);
+		await new Promise<void>((resolve) => queueMicrotask(resolve));
+		expect(document.activeElement).toBe(elsewhere);
+	});
 });

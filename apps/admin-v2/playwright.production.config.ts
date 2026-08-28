@@ -3,10 +3,8 @@ import { requireDisposableProductionE2EDatabase } from './e2e/production-environ
 
 requireDisposableProductionE2EDatabase();
 
-const compatibilityPort = 43121;
 const productionPort = 43123;
 const upstreamPort = 43124;
-const compatibilityOrigin = `http://127.0.0.1:${compatibilityPort}`;
 const upstreamOrigin = `http://127.0.0.1:${upstreamPort}`;
 const externalProductionOrigin = process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'];
 const productionOrigin = externalProductionOrigin ?? `http://127.0.0.1:${productionPort}`;
@@ -15,29 +13,22 @@ const bunExecutable = process.env['ADMIN_V2_E2E_BUN_EXECUTABLE'] ?? 'bun';
 
 if (!/^[\w./-]+$/.test(bunExecutable)) throw new Error('ADMIN_V2_E2E_BUN_EXECUTABLE must be a plain executable path.');
 
-const webServer = [
-	{
-		command: `env ADMIN_V2_RUNTIME=compatibility-lab ADMIN_V2_COMPATIBILITY_AUTH_SECRET=solid-2-compatibility-e2e-secret ${bunExecutable} run start --host 127.0.0.1 --port ${compatibilityPort}`,
-		url: `${compatibilityOrigin}/api/health`,
-		reuseExistingServer: false,
-		timeout: 30_000,
-	},
-];
-
-if (!externalProductionOrigin) {
-	webServer.push({
-		command: `${bunExecutable} e2e/production-upstream.ts`,
-		url: `${upstreamOrigin}/health`,
-		reuseExistingServer: false,
-		timeout: 30_000,
-	});
-	webServer.push({
-		command: `env ADMIN_V2_RUNTIME=production LISTMONK_URL=${upstreamOrigin} LISTMONK_API_TOKEN=admin:fixture-listmonk-secret SHLINK_URL=${upstreamOrigin} SHLINK_API_KEY=fixture-shlink-secret UMAMI_URL=${upstreamOrigin} UMAMI_WEBSITE_ID=website/id ${bunExecutable} run start --host 127.0.0.1 --port ${productionPort}`,
-		url: `${productionOrigin}/api/health`,
-		reuseExistingServer: false,
-		timeout: 30_000,
-	});
-}
+const webServer = externalProductionOrigin
+	? []
+	: [
+			{
+				command: `${bunExecutable} e2e/production-upstream.ts`,
+				url: `${upstreamOrigin}/health`,
+				reuseExistingServer: false,
+				timeout: 30_000,
+			},
+			{
+				command: `env ADMIN_V2_RUNTIME=production LISTMONK_URL=${upstreamOrigin} LISTMONK_API_TOKEN=admin:fixture-listmonk-secret SHLINK_URL=${upstreamOrigin} SHLINK_API_KEY=fixture-shlink-secret UMAMI_URL=${upstreamOrigin} UMAMI_WEBSITE_ID=website/id ${bunExecutable} run start --host 127.0.0.1 --port ${productionPort}`,
+				url: `${productionOrigin}/api/health`,
+				reuseExistingServer: false,
+				timeout: 30_000,
+			},
+		];
 
 export default defineConfig({
 	testDir: './e2e',

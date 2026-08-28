@@ -12,7 +12,7 @@ describe('admin HTTP boundary', () => {
 			fileRouteManifest
 				.filter((route) => route.page)
 				.map((route) => route.path.replace(/\/\([^/]+\)/g, '').replace(/\/$/, '') || '/')
-				.filter((path) => path !== '/*404' && path !== '/compatibility' && !path.startsWith('/compatibility/')),
+				.filter((path) => path !== '/*404'),
 		);
 
 		for (const pattern of productionPatterns) {
@@ -32,11 +32,11 @@ describe('admin HTTP boundary', () => {
 		}
 	});
 
-	it('fails closed for all unfinished application traffic outside lab mode', async () => {
+	it('fails closed for all application traffic in the default runtime', async () => {
 		const next = vi.fn(async () => terminalResponse);
 		const guard = createAdminRuntimeGuard('platform-disabled');
 
-		for (const path of ['/', '/compatibility/auth', '/compatibility/table', '/api/auth/get-session', '/api/adapter-probe', '/_server']) {
+		for (const path of ['/', '/login', '/not-a-route', '/api/auth/get-session', '/api/not-an-endpoint', '/_server']) {
 			const response = await guard(new Request(`https://admin.example${path}`), next);
 			expect(response.status, path).toBe(404);
 		}
@@ -96,7 +96,7 @@ describe('admin HTTP boundary', () => {
 		}
 		for (const path of [
 			'/index.html',
-			'/compatibility/auth',
+			'/not-a-route',
 			'/members/accept',
 			'/members/accept/invitation-id//',
 			'/shortlinks/press-kit/details',
@@ -129,7 +129,7 @@ describe('admin HTTP boundary', () => {
 			'/members/member-1/roles',
 			'/members/~h80/roles',
 			'/members/invitations/extra/new',
-			'/api/adapter-probe',
+			'/api/not-an-endpoint',
 		]) {
 			expect((await guard(new Request(`https://admin.example${path}`), next)).status, path).toBe(404);
 		}
@@ -148,9 +148,9 @@ describe('admin HTTP boundary', () => {
 		expect(serverFunctionResponse.headers.get('allow')).toBe('GET, POST');
 	});
 
-	it('allows lab GET and POST auth traffic but rejects every other method', async () => {
+	it('allows GET and POST auth traffic but rejects every other method', async () => {
 		const next = vi.fn(async () => terminalResponse);
-		const guard = createAdminRuntimeGuard('compatibility-lab');
+		const guard = createAdminRuntimeGuard('production');
 
 		for (const method of ['GET', 'POST']) {
 			const response = await guard(new Request('https://admin.example/api/auth/session', { method }), next);

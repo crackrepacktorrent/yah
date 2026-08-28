@@ -3,7 +3,6 @@ import { serve } from 'srvx';
 import { staticMiddleware } from 'srvx/static';
 import { handleRequest } from './dist/server/server.js';
 
-const compatibilityLab = process.env.ADMIN_V2_RUNTIME === 'compatibility-lab';
 const production = process.env.ADMIN_V2_RUNTIME === 'production';
 const staticFiles = staticMiddleware({ dir: fileURLToPath(new URL('./dist/client', import.meta.url)) });
 
@@ -18,7 +17,7 @@ const productionAssets = async (request, next) => {
 // The outer deployment boundary owns files; application documents always pass
 // through Solid's runtime guard before the CSR shell is returned.
 export const fetch = handleRequest;
-export const middleware = compatibilityLab ? [staticFiles] : production ? [productionAssets] : [];
+export const middleware = production ? [productionAssets] : [];
 
 // Keep the same standards-based server entry usable by the development CLI
 // and as the production container executable.
