@@ -1,284 +1,159 @@
-import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
-import { For, Show, createMemo, createSignal } from 'solid-js';
-import {
-	createSolidTable,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getFacetedRowModel,
-	getFacetedUniqueValues,
-	getSortedRowModel,
-	createColumnHelper,
-	type SortingState,
-	type ColumnFiltersState,
-} from '@tanstack/solid-table';
-import { toast, toastError } from '~/lib/toast';
-import {
-	Badge,
-	Button,
-	AlertDialog,
-	DataTable,
-	PageHeader,
-	createSelectColumn,
-	multiSelectFilter,
-	type RowSelectionState,
-} from '~/components';
-import { requireSession } from '~/routes/session';
-import { can } from '~/lib/can';
-import { canAccessFeature } from '~/lib/feature-policy';
-import { subscriberStatusVariant } from '~/lib/utils';
-import { listSubscribers, deleteSubscribers, blocklistSubscribers } from '../subscribers.server';
-import { listLists } from '../lists.server';
-import { SubscriberEditor } from './SubscriberEditor';
-import './index.css';
+import { can } from '@yah/admin-core/permissions';
+import { revalidate, useNavigate, useSearchParams } from '@solidjs/router';
+import { defineFileRoute } from '@solidjs/router/fs';
+import { For, Loading, Show, createEffect, createMemo, createSignal, untrack } from 'solid-js';
+import { MAX_BULK_SUBSCRIBER_SELECTION, type SubscriberPage, type SubscriberSummary } from '~/features/subscribers/contracts';
+import { decodeSubscriberListLocation, subscriberHref, subscriberListHref } from '~/features/subscribers/routing';
+import { blocklistSubscribers, deleteSubscribers, listSubscribers } from '~/features/subscribers/server';
+import { requireSession } from '~/platform/auth/session';
+import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { PageHeader } from '~/ui/page-header';
+import { SelectionCheckbox } from '~/ui/selection-checkbox';
+import { toast } from '~/ui/toast';
+import { visibleError } from '~/ui/visible-error';
 
-export const route: RouteDefinition = {
-	preload: () => {
-		void listSubscribers();
-	},
-};
+export const route = defineFileRoute('/emails/subscribers', {
+	preload: ({ location }) => void listSubscribers(decodeSubscriberListLocation(location.query)),
+});
 
-type SubscriberList = {
-	id: number;
-	name: string;
-	subscription_status: string;
-};
+export default function SubscriberListPage() {
+	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const request = createMemo(() => decodeSubscriberListLocation(searchParams));
+	const page = createMemo(() => listSubscribers(request()));
+	const session = createMemo(() => requireSession());
+	const canCreate = createMemo(() => can(session(), 'subscriber', 'create'));
+	const [search, setSearch] = createSignal(untrack(() => request().search));
+	const requestIdentity = createMemo(() => subscriberListHref(request()));
 
-type ListmonkSubscriber = {
-	id: number;
-	email: string;
-	name: string;
-	status: 'enabled' | 'disabled' | 'blocklisted';
-	lists: SubscriberList[];
-	created_at: string;
-	updated_at: string;
-};
-
-const columnHelper = createColumnHelper<ListmonkSubscriber>();
-
-export default function SubscribersPage() {
-	const session = createAsync(() => requireSession());
-	const data = createAsync(() => listSubscribers());
-	const listsData = createAsync(() => (can(session(), 'list', 'view') ? listLists() : Promise.resolve({ lists: [] })));
-
-	// ─── State ───────────────────────────────────────────────────────────────────
-
-	const [globalFilter, setGlobalFilter] = createSignal('');
-	const [columnFilters, setColumnFilters] = createSignal<ColumnFiltersState>([]);
-	const [rowSelection, setRowSelection] = createSignal<RowSelectionState>({});
-	const [sorting, setSorting] = createSignal<SortingState>([]);
-
-	const [editorOpen, setEditorOpen] = createSignal(false);
-	const [editorSubscriber, setEditorSubscriber] = createSignal<ListmonkSubscriber | null>(null);
-
-	const [confirmDelete, setConfirmDelete] = createSignal(false);
-	const [confirmBlocklist, setConfirmBlocklist] = createSignal(false);
-
-	// ─── Handlers ─────────────────────────────────────────────────────────────────
-
-	function openCreate() {
-		setEditorSubscriber(null);
-		setEditorOpen(true);
-	}
-
-	function openEdit(sub: ListmonkSubscriber) {
-		setEditorSubscriber(sub);
-		setEditorOpen(true);
-	}
-
-	async function handleEditorSaved() {
-		setRowSelection({});
-		await revalidate('listSubscribers');
-	}
-
-	async function handleDelete() {
-		try {
-			await deleteSubscribers(selectedRows().map((s) => s.id));
-			toast.success(`${selectedRows().length} subscriber${selectedRows().length > 1 ? 's' : ''} deleted.`);
-			setRowSelection({});
-			await revalidate('listSubscribers');
-		} catch (err) {
-			toastError(err, 'Failed to delete subscribers.');
-		}
-	}
-
-	async function handleBlocklist() {
-		try {
-			await blocklistSubscribers(selectedRows().map((s) => s.id));
-			toast.success(`${selectedRows().length} subscriber${selectedRows().length > 1 ? 's' : ''} blocklisted.`);
-			setRowSelection({});
-			await revalidate('listSubscribers');
-		} catch (err) {
-			toastError(err, 'Failed to blocklist subscribers.');
-		}
-	}
-
-	// ─── Columns ─────────────────────────────────────────────────────────────────
-
-	const columns = [
-		createSelectColumn<ListmonkSubscriber>(),
-		columnHelper.accessor('email', {
-			header: 'Email',
-			enableColumnFilter: false,
-			cell: (info) => (
-				<button class="cell-link" onClick={() => openEdit(info.row.original)}>
-					{info.getValue()}
-				</button>
-			),
-		}),
-		columnHelper.accessor('name', {
-			header: 'Name',
-			enableColumnFilter: false,
-			cell: (info) => info.getValue() || '—',
-		}),
-		columnHelper.accessor('status', {
-			header: 'Status',
-			filterFn: multiSelectFilter,
-			cell: (info) => <Badge variant={subscriberStatusVariant(info.getValue())}>{info.getValue()}</Badge>,
-		}),
-		columnHelper.accessor('lists', {
-			header: 'Lists',
-			enableSorting: false,
-			enableColumnFilter: false,
-			cell: (info) => {
-				const lists = info.getValue();
-				return (
-					<Show when={lists.length > 0} fallback={<span class="cell-muted">—</span>}>
-						<div class="cell-badges">
-							<For each={lists}>
-								{(list) => (
-									<Badge variant={list.subscription_status === 'unconfirmed' ? 'warning' : 'default'}>
-										{list.name}
-										{list.subscription_status === 'unconfirmed' ? ' (unconfirmed)' : ''}
-									</Badge>
-								)}
-							</For>
-						</div>
-					</Show>
-				);
-			},
-		}),
-		columnHelper.accessor('created_at', {
-			header: 'Created',
-			enableColumnFilter: false,
-			cell: (info) => <span class="cell-date">{new Date(info.getValue()).toLocaleDateString()}</span>,
-		}),
-		columnHelper.accessor('updated_at', {
-			header: 'Updated',
-			enableColumnFilter: false,
-			cell: (info) => <span class="cell-date">{new Date(info.getValue()).toLocaleDateString()}</span>,
-		}),
-	];
-
-	// ─── Table ───────────────────────────────────────────────────────────────────
-
-	const table = createSolidTable({
-		get data() {
-			return (data()?.subscribers ?? []) as ListmonkSubscriber[];
+	createEffect(
+		() => request().search,
+		(resolvedSearch, previousSearch) => {
+			if (previousSearch !== undefined && resolvedSearch !== previousSearch) setSearch(resolvedSearch);
 		},
-		columns,
-		state: {
-			get globalFilter() {
-				return globalFilter();
-			},
-			get columnFilters() {
-				return columnFilters();
-			},
-			get rowSelection() {
-				return rowSelection();
-			},
-			get sorting() {
-				return sorting();
-			},
-		},
-		onGlobalFilterChange: setGlobalFilter,
-		onColumnFiltersChange: setColumnFilters,
-		onRowSelectionChange: setRowSelection,
-		onSortingChange: setSorting,
-		enableRowSelection: () => canAccessFeature(session(), 'subscriberSelect'),
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getFacetedRowModel: getFacetedRowModel(),
-		getFacetedUniqueValues: getFacetedUniqueValues(),
-		getSortedRowModel: getSortedRowModel(),
-	});
-
-	const selectedRows = createMemo(() => table.getSelectedRowModel().rows.map((r) => r.original));
-
-	const canBlocklist = createMemo(
-		() => can(session(), 'subscriber', 'blocklist') && selectedRows().some((s) => s.status !== 'blocklisted'),
 	);
 
-	// ─── Toolbar ──────────────────────────────────────────────────────────────────
+	function submitSearch(event: SubmitEvent): void {
+		event.preventDefault();
+		navigate(subscriberListHref({ search: search() }));
+	}
 
-	const toolbar = () => (
-		<Show
-			when={selectedRows().length > 0}
-			fallback={
-				<div class="dt-toolbar-search">
-					<input
-						class="admin-input"
-						type="text"
-						placeholder="Filter by email or name…"
-						value={globalFilter()}
-						onInput={(e) => setGlobalFilter(e.currentTarget.value)}
-					/>
-					<Show when={can(session(), 'subscriber', 'create')}>
-						<Button onClick={openCreate}>+ New Subscriber</Button>
-					</Show>
-				</div>
+	return (
+		<section class="subscribers-page">
+			<PageHeader eyebrow="Email delivery" title="Subscribers">
+				<Show when={canCreate()}><a class="button" href="/emails/subscribers/new">New subscriber</a></Show>
+			</PageHeader>
+			<form class="subscriber-search" role="search" action="/emails/subscribers" method="get" onSubmit={submitSearch}>
+				<label class="filter-field"><span>Search subscribers</span><input type="search" name="search" value={search()} onInput={(event) => setSearch(event.currentTarget.value)} maxlength={200} placeholder="Email or name" /></label>
+				<button class="button button--secondary" type="submit">Search</button>
+				<Show when={request().search}><a class="button button--secondary" href="/emails/subscribers">Clear</a></Show>
+			</form>
+			<p class="subscriber-order-note">Newest subscribers first</p>
+			<Loading on={requestIdentity()} fallback={<p class="table-loading" role="status">Loading subscribers…</p>}>
+				<Show when={page()}>{(resolved) => <SubscriberResults page={resolved()} />}</Show>
+			</Loading>
+		</section>
+	);
+}
+
+function statusClass(status: SubscriberSummary['status']): string {
+	return `badge subscriber-status subscriber-status--${status}`;
+}
+
+function SubscriberResults(props: { page: SubscriberPage }) {
+	const navigate = useNavigate();
+	const session = createMemo(() => requireSession());
+	const canDelete = createMemo(() => can(session(), 'subscriber', 'delete'));
+	const canBlocklist = createMemo(() => can(session(), 'subscriber', 'blocklist'));
+	const [searchParams] = useSearchParams();
+	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
+	const [dialog, setDialog] = createSignal<'delete' | 'blocklist' | null>(null);
+	const [mutationPending, setMutationPending] = createSignal(false);
+	const [mutationError, setMutationError] = createSignal('');
+	const selected = createMemo(() => props.page.items.filter((subscriber) => selectedIds().includes(subscriber.id)));
+	const blocklistSelection = createMemo(() => selected().filter((subscriber) => subscriber.status !== 'blocklisted'));
+	const selectableIds = createMemo(() => props.page.items
+		.filter((subscriber) => canDelete() || (canBlocklist() && subscriber.status !== 'blocklisted'))
+		.slice(0, MAX_BULK_SUBSCRIBER_SELECTION)
+		.map(({ id }) => id));
+	const allSelected = createMemo(() => selectableIds().length > 0 && selectableIds().every((id) => selectedIds().includes(id)));
+	const someSelected = createMemo(() => selected().length > 0 && !allSelected());
+	const totalPages = createMemo(() => Math.max(1, Math.ceil(props.page.total / props.page.pageSize)));
+
+	createEffect(
+		() => `${props.page.page}:${props.page.search}`,
+		(key, previous) => {
+			if (previous !== undefined && key !== previous) setSelectedIds([]);
+		},
+	);
+	createEffect(
+		() => ({ requested: decodeSubscriberListLocation(searchParams), resolvedPage: props.page.page, resolvedSearch: props.page.search }),
+		({ requested, resolvedPage, resolvedSearch }) => {
+			// Canonicalize only after the response belongs to the current search.
+			if (requested.search === resolvedSearch && requested.page !== resolvedPage) {
+				navigate(subscriberListHref({ page: resolvedPage, search: resolvedSearch }), { replace: true });
 			}
-		>
-			<span class="dt-selection-count">{selectedRows().length} selected</span>
-			<Show when={canBlocklist()}>
-				<Button variant="danger-outline" onClick={() => setConfirmBlocklist(true)}>
-					Blocklist
-				</Button>
-			</Show>
-			<Show when={can(session(), 'subscriber', 'delete')}>
-				<Button variant="danger-outline" onClick={() => setConfirmDelete(true)}>
-					Delete
-				</Button>
-			</Show>
-			<button class="dt-clear-btn" onClick={() => setRowSelection({})}>
-				Clear
-			</button>
-		</Show>
+		},
 	);
+
+	function toggleSubscriber(id: number, checked: boolean): void {
+		setSelectedIds((current) => {
+			if (!checked) return current.filter((selectedId) => selectedId !== id);
+			if (current.includes(id) || current.length >= MAX_BULK_SUBSCRIBER_SELECTION) return current;
+			return [...current, id];
+		});
+	}
+
+	async function mutateSelection(): Promise<void> {
+		const operation = dialog();
+		if (!operation) return;
+		setMutationPending(true);
+		setMutationError('');
+		try {
+			const subscribers = (operation === 'blocklist' ? blocklistSelection() : selected()).map((subscriber) => ({
+				id: subscriber.id,
+				expectedUpdatedAt: subscriber.updatedAt,
+			}));
+			if (operation === 'blocklist') await blocklistSubscribers({ subscribers });
+			else await deleteSubscribers({ subscribers });
+			setDialog(null);
+			setSelectedIds([]);
+			revalidate(listSubscribers.key);
+			toast.success(operation === 'blocklist' ? 'Subscribers blocklisted.' : 'Subscribers deleted.');
+		} catch (caught) {
+			setMutationError(visibleError(caught, `The selected subscribers could not be ${operation === 'blocklist' ? 'blocklisted' : 'deleted'}.`));
+		} finally {
+			setMutationPending(false);
+		}
+	}
 
 	return (
 		<>
-			<PageHeader title="Subscribers" />
-
-			<DataTable table={table} toolbar={toolbar} emptyMessage="No subscribers found." />
-
-			<AlertDialog
-				open={confirmDelete()}
-				onOpenChange={setConfirmDelete}
-				title={`Delete Subscriber${selectedRows().length > 1 ? 's' : ''}`}
-				description={`Permanently delete ${selectedRows().length} subscriber${selectedRows().length > 1 ? 's' : ''}? This cannot be undone.`}
-				confirmLabel="Yes, delete"
-				onconfirm={handleDelete}
-			/>
-
-			<AlertDialog
-				open={confirmBlocklist()}
-				onOpenChange={setConfirmBlocklist}
-				title={`Blocklist Subscriber${selectedRows().length > 1 ? 's' : ''}`}
-				description={`Blocklist ${selectedRows().length} subscriber${selectedRows().length > 1 ? 's' : ''}? They will no longer receive any emails.`}
-				confirmLabel="Yes, blocklist"
-				onconfirm={handleBlocklist}
-			/>
-
-			<SubscriberEditor
-				open={editorOpen()}
-				onOpenChange={setEditorOpen}
-				subscriber={editorSubscriber()}
-				allLists={listsData()?.lists ?? []}
-				canCreate={can(session(), 'subscriber', 'create')}
-				canEdit={can(session(), 'subscriber', 'edit')}
-				canClearBounces={can(session(), 'bounce', 'delete')}
-				onSaved={handleEditorSaved}
-			/>
+			<Show when={selected().length > 0}>
+				<div class="bulk-actions subscriber-selection" role="status">
+					<span>{selected().length} subscriber{selected().length === 1 ? '' : 's'} selected on this page</span>
+					<Show when={canBlocklist() && blocklistSelection().length > 0}><button class="button button--danger-secondary" type="button" onClick={() => { setMutationError(''); setDialog('blocklist'); }}>Blocklist {blocklistSelection().length}</button></Show>
+					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => { setMutationError(''); setDialog('delete'); }}>Delete selected</button></Show>
+					<button class="button button--secondary" type="button" onClick={() => setSelectedIds([])}>Clear</button>
+				</div>
+			</Show>
+			<div class="data-table-scroll">
+				<table class="data-table">
+					<caption class="visually-hidden">Subscribers in fixed provider order</caption>
+					<thead><tr><th scope="col"><SelectionCheckbox label="Select all actionable subscribers on this page" checked={allSelected()} indeterminate={someSelected()} disabled={selectableIds().length === 0} onChange={(event) => setSelectedIds(event.currentTarget.checked ? selectableIds() : [])} /></th><th scope="col">Subscriber</th><th scope="col">Status</th><th scope="col">Updated</th></tr></thead>
+					<tbody>
+						<Show when={props.page.items.length > 0} fallback={<tr><td colspan="4">No subscribers match this search.</td></tr>}>
+							<For each={props.page.items}>{(subscriber) => <tr><td><SelectionCheckbox label={`Select ${subscriber.email}`} checked={selectedIds().includes(subscriber.id)} disabled={!canDelete() && (!canBlocklist() || subscriber.status === 'blocklisted')} onChange={(event) => toggleSubscriber(subscriber.id, event.currentTarget.checked)} /></td><td><div class="subscriber-name-cell"><a href={subscriberHref(subscriber.id)}>{subscriber.email}</a><small>{subscriber.name || 'No name'}</small></div></td><td><span class={statusClass(subscriber.status)}>{subscriber.status}</span></td><td>{new Date(subscriber.updatedAt).toLocaleString()}</td></tr>}</For>
+						</Show>
+					</tbody>
+				</table>
+			</div>
+			<nav class="pagination" aria-label="Subscriber pages">
+				<span>Page {props.page.page.toLocaleString()} of {totalPages().toLocaleString()} · {props.page.total.toLocaleString()} total</span>
+				<div><Show when={props.page.page > 1}><a class="button button--secondary" rel="prev" href={subscriberListHref({ page: props.page.page - 1, search: props.page.search })}>Previous</a></Show><Show when={props.page.page < totalPages()}><a class="button button--secondary" rel="next" href={subscriberListHref({ page: props.page.page + 1, search: props.page.search })}>Next</a></Show></div>
+			</nav>
+			<ConfirmDialog open={dialog() === 'blocklist'} title="Blocklist selected subscribers?" description={`Blocklist ${blocklistSelection().length} subscriber${blocklistSelection().length === 1 ? '' : 's'}? Listmonk will unsubscribe all of their memberships. Restoring them requires a separate recovery workflow.`} confirmLabel="Blocklist subscribers" pending={mutationPending()} error={mutationError()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
+			<ConfirmDialog open={dialog() === 'delete'} title="Delete selected subscribers?" description={`Permanently delete ${selected().length} subscriber${selected().length === 1 ? '' : 's'} and their Listmonk history? This cannot be undone.`} confirmLabel="Delete subscribers" pending={mutationPending()} error={mutationError()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
 		</>
 	);
 }

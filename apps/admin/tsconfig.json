@@ -1,38 +1,37 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "jsx": "preserve",
-    "jsxImportSource": "solid-js",
-    "allowJs": true,
-
-    // Strict Type Checking
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitReturns": true,
-    "noPropertyAccessFromIndexSignature": true,
-
-    // Module Resolution
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "skipLibCheck": true,
-
-    // Types
-    "types": ["vite/client", "node"],
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-
-    // Path Mapping
-    "paths": {
-      "~/*": ["./src/*"]
-    }
-  },
-	"include": ["src/**/*", "scripts/**/*"],
-  "exclude": ["node_modules", "dist", ".output"]
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"jsx": "preserve",
+		"jsxImportSource": "@solidjs/web",
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitReturns": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"noUncheckedIndexedAccess": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"paths": {
+			"~/*": ["./src/*"]
+		},
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "ESNext",
+		"types": ["vite/client", "node"]
+	},
+	"include": [
+		"src/**/*",
+		"e2e/**/*",
+		"env.ts",
+		"file-routes.d.ts",
+		"solid-env.d.ts",
+		"playwright.config.ts",
+		"playwright.production.config.ts",
+		"vite.config.ts"
+	],
+	"exclude": ["dist", "node_modules"]
 }

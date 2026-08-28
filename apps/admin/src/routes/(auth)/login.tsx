@@ -1,9 +1,9 @@
-import { createSignal, Show } from 'solid-js';
 import { revalidate, useNavigate } from '@solidjs/router';
-import { authClient } from '~/lib/auth-client';
-import { ORG_SLUG, LOGO_FILL_ORANGE } from '~/lib/constants';
-import { FormField, Input, Button, Logo } from '~/components';
-import './auth.css';
+import { Show, createSignal } from 'solid-js';
+import { ORG_SLUG } from '@yah/admin-core/constants';
+import { authClient } from '~/platform/auth/client';
+import { getSession, requireSession } from '~/platform/auth/session';
+import { AuthError, AuthField, AuthShell } from '~/ui/auth';
 
 export default function LoginPage() {
 	const navigate = useNavigate();
@@ -12,61 +12,70 @@ export default function LoginPage() {
 	const [error, setError] = createSignal('');
 	const [loading, setLoading] = createSignal(false);
 
-	async function handleLogin(e: SubmitEvent) {
-		e.preventDefault();
+	async function handleLogin(event: SubmitEvent): Promise<void> {
+		event.preventDefault();
 		setError('');
 		setLoading(true);
 
-		const result = await authClient.signIn.email({
-			email: email(),
-			password: password(),
-		});
+		try {
+			const result = await authClient.signIn.email({ email: email(), password: password() });
+			if (result.error) {
+				setError(result.error.message ?? 'Login failed.');
+				return;
+			}
 
-		if (result.error) {
-			setError(result.error.message ?? 'Login failed');
+			const organization = await authClient.organization.setActive({ organizationSlug: ORG_SLUG });
+			if (organization.error) {
+				setError('Signed in, but this account could not access the organization. Contact an administrator.');
+				return;
+			}
+
+			revalidate([getSession.key, requireSession.key]);
+			navigate('/', { replace: true });
+		} catch {
+			setError('Login failed. Check your connection and try again.');
+		} finally {
 			setLoading(false);
-			return;
 		}
-
-		const orgResult = await authClient.organization.setActive({
-			organizationSlug: ORG_SLUG,
-		});
-
-		if (orgResult.error) {
-			setError('Signed in, but failed to load organization. Contact an admin.');
-			setLoading(false);
-			return;
-		}
-
-		await revalidate(['session', 'require-session', 'guest']);
-		navigate('/');
 	}
 
 	return (
-		<div class="auth-page">
-			<div class="auth-container">
-				<Logo fill={LOGO_FILL_ORANGE} height={140} />
+		<AuthShell>
+			<form class="auth-card" onSubmit={handleLogin}>
+				<h1>Sign in</h1>
+				<AuthField label="Email" required>
+					<input
+						class="auth-input"
+						type="email"
+						name="email"
+						autocomplete="username"
+						value={email()}
+						onInput={(event) => setEmail(event.currentTarget.value)}
+						required
+					/>
+				</AuthField>
 
-				<form class="auth-card" onSubmit={handleLogin}>
-					<FormField label="Email">
-						<Input type="email" value={email()} onInput={(e) => setEmail(e.currentTarget.value)} required />
-					</FormField>
+				<AuthField label="Password" required>
+					<input
+						class="auth-input"
+						type="password"
+						name="password"
+						autocomplete="current-password"
+						value={password()}
+						onInput={(event) => setPassword(event.currentTarget.value)}
+						required
+					/>
+				</AuthField>
 
-					<FormField label="Password">
-						<Input type="password" value={password()} onInput={(e) => setPassword(e.currentTarget.value)} required />
-					</FormField>
+				<Show when={error()}>{(message) => <AuthError>{message()}</AuthError>}</Show>
 
-					<Show when={error()}>
-						<p class="auth-error">{error()}</p>
-					</Show>
-
-					<Button type="submit" disabled={loading()} aria-busy={loading()} class="login-btn">
-						{loading() ? 'Signing in…' : 'Sign in'}
-					</Button>
-
-					<a href="/forgot-password" class="auth-link">Forgot password?</a>
-				</form>
-			</div>
-		</div>
+				<button class="auth-button" type="submit" disabled={loading()} aria-busy={loading() ? 'true' : undefined}>
+					{loading() ? 'Signing in…' : 'Sign in'}
+				</button>
+				<a href="/forgot-password" class="auth-link">
+					Forgot password?
+				</a>
+			</form>
+		</AuthShell>
 	);
 }

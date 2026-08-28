@@ -6,7 +6,6 @@ WORKDIR /app
 COPY package.json bun.lock turbo.json ./
 COPY apps/web/package.json ./apps/web/
 COPY apps/admin/package.json ./apps/admin/
-COPY apps/admin-v2/package.json ./apps/admin-v2/
 COPY packages/admin-core/package.json ./packages/admin-core/
 RUN bun install --frozen-lockfile --ignore-scripts --filter yah-dev
 
@@ -30,7 +29,6 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/web/package.json ./apps/web/
 COPY apps/admin/package.json ./apps/admin/
-COPY apps/admin-v2/package.json ./apps/admin-v2/
 COPY packages/admin-core/package.json ./packages/admin-core/
 RUN bun install --production --frozen-lockfile --ignore-scripts --filter yah-dev
 

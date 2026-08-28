@@ -1,15 +1,21 @@
-import { createAsync, Navigate } from '@solidjs/router';
-import { Show, Suspense, type JSX } from 'solid-js';
-import { getSession } from '~/routes/session';
+import { type RouteDefinition, useNavigate } from '@solidjs/router';
+import { Show, createEffect, createMemo, type ParentProps } from 'solid-js';
+import { getSession } from '~/platform/auth/session';
 
-export default function AuthLayout(props: { children: JSX.Element }) {
-	const session = createAsync(() => getSession());
+export const route = {
+	preload: () => void getSession(),
+} satisfies RouteDefinition;
 
-	return (
-		<Suspense>
-			<Show when={!session()?.authorized} fallback={<Navigate href="/" />}>
-				{props.children}
-			</Show>
-		</Suspense>
+export default function GuestLayout(props: ParentProps) {
+	const navigate = useNavigate();
+	const session = createMemo(() => getSession());
+
+	createEffect(
+		() => session()?.authorized,
+		(authorized) => {
+			if (authorized) navigate('/', { replace: true });
+		},
 	);
+
+	return <Show when={!session()?.authorized}>{props.children}</Show>;
 }

@@ -3,8 +3,8 @@ import { hashPassword } from 'better-auth/crypto';
 import { getMigrations } from 'better-auth/db/migration';
 import { organization } from 'better-auth/plugins';
 import pg from 'pg';
-import { AUTH_MAINTENANCE_LOCK_ID, ORG_SLUG } from '../src/lib/constants';
-import { ac, roles } from '../src/lib/permissions';
+import { AUTH_MAINTENANCE_LOCK_ID, ORG_SLUG } from '@yah/admin-core/constants';
+import { ac, roles } from '@yah/admin-core/permissions';
 
 const { Pool } = pg;
 const ORGANIZATION_NAME = 'Youth Alliance for Housing';

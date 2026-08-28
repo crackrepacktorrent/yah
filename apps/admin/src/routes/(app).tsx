@@ -1,159 +1,123 @@
-import { createAsync, revalidate, useNavigate, type RouteDefinition } from '@solidjs/router';
-import { createMemo, ErrorBoundary, Suspense, type JSX } from 'solid-js';
-import { Sidebar, Spinner, type NavSection } from '~/components';
-import { authClient } from '~/lib/auth-client';
-import { canAccessFeature, type Feature } from '~/lib/feature-policy';
-import { requireSession } from '~/routes/session';
+import { can } from '@yah/admin-core/permissions';
+import { revalidate, type RouteDefinition, useNavigate } from '@solidjs/router';
+import { Errored, Loading, Show, createMemo, type ParentProps } from 'solid-js';
+import { authClient } from '~/platform/auth/client';
+import { getSession, requireSession } from '~/platform/auth/session';
+import { ErrorView } from '~/ui/error-view';
+import { toast } from '~/ui/toast';
 import './(app).css';
 
-export const route: RouteDefinition = {
-	preload: () => {
-		void requireSession();
-	},
-};
+export const route = {
+	preload: () => void requireSession(),
+} satisfies RouteDefinition;
 
-type PolicyNavItem = {
-	href: string;
-	label: string;
-	icon: string;
-	policy?: Feature;
-	children?: Array<{ href: string; label: string; icon?: string; policy: Feature }>;
-};
-
-const NAV_SECTIONS: Array<{ label: string; items: PolicyNavItem[] }> = [
-	{
-		label: 'Home',
-		items: [
-			{ href: '/', label: 'Dashboard', icon: 'dashboard', policy: 'dashboard' },
-			{ href: '/shortlinks', label: 'Shortlinks', icon: 'link', policy: 'shortlinks' },
-			{ href: '/analytics', label: 'Analytics', icon: 'chart', policy: 'analytics' },
-		],
-	},
-	{
-		label: 'Email',
-		items: [
-			{
-				href: '/emails/campaigns',
-				label: 'Campaigns',
-				icon: 'megaphone',
-				children: [
-					{
-						href: '/emails/campaigns',
-						label: 'All Campaigns',
-						icon: 'megaphone',
-						policy: 'campaigns',
-					},
-					{ href: '/emails', label: 'Templates', icon: 'mail', policy: 'templates' },
-					{
-						href: '/emails/analytics',
-						label: 'Analytics',
-						icon: 'pie-chart',
-						policy: 'campaignAnalytics',
-					},
-				],
-			},
-			{
-				href: '/emails/subscribers',
-				label: 'Subscribers',
-				icon: 'contact',
-				children: [
-					{
-						href: '/emails/subscribers',
-						label: 'All Subscribers',
-						icon: 'contact',
-						policy: 'subscribers',
-					},
-					{ href: '/emails/bounces', label: 'Bounces', icon: 'alert-circle', policy: 'bounces' },
-				],
-			},
-			{
-				href: '/emails/lists',
-				label: 'Lists',
-				icon: 'list-checks',
-				children: [
-					{ href: '/emails/lists', label: 'All Lists', icon: 'list-checks', policy: 'lists' },
-					{ href: '/emails/forms', label: 'Forms', icon: 'clipboard-list', policy: 'forms' },
-				],
-			},
-			{ href: '/emails/logs', label: 'Logs', icon: 'file-text', policy: 'emailLogs' },
-		],
-	},
-	{
-		label: 'Organization',
-		items: [
-			{ href: '/members', label: 'Members', icon: 'users', policy: 'members' },
-			{ href: '/roles', label: 'Roles', icon: 'shield', policy: 'roles' },
-		],
-	},
-	{
-		label: 'Settings',
-		items: [{ href: '/settings/email', label: 'Email', icon: 'settings', policy: 'settings' }],
-	},
-];
-
-function visibleNavSections(session: Parameters<typeof canAccessFeature>[0]): NavSection[] {
-	return NAV_SECTIONS.map((section) => ({
-		label: section.label,
-		items: section.items.flatMap((item) => {
-			if (item.children) {
-				const children = item.children
-					.filter((child) => canAccessFeature(session, child.policy))
-					.map(({ policy: _policy, ...child }) => child);
-				return children.length > 0 ? [{ href: item.href, label: item.label, icon: item.icon, children }] : [];
-			}
-
-			if (!item.policy || !canAccessFeature(session, item.policy)) return [];
-			return [{ href: item.href, label: item.label, icon: item.icon }];
-		}),
-	})).filter((section) => section.items.length > 0);
-}
-
-function ErrorView(props: { error: unknown; reset: () => void }) {
-	const message = () => (props.error instanceof Error ? props.error.message : 'An unexpected error occurred.');
-
-	return (
-		<div class="error-boundary">
-			<h2>Something went wrong</h2>
-			<p>{message()}</p>
-			<div class="error-actions">
-				<button class="error-btn" onClick={() => props.reset()}>
-					Try again
-				</button>
-				<a href="/" class="error-link">
-					Back to Dashboard
-				</a>
-			</div>
-		</div>
-	);
-}
-
-export default function AppLayout(props: { children: JSX.Element }) {
+export default function ProtectedLayout(props: ParentProps) {
 	const navigate = useNavigate();
-	const session = createAsync(() => requireSession());
-
-	const navSections = createMemo(() => {
-		return visibleNavSections(session());
+	const session = createMemo(() => requireSession());
+	const canViewAnalytics = createMemo(() => can(session(), 'analytics', 'view'));
+	const canViewShortlinks = createMemo(() => can(session(), 'shortlink', 'view'));
+	const canViewEmailTemplates = createMemo(() => can(session(), 'template', 'view'));
+	const canViewMailingLists = createMemo(() => can(session(), 'list', 'view'));
+	const canViewCampaigns = createMemo(() => can(session(), 'campaign', 'view'));
+	const canViewSubscribers = createMemo(() => can(session(), 'subscriber', 'view'));
+	const canViewBounces = createMemo(() => can(session(), 'bounce', 'view'));
+	const canViewSettings = createMemo(() => can(session(), 'settings', 'view'));
+	const canViewEmailLogs = createMemo(() => can(session(), 'provider', 'manage'));
+	const canViewRoles = createMemo(() => can(session(), 'ac', 'read'));
+	const canViewMembers = createMemo(
+		() =>
+			can(session(), 'member', 'create') &&
+			can(session(), 'invitation', 'create'),
+	);
+	const emailHref = createMemo(() => {
+		if (canViewEmailTemplates()) return '/emails';
+		if (canViewMailingLists()) return '/emails/lists';
+		if (canViewCampaigns()) return '/emails/campaigns';
+		if (canViewSubscribers()) return '/emails/subscribers';
+		if (canViewBounces()) return '/emails/bounces';
+		if (canViewEmailLogs()) return '/emails/logs';
+		return undefined;
 	});
 
-	async function handleLogout() {
-		await authClient.signOut();
-		navigate('/login');
-		void revalidate(['require-session', 'session']);
+	async function handleLogout(): Promise<void> {
+		try {
+			const result = await authClient.signOut();
+			if (result.error) {
+				toast.error('Sign out failed. Please try again.');
+				return;
+			}
+			revalidate([getSession.key, requireSession.key]);
+			navigate('/login', { replace: true });
+		} catch {
+			toast.error('Sign out failed. Check your connection and try again.');
+		}
 	}
 
 	return (
-		<div class="admin-layout">
-			<Sidebar sections={navSections()} user={session()?.user ?? null} onlogout={handleLogout} />
-			<main>
-				<ErrorBoundary
-					fallback={(err, reset) => {
-						console.error('[ErrorBoundary]', err);
-						return <ErrorView error={err} reset={reset} />;
-					}}
-				>
-					<Suspense fallback={<Spinner size={80} centered />}>{props.children}</Suspense>
-				</ErrorBoundary>
-			</main>
-		</div>
+		<Errored fallback={(error, reset) => <ErrorView error={error()} reset={reset} onRetry={() => revalidate()} />}>
+			<Loading
+				fallback={
+					<div class="admin-loading" role="status">
+						<span class="admin-spinner" aria-hidden="true" />
+						<span class="visually-hidden">Loading admin…</span>
+					</div>
+				}
+			>
+				<div class="admin-layout-v2">
+					<header class="admin-header-v2">
+						<a class="admin-brand-v2" href="/" aria-label="YAH Admin dashboard">
+							<img src="/logo.svg" alt="" height="48" />
+						</a>
+						<nav aria-label="Primary navigation">
+							<a href="/">
+								Dashboard
+							</a>
+							<Show when={canViewAnalytics()}>
+								<a href="/analytics">
+									Analytics
+								</a>
+							</Show>
+							<Show when={canViewShortlinks()}>
+								<a href="/shortlinks">
+									Shortlinks
+								</a>
+							</Show>
+							<Show when={emailHref()}>
+								{(href) => <a href={href()}>Email</a>}
+							</Show>
+							<Show when={canViewRoles()}>
+								<a href="/roles">Roles</a>
+							</Show>
+							<Show when={canViewMembers()}>
+								<a href="/members">Members</a>
+							</Show>
+							<Show when={canViewSettings()}>
+								<a href="/settings/email">Settings</a>
+							</Show>
+						</nav>
+						<div class="admin-account-v2">
+							<span class="admin-account-email-v2">{session().user.email}</span>
+							<button type="button" onClick={() => void handleLogout()}>
+								Sign out
+							</button>
+						</div>
+					</header>
+					<main class="admin-content-v2">
+						<Errored fallback={(error, reset) => <ErrorView error={error()} reset={reset} onRetry={() => revalidate()} />}>
+							<Loading
+								fallback={
+									<div class="admin-page-loading" role="status">
+										<span class="admin-spinner" aria-hidden="true" />
+										<span class="visually-hidden">Loading page…</span>
+									</div>
+								}
+							>
+								{props.children}
+							</Loading>
+						</Errored>
+					</main>
+				</div>
+			</Loading>
+		</Errored>
 	);
 }

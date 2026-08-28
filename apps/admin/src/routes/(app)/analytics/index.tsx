@@ -1,175 +1,225 @@
-import { createAsync, type RouteDefinition } from '@solidjs/router';
-import { For, Show, createSignal } from 'solid-js';
-import { createSolidTable, getCoreRowModel, createColumnHelper } from '@tanstack/solid-table';
-import {
-	BarChart, Card, DataTable, HorizontalBarList, PageHeader, Section, StatCard, ToggleGroup,
-} from '~/components';
-import { formatDuration } from '~/lib/utils';
-import { getAnalytics } from '../analytics.server';
-import type { UmamiMetric } from '~/server/umami';
+import { revalidate } from '@solidjs/router';
+import { defineFileRoute } from '@solidjs/router/fs';
+import { Errored, For, Loading, Show, createMemo, createSignal, isPending, latest } from 'solid-js';
+import { ANALYTICS_PERIODS, type AnalyticsMetric, type AnalyticsPeriod, type AnalyticsSnapshot } from '~/features/analytics/contracts';
+import { getAnalytics } from '~/features/analytics/server';
 import './index.css';
 
-export const route: RouteDefinition = {
-	preload: () => { void getAnalytics('7d'); },
+export const route = defineFileRoute('/analytics', {
+	preload: () => void getAnalytics('7d'),
+});
+
+const periodLabels: Record<AnalyticsPeriod, string> = {
+	'24h': '24 hours',
+	'7d': '7 days',
+	'30d': '30 days',
 };
 
-type Period = '24h' | '7d' | '30d';
-
-const metricColumnHelper = createColumnHelper<UmamiMetric>();
-
-const outreachSections = [
-	{ title: 'Top Pages', key: 'pages' as const, label: 'Page', mono: true },
-	{ title: 'Referrers', key: 'referrers' as const, label: 'Source', mono: true, emptyLabel: '(direct)' },
+const metricSections = [
+	{ title: 'Top Pages', key: 'pages' as const, column: 'Page', code: true, emptyLabel: 'Unknown' },
+	{ title: 'Referrers', key: 'referrers' as const, column: 'Source', code: true, emptyLabel: '(direct)' },
+	{ title: 'Browsers', key: 'browsers' as const, column: 'Browser', code: false, emptyLabel: 'Unknown' },
+	{ title: 'Operating Systems', key: 'operatingSystems' as const, column: 'Operating system', code: false, emptyLabel: 'Unknown' },
+	{ title: 'Devices', key: 'devices' as const, column: 'Device', code: false, emptyLabel: 'Unknown' },
 ] as const;
 
-const technicalSections = [
-	{ title: 'Browsers', key: 'browsers' as const, label: 'Browser', mono: false },
-	{ title: 'Operating Systems', key: 'os' as const, label: 'OS', mono: false },
-	{ title: 'Devices', key: 'devices' as const, label: 'Device', mono: false },
-] as const;
+function formatDuration(seconds: number): string {
+	if (seconds < 60) return `${seconds}s`;
+	return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+
+function formatTimestamp(timestamp: string, period: AnalyticsPeriod): string {
+	const date = new Date(timestamp);
+	if (Number.isNaN(date.getTime())) return timestamp;
+	return period === '24h'
+		? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+		: date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
 
 export default function AnalyticsPage() {
-	const [period, setPeriod] = createSignal<Period>('7d');
-	const data = createAsync(() => getAnalytics(period()));
-
-	function geoItems(metrics: UmamiMetric[]) {
-		const known = metrics.filter((m) => m.x).map((m) => ({ label: m.x, value: m.y }));
-		const unknownTotal = metrics.filter((m) => !m.x).reduce((sum, m) => sum + m.y, 0);
-		if (unknownTotal > 0) known.push({ label: '(unknown)', value: unknownTotal });
-		return known;
-	}
-
-	function formatDate(timestamp: string) {
-		const d = new Date(timestamp);
-		return period() === '24h'
-			? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-			: d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-	}
+	const [period, setPeriod] = createSignal<AnalyticsPeriod>('7d');
+	const snapshot = createMemo(() => getAnalytics(period()));
+	const visibleSnapshot = createMemo(() => latest(snapshot));
+	const updating = createMemo(() => isPending(snapshot));
 
 	return (
-		<>
-			<PageHeader title="Analytics">
-				<ToggleGroup
-					value={period()}
-					onValueChange={(v) => setPeriod(v as Period)}
-					options={[
-						{ value: '24h', label: '24h' },
-						{ value: '7d', label: '7d' },
-						{ value: '30d', label: '30d' },
-					]}
-				/>
-			</PageHeader>
-
-			<Show when={data()}>
-				{(d) => (
-					<>
-						<div class="stats-grid" style={{ 'margin-bottom': '1.5rem' }}>
-							<StatCard value={d().stats.pageviews.toLocaleString()} label="Pageviews" accent="var(--brand-olive)" />
-							<StatCard value={d().stats.visitors.toLocaleString()} label="Visitors" accent="var(--brand-amber)" />
-							<StatCard value={d().stats.visits.toLocaleString()} label="Visits" accent="var(--brand-orange)" />
-							<StatCard value={`${d().stats.bounceRate}%`} label="Bounce Rate" accent="var(--brand-magenta)" />
-							<StatCard value={formatDuration(d().stats.avgTime)} label="Avg. Visit" accent="var(--brand-brown-lighter)" />
-							<StatCard value={d().active} label="Active Now" accent="var(--brand-olive)" />
-						</div>
-
-						<Show when={d().pageviews.length > 0}>
-							<section class="chart-section">
-								<h2>Pageviews</h2>
-								<Card>
-									<BarChart
-										bars={d().pageviews.map((p) => ({ x: p.x, y: p.y }))}
-										color="var(--brand-olive)"
-										hoverColor="var(--brand-olive-light)"
-										formatLabel={(x) => formatDate(x)}
-									/>
-								</Card>
-							</section>
-						</Show>
-
-						<section class="analytics-group">
-							<h2>Geographic Reach</h2>
-							<Card>
-								<HorizontalBarList
-									items={geoItems(d().cities)}
-									color="var(--brand-amber)"
-									emptyMessage="No city data yet."
+		<section class="analytics-page">
+			<header class="analytics-header">
+				<div>
+					<p class="eyebrow">Audience</p>
+					<h1>Analytics</h1>
+				</div>
+				<fieldset class="period-picker">
+					<legend>Reporting period</legend>
+					<For each={ANALYTICS_PERIODS}>
+						{(option) => (
+							<label>
+								<input
+									type="radio"
+									name="analytics-period"
+									value={option}
+									checked={period() === option}
+									onInput={() => setPeriod(option)}
 								/>
-							</Card>
-						</section>
+								<span>{option}</span>
+							</label>
+						)}
+					</For>
+				</fieldset>
+			</header>
 
-						<section class="analytics-group">
-							<h2>Outreach</h2>
-							<div class="metrics-grid">
-								<For each={outreachSections}>
-									{(section) => (
-										<MetricSection
-											title={section.title}
-											items={d()[section.key]}
-											label={section.label}
-											mono={section.mono}
-											emptyLabel={'emptyLabel' in section ? section.emptyLabel : undefined}
-										/>
-									)}
-								</For>
-							</div>
-						</section>
-
-						<section class="analytics-group">
-							<h2>Technical</h2>
-							<div class="metrics-grid metrics-grid-3">
-								<For each={technicalSections}>
-									{(section) => (
-										<MetricSection
-											title={section.title}
-											items={d()[section.key]}
-											label={section.label}
-											mono={section.mono}
-										/>
-									)}
-								</For>
-							</div>
-						</section>
-					</>
-				)}
-			</Show>
-		</>
+			<Errored fallback={(_error, reset) => <div class="analytics-error" role="alert"><p>Analytics for this period could not be loaded.</p><button class="button button--secondary" type="button" onClick={() => { revalidate(getAnalytics.keyFor(period()), true); reset(); }}>Try again</button></div>}>
+				<Loading fallback={<p class="analytics-status" role="status">Loading analytics…</p>}>
+					<div class="analytics-result-slot" aria-busy={updating() ? 'true' : undefined}>
+						<Show when={updating()}><p class="visually-hidden" role="status">Updating analytics…</p></Show>
+						<Show when={visibleSnapshot()}>{(data) => <AnalyticsSnapshotView snapshot={data()} />}</Show>
+					</div>
+				</Loading>
+			</Errored>
+		</section>
 	);
 }
 
-function MetricSection(props: {
-	title: string;
-	items: UmamiMetric[];
-	label: string;
-	mono: boolean;
-	emptyLabel?: string;
-}) {
-	const columns = [
-		metricColumnHelper.accessor('x', {
-			get header() { return props.label; },
-			cell: (info) => {
-				const val = info.getValue() || props.emptyLabel || 'Unknown';
-				return <Show when={props.mono} fallback={<>{val}</>}><span class="metric-path">{val}</span></Show>;
-			},
-			enableSorting: false,
-		}),
-		metricColumnHelper.accessor('y', {
-			header: 'Visitors',
-			cell: (info) => <span class="metric-num">{info.getValue()}</span>,
-			enableSorting: false,
-		}),
-	];
-
-	const table = createSolidTable({
-		get data() { return props.items; },
-		columns,
-		getCoreRowModel: getCoreRowModel(),
-		enableColumnFilters: false,
-		enableSorting: false,
-	});
+function AnalyticsSnapshotView(props: { snapshot: AnalyticsSnapshot }) {
+	const stats = createMemo(() => [
+		{ label: 'Pageviews', value: props.snapshot.stats.pageviews.toLocaleString() },
+		{ label: 'Visitors', value: props.snapshot.stats.visitors.toLocaleString() },
+		{ label: 'Visits', value: props.snapshot.stats.visits.toLocaleString() },
+		{ label: 'Bounce rate', value: `${props.snapshot.stats.bounceRate}%` },
+		{ label: 'Average visit', value: formatDuration(props.snapshot.stats.averageVisitSeconds) },
+		{ label: 'Active now', value: props.snapshot.activeVisitors.toLocaleString() },
+	]);
 
 	return (
-		<Section title={props.title}>
-			<DataTable table={table} emptyMessage={`No ${props.title.toLowerCase()} data yet.`} />
-		</Section>
+		<div class="analytics-results">
+			<p class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+				Showing analytics for the last {periodLabels[props.snapshot.period]}.
+			</p>
+			<dl class="analytics-stats">
+				<For each={stats()}>
+					{(stat) => (
+						<div class="analytics-stat">
+							<dt>{stat.label}</dt>
+							<dd>{stat.value}</dd>
+						</div>
+					)}
+				</For>
+			</dl>
+
+			<Show when={props.snapshot.pageviews.length > 0}>
+				<PageviewFigure snapshot={props.snapshot} />
+			</Show>
+
+			<section class="analytics-section" aria-labelledby="geographic-reach">
+				<h2 id="geographic-reach">Geographic Reach</h2>
+				<MetricBars items={props.snapshot.cities} emptyMessage="No city data yet." />
+			</section>
+
+			<div class="analytics-tables">
+				<For each={metricSections}>
+					{(section) => (
+						<MetricTable
+							title={section.title}
+							column={section.column}
+							items={props.snapshot[section.key]}
+							code={section.code}
+							emptyLabel={section.emptyLabel}
+						/>
+					)}
+				</For>
+			</div>
+		</div>
+	);
+}
+
+function PageviewFigure(props: { snapshot: AnalyticsSnapshot }) {
+	const maximum = createMemo(() => Math.max(1, ...props.snapshot.pageviews.map(({ pageviews }) => pageviews)));
+
+	return (
+		<figure class="pageview-figure">
+			<figcaption>Pageviews over the last {periodLabels[props.snapshot.period]}</figcaption>
+			<ul>
+				<For each={props.snapshot.pageviews}>
+					{(point) => (
+						<li>
+							<span>{formatTimestamp(point.timestamp, props.snapshot.period)}</span>
+							<span class="pageview-value">{point.pageviews.toLocaleString()}</span>
+							<span class="pageview-track" aria-hidden="true">
+								<span style={{ width: `${(point.pageviews / maximum()) * 100}%` }} />
+							</span>
+						</li>
+					)}
+				</For>
+			</ul>
+		</figure>
+	);
+}
+
+function MetricBars(props: { items: AnalyticsMetric[]; emptyMessage: string }) {
+	const normalized = createMemo(() => {
+		const known = props.items.filter(({ label }) => label).map((item) => ({ ...item }));
+		const unknown = props.items.filter(({ label }) => !label).reduce((total, item) => total + item.visitors, 0);
+		if (unknown > 0) known.push({ label: '(unknown)', visitors: unknown });
+		return known;
+	});
+	const maximum = createMemo(() => Math.max(1, ...normalized().map(({ visitors }) => visitors)));
+
+	return (
+		<Show when={normalized().length > 0} fallback={<p class="analytics-empty">{props.emptyMessage}</p>}>
+			<ul class="metric-bars">
+				<For each={normalized()}>
+					{(item) => (
+						<li>
+							<span>{item.label}</span>
+							<strong>{item.visitors.toLocaleString()}</strong>
+							<span class="metric-track" aria-hidden="true">
+								<span style={{ width: `${(item.visitors / maximum()) * 100}%` }} />
+							</span>
+						</li>
+					)}
+				</For>
+			</ul>
+		</Show>
+	);
+}
+
+function MetricTable(props: {
+	title: string;
+	column: string;
+	items: AnalyticsMetric[];
+	code: boolean;
+	emptyLabel: string;
+}) {
+	return (
+		<div class="metric-table-card">
+			<table>
+				<caption>{props.title}</caption>
+				<thead>
+					<tr>
+						<th scope="col">{props.column}</th>
+						<th scope="col">Visitors</th>
+					</tr>
+				</thead>
+				<tbody>
+					<Show
+						when={props.items.length > 0}
+						fallback={
+							<tr>
+								<td colspan="2">No {props.title.toLowerCase()} data yet.</td>
+							</tr>
+						}
+					>
+						<For each={props.items}>
+							{(item) => (
+								<tr>
+									<td>{props.code ? <code>{item.label || props.emptyLabel}</code> : item.label || props.emptyLabel}</td>
+									<td>{item.visitors.toLocaleString()}</td>
+								</tr>
+							)}
+						</For>
+					</Show>
+				</tbody>
+			</table>
+		</div>
 	);
 }

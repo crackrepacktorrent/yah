@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { AUTH_MAINTENANCE_LOCK_ID, ORG_SLUG } from '../src/lib/constants';
+import { AUTH_MAINTENANCE_LOCK_ID, ORG_SLUG } from '@yah/admin-core/constants';
 
 const { Pool } = pg;
 const databaseUrl = process.env['DATABASE_URL'];

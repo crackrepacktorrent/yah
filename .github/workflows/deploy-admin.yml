@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - "apps/admin/**"
-      - "apps/admin-v2/**"
       - "packages/admin-core/**"
       - "package.json"
       - "bun.lock"
@@ -81,11 +80,16 @@ jobs:
             ADMIN_TAG=$TAG docker compose pull yah-admin
             # Fail closed before replacing the running admin. The first strict-
             # verification rollout intentionally stops here until the attested
-            # owner operation in docs/admin-stabilization.md has been completed.
+            # owner operation in docs/runbooks.md has been completed.
             ADMIN_TAG=$TAG docker compose run --rm --no-deps yah-admin bun ops/audit-auth.js
             ADMIN_TAG=$TAG docker compose up -d --no-deps --pull never --wait yah-admin
 
       - name: Verify deployment
         run: |
           sleep 10
-          curl -sf --retry 3 --retry-delay 5 https://admin.y4h.org/api/health || exit 1
+          # A missing or renamed runtime variable leaves the container in
+          # platform-disabled, where health still answers 200 while every page
+          # 404s. Assert the mode, not just reachability.
+          health=$(curl -sf --retry 3 --retry-delay 5 https://admin.y4h.org/api/health) || exit 1
+          echo "$health"
+          echo "$health" | grep -q '"runtime":"production"' || exit 1

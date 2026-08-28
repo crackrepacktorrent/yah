@@ -1,7 +1,14 @@
 import pg from 'pg';
 import * as v from 'valibot';
-import { AUTH_MAINTENANCE_LOCK_ID, ORG_SLUG } from '../src/lib/constants';
-import { emailSchema } from '../src/lib/schemas';
+import { AUTH_MAINTENANCE_LOCK_ID, ORG_SLUG } from '@yah/admin-core/constants';
+
+/** Kept local: this executable must not depend on any feature contract. */
+const emailSchema = v.pipe(
+	v.string('Expected an email address.'),
+	v.trim(),
+	v.email('Enter a valid email address.'),
+	v.maxLength(254, 'Email addresses must be at most 254 characters.'),
+);
 
 const { Pool } = pg;
 const CONFIRMATION = 'preserve-passwords-revoke-sessions';

@@ -1,36 +1,30 @@
 import { defineConfig, devices } from '@playwright/test';
-import { getCurrentBaseUrl, getV2BaseUrl } from './e2e/support/environment';
 
-const currentBaseUrl = getCurrentBaseUrl();
-const v2BaseUrl = getV2BaseUrl();
-const isCI = !!process.env['CI'];
+const disabledPort = 43122;
+const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'];
+const bunExecutable = process.env['ADMIN_E2E_BUN_EXECUTABLE'] ?? 'bun';
 
-function browserProject(name: string, baseURL: string) {
-	return {
-		name,
-		use: {
-			...devices['Desktop Chrome'],
-			baseURL,
-		},
-	};
-}
+if (!/^[\w./-]+$/.test(bunExecutable)) throw new Error('ADMIN_E2E_BUN_EXECUTABLE must be a plain executable path.');
 
 export default defineConfig({
 	testDir: './e2e',
-	testMatch: '**/*.spec.ts',
-	outputDir: './test-results',
+	testIgnore: '**/*.production.spec.ts',
 	fullyParallel: true,
-	forbidOnly: isCI,
-	retries: isCI ? 1 : 0,
-	reporter: isCI
-		? [['line'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
-		: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
+	forbidOnly: !!process.env['CI'],
+	retries: process.env['CI'] ? 1 : 0,
+	reporter: 'list',
 	use: {
+		...devices['Desktop Chrome'],
+		baseURL: `http://127.0.0.1:${disabledPort}`,
+		launchOptions: executablePath ? { executablePath } : undefined,
 		trace: 'on-first-retry',
-		screenshot: 'only-on-failure',
-		video: 'retain-on-failure',
-		navigationTimeout: 15_000,
-		actionTimeout: 10_000,
 	},
-	projects: [browserProject('current', currentBaseUrl), ...(v2BaseUrl ? [browserProject('v2', v2BaseUrl)] : [])],
+	webServer: [
+		{
+			command: `env ADMIN_RUNTIME=platform-disabled ${bunExecutable} run start --host 127.0.0.1 --port ${disabledPort}`,
+			url: `http://127.0.0.1:${disabledPort}/api/health`,
+			reuseExistingServer: false,
+			timeout: 30_000,
+		},
+	],
 });

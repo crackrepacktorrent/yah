@@ -1,82 +1,24 @@
-import { createAsync, revalidate, type RouteDefinition } from '@solidjs/router';
-import { Show, createMemo, createSignal } from 'solid-js';
-import { toast, toastError } from '~/lib/toast';
-import { Card, PageHeader, Tabs, TabContent } from '~/components';
-import { getSession } from '~/routes/session';
-import { can } from '~/lib/can';
-import { getEmailSettings, updateEmailSettings } from '../settings.server';
-import type { ListmonkSettings } from '~/server/listmonk';
-import { GeneralTab } from './tabs/GeneralTab';
-import { SmtpTab } from './tabs/SmtpTab';
-import { PerformanceTab } from './tabs/PerformanceTab';
-import { BounceTab } from './tabs/BounceTab';
-import { PrivacyTab } from './tabs/PrivacyTab';
+import { useLocation } from '@solidjs/router';
+import type { ParentProps } from 'solid-js';
+import { SectionNavigation } from '~/ui/section-navigation';
 import './email.css';
 
-export const route: RouteDefinition = {
-	preload: () => { void getEmailSettings(); },
-};
-
-// Shared prop type for all tab components
-export type TabProps = {
-	settings: ListmonkSettings;
-	canEdit: boolean;
-	onSave: (p: Partial<ListmonkSettings>) => Promise<void>;
-};
-
-export default function EmailSettingsPage() {
-	const session = createAsync(() => getSession());
-	const settings = createAsync(() => getEmailSettings());
-	const canEdit = createMemo(() => can(session(), 'settings', 'edit'));
-	const [activeTab, setActiveTab] = createSignal('general');
-
-	async function save(partial: Partial<ListmonkSettings>) {
-		try {
-			await updateEmailSettings(partial);
-			toast.success('Settings saved.');
-			await revalidate('getEmailSettings');
-		} catch (err) {
-			toastError(err, 'Failed to save settings.');
-		}
-	}
-
+export default function EmailSettingsLayout(props: ParentProps) {
+	const location = useLocation();
 	return (
 		<>
-			<PageHeader title="Email Settings" />
-
-			<Show when={settings()} keyed>
-				{(s) => (
-					<Card>
-						<Tabs
-							value={activeTab()}
-							onChange={setActiveTab}
-							tabs={[
-								{ value: 'general', label: 'General' },
-								{ value: 'smtp', label: 'SMTP' },
-								{ value: 'performance', label: 'Performance' },
-								{ value: 'bounce', label: 'Bounces' },
-								{ value: 'privacy', label: 'Privacy' },
-							]}
-						>
-							<TabContent value="general">
-								<GeneralTab settings={s} canEdit={canEdit()} onSave={save} />
-							</TabContent>
-							<TabContent value="smtp">
-								<SmtpTab settings={s} canEdit={canEdit()} onSave={save} />
-							</TabContent>
-							<TabContent value="performance">
-								<PerformanceTab settings={s} canEdit={canEdit()} onSave={save} />
-							</TabContent>
-							<TabContent value="bounce">
-								<BounceTab settings={s} canEdit={canEdit()} onSave={save} />
-							</TabContent>
-							<TabContent value="privacy">
-								<PrivacyTab settings={s} canEdit={canEdit()} onSave={save} />
-							</TabContent>
-						</Tabs>
-					</Card>
-				)}
-			</Show>
+			<SectionNavigation
+				label="Email settings"
+				items={[
+					{ href: '/settings/email/general', label: 'General', selected: location.pathname === '/settings/email/general' },
+					{ href: '/settings/email', label: 'SMTP delivery', selected: location.pathname === '/settings/email' },
+					{ href: '/settings/email/performance', label: 'Performance', selected: location.pathname === '/settings/email/performance' },
+					{ href: '/settings/email/bounces', label: 'Bounces', selected: location.pathname === '/settings/email/bounces' },
+					{ href: '/settings/email/privacy', label: 'Privacy', selected: location.pathname === '/settings/email/privacy' },
+					{ href: '/settings/email/provider', label: 'Provider', selected: location.pathname === '/settings/email/provider' },
+				]}
+			/>
+			{props.children}
 		</>
 	);
 }
