@@ -212,6 +212,36 @@ describe('Listmonk email settings manager', () => {
 		});
 	});
 
+	it('reads the real production document: nil Go slices arrive as null and disabled features leave their duration empty', async () => {
+		const manager = createListmonkEmailSettingsManager(config, vi.fn(async () => json({
+			data: {
+				...createListmonkV62SettingsFixture(),
+				smtp: [{ ...providerServer, email_headers: null, from_addresses: null }],
+				// A nil Go slice marshals to null, never [].
+				'app.notify_emails': null,
+				'privacy.exportable': null,
+				'upload.extensions': null,
+				messengers: null,
+				'bounce.mailboxes': null,
+				// Listmonk stores no duration or cron while the owning toggle is off.
+				'app.message_sliding_window': false,
+				'app.message_sliding_window_duration': '',
+				'app.cache_slow_queries': false,
+				'app.cache_slow_queries_interval': '',
+			},
+		})));
+
+		await expect(manager.readPerformance()).resolves.toMatchObject({
+			slidingWindow: false,
+			slidingWindowDuration: '',
+			cacheSlowQueries: false,
+			cacheSlowQueriesInterval: '',
+		});
+		await expect(manager.readGeneral()).resolves.toMatchObject({ notifyEmails: [] });
+		await expect(manager.readPrivacy()).resolves.toMatchObject({ exportable: [] });
+		await expect(manager.readBounces()).resolves.toMatchObject({ mailboxes: [] });
+	});
+
 	it('serializes concurrent full-document writes and preserves both feature-owned patches', async () => {
 		let current: Record<string, unknown> = {
 			...createListmonkV62SettingsFixture(),

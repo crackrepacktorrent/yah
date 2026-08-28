@@ -74,6 +74,11 @@ describe('Listmonk campaign manager', () => {
 	it('accepts Listmonk v6 empty-catalog metadata omission but rejects incomplete and duplicate catalogs', async () => {
 		await expect(createListmonkCampaignManager(config, vi.fn(async () => json({ data: { results: [] } }))).list()).resolves.toEqual([]);
 		await expect(createListmonkCampaignManager(config, vi.fn(async () => json({ data: { results: [], total: 0, page: 1, per_page: 1000 } }))).list()).resolves.toEqual([]);
+		// The real zero-campaign response. Rejecting these Go zero values
+		// blanked the campaigns page and the analytics page, which loads it.
+		await expect(createListmonkCampaignManager(config, vi.fn(async () => json({
+			data: { results: [], search: '', query: '', total: 0, per_page: 0, page: 0 },
+		}))).list()).resolves.toEqual([]);
 		await expect(createListmonkCampaignManager(config, vi.fn(async () => json({ data: { results: [], total: 1, page: 1, per_page: 1000 } }))).list()).rejects.toThrow('incomplete');
 		await expect(createListmonkCampaignManager(config, vi.fn(async () => json({ data: { results: [providerCampaign()], total: 2, page: 1, per_page: 1000 } }))).list()).rejects.toThrow('incomplete');
 		await expect(createListmonkCampaignManager(config, vi.fn(async () => json({ data: { results: [providerCampaign(), providerCampaign()], total: 2, page: 1, per_page: 1000 } }))).list()).rejects.toThrow('duplicate');
