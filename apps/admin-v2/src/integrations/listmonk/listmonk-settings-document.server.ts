@@ -267,6 +267,45 @@ async function serializeSettingsWrite<T>(
 }
 
 /**
+ * Listmonk marshals a nil Go slice as JSON `null`, not `[]`. Only these keys
+ * can arrive null; every other slice setting is rebuilt with `make(...)` in
+ * the provider's write path, so `null` there is a real protocol violation and
+ * must still fail loudly. `bounce.actions` is excluded too — it is a map, and
+ * `{}` would fail validation anyway.
+ */
+const NIL_SLICE_SETTING_KEYS = [
+	'app.notify_emails',
+	'privacy.exportable',
+	'upload.extensions',
+	'messengers',
+	'bounce.mailboxes',
+] as const;
+const NIL_SLICE_SMTP_KEYS = ['email_headers', 'from_addresses'] as const;
+
+/**
+ * Mutates the parsed response in place: the caller owns it, and editing it
+ * directly keeps unknown provider keys intact for the GET/merge/PUT cycle.
+ */
+function normalizeListmonkNilSlices(document: ListmonkSettingsDocument): ListmonkSettingsDocument {
+	for (const key of NIL_SLICE_SETTING_KEYS) {
+		if (document[key] === null) document[key] = [];
+	}
+
+	const smtp = document['smtp'];
+	if (Array.isArray(smtp)) {
+		for (const block of smtp) {
+			if (typeof block !== 'object' || block === null) continue;
+			const entry = block as Record<string, unknown>;
+			for (const key of NIL_SLICE_SMTP_KEYS) {
+				if (entry[key] === null) entry[key] = [];
+			}
+		}
+	}
+
+	return document;
+}
+
+/**
  * Owns Listmonk's full settings document lifecycle. Every mutation is one
  * serialized fresh GET, allowlisted in-memory patch, and full PUT.
  */
@@ -275,11 +314,13 @@ export function createListmonkSettingsDocumentCoordinator(
 	transport: ListmonkTransport,
 ) {
 	async function read(): Promise<ListmonkSettingsDocument> {
-		return parseListmonkValue(
-			settingsEnvelopeSchema,
-			await transport.json('/settings'),
-			'settings',
-		).data;
+		return normalizeListmonkNilSlices(
+			parseListmonkValue(
+				settingsEnvelopeSchema,
+				await transport.json('/settings'),
+				'settings',
+			).data,
+		);
 	}
 
 	return {

@@ -60,9 +60,11 @@ const campaignResponseSchema = v.object({ data: campaignSchema });
 const campaignCatalogResponseSchema = v.object({
 	data: v.object({
 		results: v.array(campaignSchema),
+		// Go zero values, not absences: PageResults has no `omitempty`, so an
+		// empty catalog reports 0. The check below owns what that may mean.
 		total: v.optional(nonNegativeInteger),
-		per_page: v.optional(positiveInteger),
-		page: v.optional(positiveInteger),
+		per_page: v.optional(nonNegativeInteger),
+		page: v.optional(nonNegativeInteger),
 	}),
 });
 const deleteResponseSchema = v.object({ data: v.literal(true) });
@@ -158,15 +160,15 @@ export function createListmonkCampaignManager(config: ListmonkConfig, request?: 
 				if (response.results.length > MAX_CAMPAIGNS || (response.total ?? 0) > MAX_CAMPAIGNS) {
 					throw new Error(`Listmonk campaign catalog exceeds the ${MAX_CAMPAIGNS}-campaign safety limit.`);
 				}
-					if (response.results.length === 0) {
-						const metadataIsConsistent =
-							(response.total === undefined || response.total === 0) &&
-							(response.page === undefined || response.page === 1) &&
-							(response.per_page === undefined || response.per_page === MAX_CAMPAIGNS);
-						if (!metadataIsConsistent) throw new Error('Listmonk returned an incomplete campaign catalog.');
-					} else if (response.page !== 1 || response.per_page !== MAX_CAMPAIGNS || response.total !== response.results.length) {
+				if (response.results.length === 0) {
+					// Listmonk returns an empty catalog before setting pagination,
+					// so only total can show the provider withheld rows.
+					if ((response.total ?? 0) !== 0) {
 						throw new Error('Listmonk returned an incomplete campaign catalog.');
 					}
+				} else if (response.page !== 1 || response.per_page !== MAX_CAMPAIGNS || response.total !== response.results.length) {
+					throw new Error('Listmonk returned an incomplete campaign catalog.');
+				}
 				const ids = response.results.map((campaign) => campaign.id);
 				if (new Set(ids).size !== ids.length) throw new Error('Listmonk returned duplicate campaigns.');
 				return response.results.map(normalizeSummary);
