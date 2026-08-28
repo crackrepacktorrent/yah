@@ -137,7 +137,7 @@ If the verifier's client exits ambiguously, do not blindly rerun it. Run the aud
 
 - Listmonk settings retain the one-GET/one-PUT raw merge from `7ae5d68` and `8e5522e`. Per-key parallel writes are rejected because each settings write can briefly restart Listmonk, and raw merging preserves unknown fields and masked credentials.
 - Listmonk v6 token authentication remains `token username:token`, following the corrections recorded in `1e1f057`, `44dc949`, and `0819276`.
-- A read-only production inventory on 2026-08-26, using the direct VPS target from local operator configuration rather than the Cloudflare-facing `y4h.org` domain, found a healthy running Listmonk `v6.0.0` container. Its current immutable rollback artifact is `listmonk/listmonk:v6.0.0@sha256:bf3903d54a468ba0544629b474a9c78714b1419ba9f89e186590264fa40d4ea1`. The tracked Compose target is now the tested exact v6.2.0 digest, but automatic infrastructure deploys explicitly exclude Listmonk, so this source change does not mutate the running provider. The direct VPS address is intentionally not recorded in this public repository; operators use the GitHub Actions `VPS_HOST` secret or local SSH configuration. Admin-v2 campaign analytics remains production-ineligible until the explicit runbook below succeeds: its multi-campaign contract requires the v6.2 correctness fix and fails closed on older declared versions.
+- A read-only production inventory on 2026-08-26 found Listmonk `v6.0.0`; the stopped-service maintenance run on 2026-08-28 upgraded production to the exact pinned `v6.2.0` digest below. The retained immutable application rollback artifact remains `listmonk/listmonk:v6.0.0@sha256:bf3903d54a468ba0544629b474a9c78714b1419ba9f89e186590264fa40d4ea1`, paired with a connection-disabled frozen v6.0 database clone and the restore-tested custom-format dump. Automatic infrastructure deploys still exclude Listmonk. The direct VPS address is intentionally not recorded in this public repository; operators use the GitHub Actions `VPS_HOST` secret or local SSH configuration.
 - Keep Listmonk for admin access mail. Before rollout, provision and canary the transactional template referenced by `LISTMONK_ADMIN_ACCESS_TEMPLATE_ID`; its required payload is `.Tx.Data.access_link`. Startup validates the numeric ID but deliberately does not make app availability depend on a live Listmonk template lookup. The invitation-bound access send is awaited so the UI can report delivery failure; public password-reset delivery is dispatched without awaiting its result to avoid an account-enumeration timing signal and logs background failure server-side.
 - Umami retains one shared in-flight token request. Concurrent dashboard calls otherwise create an authentication burst when the cached token expires. This is a narrow concurrency guard, not a general caching layer.
 - Public subscription submission remains in `apps/web`, as established in `2eab195`. The admin owns configuration and snippet generation; the web app owns public validation and the unauthenticated Listmonk public API. `PUBLIC_SITE_URL` repairs the relative-link regression introduced when admin moved to its own subdomain in `1408b1c`.
@@ -159,7 +159,7 @@ History preserves behavior only where it records a real constraint. Template cre
 
 Alternatives were rejected explicitly: copying the horizontal client preserves its coupling; duplicating a complete fetch wrapper per feature invites auth/error drift; a generated OpenAPI client still needs runtime validation and product projection and is premature at the current endpoint count; a direct Listmonk database integration bypasses provider invariants; and a separate BFF duplicates the server-function auth/deployment boundary without another client. A generic repository, command bus, TanStack Query, form library, Zag/Kobalte peer override, durable queue, or compatibility table bridge does not solve a demonstrated requirement in these slices. Keep Valibot, native fetch, native forms/dialogs, and semantic tables. Add server-backed search/order/pagination only when measured inventory or operator workflow requires it.
 
-Development and tracked production configuration are pinned to exact v6.2.0 artifacts. The running production container remains on the inventoried v6.0.0 artifact until the stopped-service maintenance runbook succeeds. Deployment workflows target only stateless services with `--no-deps --pull never`, so merging the pin cannot turn a source push into a provider upgrade.
+Development, tracked production configuration, and the running production container are pinned to the exact v6.2.0 artifact. Deployment workflows target only stateless services with `--no-deps --pull never`; future provider upgrades remain explicit maintenance operations.
 
 ### Listmonk v6.2 production maintenance runbook
 
@@ -177,13 +177,15 @@ listmonk/listmonk:v6.0.0@sha256:bf3903d54a468ba0544629b474a9c78714b1419ba9f89e18
 
 A disposable PostgreSQL 18 rehearsal on 2026-08-27 installed v6.0, restored representative configuration, upgraded through v6.1 and v6.2, reran the upgrade idempotently, returned `v6.2.0` from authenticated `/api/config`, and passed all three guarded live Listmonk adapter suites. The tests deleted their temporary lists, subscribers, and campaigns. The v6.1 migration rebuilt analytics materialized views; production therefore needs downtime and temporary disk headroom. The v6.2 migration hashes API tokens, so a v6.0 binary cannot be restarted against the upgraded database. Rollback means restoring or swapping back the frozen v6.0 database, never only changing the image.
 
+Production maintenance completed on 2026-08-28. The final database-scoped Listmonk and Shlink dumps were copied off-host, checksum-verified, and restored into separate disposable PostgreSQL 18 databases; all Listmonk core counts and the v6.0 migration marker matched, and the restored Shlink database contained the expected 16 short links. Production had zero uploads, no active import, and no running or scheduled campaigns. The v6.1/v6.2 migration completed, all stable counts were identical, settings and roles differed only by the allowlisted migration changes, every API credential was hashed, the existing token still authenticated, and `/api/config` declared `v6.2.0`. The disposable private-list create/read/delete canary self-cleaned. Shlink's running image identity, 16-record semantic catalog, nondecreasing visit totals, seven protected slugs, and fourteen canonical/legacy printed-QR routes were unchanged. The exact v6.0 image, restricted dump, and connection-disabled `listmonk_v60_pre_v62` clone remain through the observation window. The web instances remained available during this completed window, but Listmonk had fully stopped before the final frozen snapshots and identical post-migration count comparison, so no provider write crossed the database boundary; public submissions during downtime failed closed. The corrected reusable runbook now stops both web instances as explicit Listmonk callers.
+
 Production inventory also found zero files in the current container upload directory. Recheck that immediately before maintenance. The new named `listmonk_uploads` volume prevents future container recreation from losing filesystem media; if the count is no longer zero, stop and copy/checksum those files into the volume before continuing.
 
 #### Hard boundaries
 
 - Stop and upgrade only Listmonk. Never run `docker compose down`, a broad `pull`/`up`, or restore the shared `postgres_data` volume.
 - PostgreSQL contains separate `listmonk`, `shlink`, `umami`, and auth databases. A Listmonk rollback may touch only `listmonk`.
-- Stop the admin during Listmonk downtime so it cannot issue provider commands. The public subscription route will report provider unavailability during the short window; do not pretend those writes were accepted.
+- Stop the admin plus both web instances during Listmonk downtime. The web app owns the public subscription POST path, so leaving it running would admit requests that can only fail while the provider is stopped and would make the caller boundary harder to audit. Caddy may return temporary maintenance-window 502s; do not pretend those writes were accepted.
 - Keep Shlink running and require its container image, semantic shortlink manifest, and printed-QR redirects to be identical before and after. Do not recreate Shlink in this window.
 - Take the host deployment lock below. GitHub deploy jobs use the same lock and a shared `production-vps` concurrency group.
 - Stop if there is an active import/campaign, an unexpected custom Shlink domain, any Shlink redirect rule, missing printed slug, nonzero unhandled media count, failed backup restore test, insufficient disk, or any inventory drift that has not been explained.
@@ -224,8 +226,8 @@ jq -e 'index("listmonk/listmonk@sha256:bf3903d54a468ba0544629b474a9c78714b1419ba
 jq -e 'index("shlinkio/shlink@sha256:a6d8508bc6b0eba5a28e1ee8b64dd5253434cd113c950e715baab4020edcd2a1") != null' \
   "$BACKUP_DIR/shlink-repo-digests.before.json"
 curl -fsS https://y4h.link/rest/health > "$BACKUP_DIR/shlink-health.before.json"
-# Close the only admin writer before checking either provider's quiet state.
-docker compose stop yah-admin
+# Close every Listmonk caller before checking either provider's quiet state.
+docker compose stop yah-admin sveltekit sveltekit-preview
 docker compose exec -T listmonk sh -c 'find /listmonk/uploads -type f 2>/dev/null | wc -l' > "$BACKUP_DIR/listmonk-upload-count.before.txt"
 test "$(cat "$BACKUP_DIR/listmonk-upload-count.before.txt")" -eq 0
 
@@ -270,10 +272,10 @@ docker compose exec -T postgres psql -U postgres -d listmonk -Atc \
 jq -e 'length == 0' "$BACKUP_DIR/active-campaigns.before.json"
 ```
 
-With both callers stopped, take the final semantic snapshots and database-scoped backups. The Shlink dump is a catastrophe safeguard; the planned migration does not touch it.
+With Listmonk and every application caller stopped, take the final semantic snapshots and database-scoped backups. The Shlink dump is a catastrophe safeguard; the planned migration does not touch it.
 
 ```sh
-test -z "$(docker compose ps -q --status running yah-admin listmonk)"
+test -z "$(docker compose ps -q --status running yah-admin sveltekit sveltekit-preview listmonk)"
 
 # With the only Shlink-writing application stopped, record the complete
 # semantic catalog and visit counters. Enter the key without echoing it.
@@ -486,7 +488,15 @@ jq -e --slurpfile before "$BACKUP_DIR/shlink-visits.before.json" '
 
 # Reopen the already-existing admin only after every provider gate passes;
 # do not reconcile its image or dependencies in this maintenance window.
-docker compose start yah-admin
+docker compose start sveltekit sveltekit-preview yah-admin
+for service in sveltekit sveltekit-preview yah-admin; do
+  container_id=$(docker compose ps -q "$service")
+  for attempt in $(seq 1 60); do
+    test "$(docker inspect --format '{{.State.Health.Status}}' "$container_id")" = healthy && break
+    sleep 2
+  done
+  test "$(docker inspect --format '{{.State.Health.Status}}' "$container_id")" = healthy
+done
 ```
 
 Retain both exact Listmonk images, the frozen clone, both restricted dumps, the Shlink manifest, and checksums through the observation window. Do not run automatic image pruning during that window.
@@ -498,7 +508,7 @@ Rollback before reopening writes if the migration, token, version, counts, SMTP/
 With callers stopped, preserve the failed database and perform this ordered database swap. Each `psql -c` is a separate transaction; this is deliberately not described as atomic:
 
 ```sh
-docker compose stop yah-admin listmonk
+docker compose stop yah-admin sveltekit sveltekit-preview listmonk
 docker compose exec -T postgres psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
   -c "ALTER DATABASE listmonk WITH ALLOW_CONNECTIONS false;" \
   -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'listmonk' AND pid <> pg_backend_pid();" \
@@ -517,12 +527,20 @@ LISTMONK_IMAGE='listmonk/listmonk:v6.0.0@sha256:bf3903d54a468ba0544629b474a9c787
 Re-run the v6.0 version/token, data, public route, and every Shlink/printed-QR invariant while the admin remains stopped. Only after those rollback gates pass, reopen the admin and verify its read paths:
 
 ```sh
-docker compose start yah-admin
+docker compose start sveltekit sveltekit-preview yah-admin
+for service in sveltekit sveltekit-preview yah-admin; do
+  container_id=$(docker compose ps -q "$service")
+  for attempt in $(seq 1 60); do
+    test "$(docker inspect --format '{{.State.Health.Status}}' "$container_id")" = healthy && break
+    sleep 2
+  done
+  test "$(docker inspect --format '{{.State.Health.Status}}' "$container_id")" = healthy
+done
 ```
 
 If the frozen clone is unavailable, restore only `listmonk-v60.dump` into a newly created `listmonk` database; never restore the shared volume or the Shlink dump as part of a Listmonk rollback.
 
-If any rename command fails, keep both callers stopped and inspect `pg_database` before issuing another rename. The intended recovery state is exactly one connection-enabled database named `listmonk` plus a connection-disabled preserved failed database. Never guess from command position or start either application while no database—or the wrong database—is named `listmonk`.
+If any rename command fails, keep Listmonk and every application caller stopped and inspect `pg_database` before issuing another rename. The intended recovery state is exactly one connection-enabled database named `listmonk` plus a connection-disabled preserved failed database. Never guess from command position or start an application while no database—or the wrong database—is named `listmonk`.
 
 #### Shlink pin maintenance is separate
 
@@ -663,7 +681,7 @@ The baseline is the official full-stack template at [`ca15101e`](https://github.
 - [x] Port one complete feature slice at a time and run the same parity suite against both base URLs.
 - [x] Replace Nitro `.output` with the verified Solid 2 Start-mode Fetch output and `srvx` production entry after preview/built-server parity.
 - [x] Preserve GHCR builds, non-root runtime, port 3002, image-tag rollback, runtime environment injection, and DB-aware post-deploy health verification.
-- [ ] Before admin-v2 cutover, take and restore-test the final production Listmonk backup, run the explicit v6.0.0-to-v6.2.0 maintenance procedure, and verify production authenticated `/api/config`. The disposable upgrade rehearsal and exact digest pin are complete.
+- [x] Before admin-v2 cutover, take and restore-test the final production Listmonk backup, run the explicit v6.0.0-to-v6.2.0 maintenance procedure, and verify production authenticated `/api/config`. Production maintenance completed on 2026-08-28 with the exact pinned digest, frozen v6.0 clone, off-host restore proof, provider canaries, and unchanged Shlink/printed-QR invariants.
 - [ ] Cut over only after routes, roles, invitations, auth API, direct loads, session expiry, and deployment all match.
 - [ ] Request an independent review after each completed migration phase; advance with no unresolved correctness, security, boundary, or dependency findings.
 
