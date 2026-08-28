@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 import * as v from 'valibot';
 import type { AnalyticsMetric, AnalyticsPeriod, AnalyticsSnapshot } from '~/features/analytics/contracts';
 import type { SiteOverview, SiteOverviewPeriod } from '~/features/analytics/contracts';
@@ -93,7 +94,7 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ username: config.UMAMI_USERNAME, password: config.UMAMI_PASSWORD }),
 				});
-				if (!response.ok) throw new Error(`Umami authentication failed with status ${response.status}.`);
+				if (!response.ok) throw providerInvariantError(`Umami authentication failed with status ${response.status}.`);
 				const payload = parse(loginSchema, await parseJsonResponse<unknown>(response, 'Umami'), 'authentication');
 				cachedToken = { token: payload.token, expiresAt: tokenExpiry(payload.token) };
 				return payload.token;
@@ -123,7 +124,7 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 			if (cachedToken?.token === token) cachedToken = null;
 			if (retryUnauthorized) return get(path, params, schema, endpoint, false);
 		}
-		if (!response.ok) throw new Error(`Umami ${endpoint} request failed with status ${response.status}.`);
+		if (!response.ok) throw providerInvariantError(`Umami ${endpoint} request failed with status ${response.status}.`);
 		return parse(schema, await parseJsonResponse<unknown>(response, 'Umami'), endpoint);
 	}
 

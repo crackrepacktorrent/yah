@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 import * as v from 'valibot';
 import {
 	CampaignProviderFailure,
@@ -158,19 +159,19 @@ export function createListmonkCampaignManager(config: ListmonkConfig, request?: 
 					'campaign catalog',
 				).data;
 				if (response.results.length > MAX_CAMPAIGNS || (response.total ?? 0) > MAX_CAMPAIGNS) {
-					throw new Error(`Listmonk campaign catalog exceeds the ${MAX_CAMPAIGNS}-campaign safety limit.`);
+					throw providerInvariantError(`Listmonk campaign catalog exceeds the ${MAX_CAMPAIGNS}-campaign safety limit.`);
 				}
 				if (response.results.length === 0) {
 					// Listmonk returns an empty catalog before setting pagination,
 					// so only total can show the provider withheld rows.
 					if ((response.total ?? 0) !== 0) {
-						throw new Error('Listmonk returned an incomplete campaign catalog.');
+						throw providerInvariantError('Listmonk returned an incomplete campaign catalog.');
 					}
 				} else if (response.page !== 1 || response.per_page !== MAX_CAMPAIGNS || response.total !== response.results.length) {
-					throw new Error('Listmonk returned an incomplete campaign catalog.');
+					throw providerInvariantError('Listmonk returned an incomplete campaign catalog.');
 				}
 				const ids = response.results.map((campaign) => campaign.id);
-				if (new Set(ids).size !== ids.length) throw new Error('Listmonk returned duplicate campaigns.');
+				if (new Set(ids).size !== ids.length) throw providerInvariantError('Listmonk returned duplicate campaigns.');
 				return response.results.map(normalizeSummary);
 			});
 		},
@@ -225,7 +226,7 @@ export function createListmonkCampaignManager(config: ListmonkConfig, request?: 
 				parse(campaignResponseSchema, response, 'campaign status');
 				const current = await getRaw(id);
 				if (!current) throw new CampaignProviderFailure(404);
-				if (current.status !== status) throw new Error('Listmonk did not apply the requested campaign status.');
+				if (current.status !== status) throw providerInvariantError('Listmonk did not apply the requested campaign status.');
 				return normalizeDetail(current);
 			});
 		},

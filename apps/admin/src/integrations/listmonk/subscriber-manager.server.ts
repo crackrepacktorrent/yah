@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 import { createHash } from 'node:crypto';
 import * as v from 'valibot';
 import {
@@ -225,7 +226,7 @@ function canonicalJson(value: unknown): string {
 
 function requireExactMemberships(value: SubscriberDto, expected: readonly number[], operation: string): void {
 	if (!sameIds(value.lists.map(({ id }) => id), expected)) {
-		throw new Error(`Listmonk did not preserve the complete ${operation} membership set.`);
+		throw providerInvariantError(`Listmonk did not preserve the complete ${operation} membership set.`);
 	}
 }
 
@@ -241,7 +242,7 @@ function requireMembershipStates(
 			membership.subscription_status !== state.status ||
 			(state.meta !== undefined && canonicalJson(membership.subscription_meta) !== canonicalJson(state.meta))
 		) {
-			throw new Error(`Listmonk did not preserve the complete ${operation} membership state.`);
+			throw providerInvariantError(`Listmonk did not preserve the complete ${operation} membership state.`);
 		}
 	}
 }
@@ -275,7 +276,7 @@ export function createListmonkSubscriberManager(
 		try {
 			const response = await transport.json(`/subscribers/${id}`);
 			const subscriber = parse(subscriberResponseSchema, response, 'subscriber detail').data;
-			if (subscriber.id !== id) throw new Error('Listmonk returned the wrong subscriber detail.');
+			if (subscriber.id !== id) throw providerInvariantError('Listmonk returned the wrong subscriber detail.');
 			return subscriber;
 		} catch (error) {
 			// Listmonk v6 reports a missing valid subscriber ID as 400; accept 404
@@ -298,7 +299,7 @@ export function createListmonkSubscriberManager(
 				await transport.json(`/lists/${id}`),
 				'mailing-list membership target',
 			).data;
-			if (list.id !== id) throw new Error('Listmonk returned the wrong mailing-list membership target.');
+			if (list.id !== id) throw providerInvariantError('Listmonk returned the wrong mailing-list membership target.');
 			if (list.status !== 'active' || list.type === 'temporary') {
 				throw new SubscriberProviderFailure(422);
 			}
@@ -344,14 +345,14 @@ export function createListmonkSubscriberManager(
 						'subscriber catalog',
 					).data;
 					if (response.page !== page || response.per_page !== SUBSCRIBER_PAGE_SIZE) {
-						throw new Error('Listmonk did not honor the bounded subscriber page request.');
+						throw providerInvariantError('Listmonk did not honor the bounded subscriber page request.');
 					}
-					if (response.query !== '') throw new Error('Listmonk unexpectedly applied a subscriber SQL query.');
-					if (response.search !== providerSearch) throw new Error('Listmonk did not honor the subscriber search request.');
+					if (response.query !== '') throw providerInvariantError('Listmonk unexpectedly applied a subscriber SQL query.');
+					if (response.search !== providerSearch) throw providerInvariantError('Listmonk did not honor the subscriber search request.');
 					const ids = response.results.map(({ id }) => id);
-					if (new Set(ids).size !== ids.length) throw new Error('Listmonk returned duplicate subscribers.');
+					if (new Set(ids).size !== ids.length) throw providerInvariantError('Listmonk returned duplicate subscribers.');
 					if (response.results.length > response.total) {
-						throw new Error('Listmonk returned inconsistent subscriber page metadata.');
+						throw providerInvariantError('Listmonk returned inconsistent subscriber page metadata.');
 					}
 					return response;
 				}
@@ -414,14 +415,14 @@ export function createListmonkSubscriberManager(
 				try {
 					created = parse(subscriberResponseSchema, response, 'created subscriber identity').data;
 					if (created.email !== input.email || created.status !== input.status) {
-						throw new Error('Listmonk did not apply the created subscriber identity and status.');
+						throw providerInvariantError('Listmonk did not apply the created subscriber identity and status.');
 					}
 					if (input.name !== '' && created.name !== input.name) {
-						throw new Error('Listmonk did not apply the created subscriber name.');
+						throw providerInvariantError('Listmonk did not apply the created subscriber name.');
 					}
 					requireExactMemberships(created, [], 'created subscriber identity');
 					if (canonicalJson(created.attribs) !== '{}') {
-						throw new Error('Listmonk did not apply the created subscriber attributes.');
+						throw providerInvariantError('Listmonk did not apply the created subscriber attributes.');
 					}
 				} catch {
 					// POST completed, so even an invalid acknowledgement may represent a
@@ -457,7 +458,7 @@ export function createListmonkSubscriberManager(
 				let completed: SubscriberDto | null;
 				try {
 					completed = await getRaw(created.id);
-					if (!completed) throw new Error('Created subscriber disappeared before verification.');
+					if (!completed) throw providerInvariantError('Created subscriber disappeared before verification.');
 					requireExactMemberships(completed, input.listIds, 'created subscriber');
 					requireMembershipStates(
 						completed,
@@ -500,11 +501,11 @@ export function createListmonkSubscriberManager(
 				});
 				const updated = parse(subscriberResponseSchema, response, 'updated subscriber').data;
 				if (updated.id !== input.id || updated.email !== input.email || updated.status !== input.status) {
-					throw new Error('Listmonk did not apply the updated subscriber identity and status.');
+					throw providerInvariantError('Listmonk did not apply the updated subscriber identity and status.');
 				}
 				const effectiveName = input.name === '' ? current.name : input.name;
 				if (updated.name !== effectiveName || canonicalJson(updated.attribs) !== canonicalJson(current.attribs)) {
-					throw new Error('Listmonk did not preserve the updated subscriber profile.');
+					throw providerInvariantError('Listmonk did not preserve the updated subscriber profile.');
 				}
 				requireExactMemberships(updated, completeListIds, 'updated subscriber');
 				const currentMemberships = new Map(current.lists.map((membership) => [membership.id, membership]));
@@ -645,7 +646,7 @@ export function createListmonkSubscriberManager(
 				);
 				const remaining = await mapInBatches(subscribers, ({ id }) => getRaw(id));
 				if (remaining.some((subscriber) => subscriber !== null)) {
-					throw new Error('Listmonk acknowledged subscriber deletion without deleting every requested subscriber.');
+					throw providerInvariantError('Listmonk acknowledged subscriber deletion without deleting every requested subscriber.');
 				}
 			});
 		},
@@ -669,7 +670,7 @@ export function createListmonkSubscriberManager(
 					subscriber.status !== 'blocklisted' ||
 					subscriber.lists.some((membership) => membership.subscription_status !== 'unsubscribed')
 				)) {
-					throw new Error('Listmonk acknowledged blocklisting without applying its complete subscription effect.');
+					throw providerInvariantError('Listmonk acknowledged blocklisting without applying its complete subscription effect.');
 				}
 			});
 		},

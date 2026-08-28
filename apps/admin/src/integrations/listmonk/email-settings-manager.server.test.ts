@@ -242,6 +242,33 @@ describe('Listmonk email settings manager', () => {
 		await expect(manager.readBounces()).resolves.toMatchObject({ mailboxes: [] });
 	});
 
+	it('names the field that broke the contract instead of failing opaquely', async () => {
+		// The regression this guards: a bad provider field used to surface as
+		// "An unexpected error occurred. Reference: <hex>", identical for every
+		// cause, with the real reason server-log-only. Diagnosing it meant
+		// reading the adapter source.
+		const withBadField = (overrides: Record<string, unknown>) =>
+			createListmonkEmailSettingsManager(
+				config,
+				vi.fn(async () => json({ data: { ...createListmonkV62SettingsFixture(), smtp: [providerServer], ...overrides } })),
+			);
+
+		await expect(withBadField({ 'app.concurrency': 'five' }).readPerformance()).rejects.toThrow(
+			/at concurrency/,
+		);
+		await expect(withBadField({ 'bounce.mailboxes': 'not-a-collection' }).readBounces()).rejects.toThrow(
+			'Listmonk returned an invalid bounce.mailboxes setting (expected an array of objects).',
+		);
+
+		// The provider value itself must never ride along into the message.
+		const leaky = await withBadField({ 'app.from_email': { secret: 'sk-live-do-not-surface' } })
+			.readGeneral()
+			.then(() => null, (error: Error) => error);
+		expect(leaky).toBeInstanceOf(Error);
+		expect(leaky?.message).toContain('at fromEmail');
+		expect(leaky?.message).not.toContain('sk-live-do-not-surface');
+	});
+
 	it('serializes concurrent full-document writes and preserves both feature-owned patches', async () => {
 		let current: Record<string, unknown> = {
 			...createListmonkV62SettingsFixture(),
