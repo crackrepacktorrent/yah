@@ -41,7 +41,7 @@ vite.config.ts.timestamp-*
 # Documentation/Guides
 *.md
 !README.md
-!docs/admin-stabilization.md
+!docs/runbooks.md
 !docs/storyblok-editor-fields.md
 
 # Playwright MCP
