@@ -1,3 +1,4 @@
+import 'server-only';
 import type { Permissions } from '@yah/admin-core/permissions';
 import * as v from 'valibot';
 import type { AuthorizationContext } from '~/platform/auth/authorization-context';

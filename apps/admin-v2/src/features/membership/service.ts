@@ -1,3 +1,4 @@
+import 'server-only';
 import { rolesRequireAccessControl } from '@yah/admin-core/membership-policy';
 import { getBuiltInRolePermissions, type Permissions } from '@yah/admin-core/permissions';
 import { parseMemberRoles, sameRoleSet } from '@yah/admin-core/role-permissions';

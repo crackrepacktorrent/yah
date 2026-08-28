@@ -1,3 +1,5 @@
+import 'server-only';
+
 import * as v from 'valibot';
 import {
 	EmailSettingsProviderFailure,

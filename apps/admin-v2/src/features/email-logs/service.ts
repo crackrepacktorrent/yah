@@ -1,3 +1,4 @@
+import 'server-only';
 import type { AuthorizationContext } from '~/platform/auth/authorization-context';
 import { createPublicInputParser } from '~/platform/public-input';
 import { EmailLogPageQuerySchema, type EmailLogPage, type EmailLogPageQuery } from './contracts';

@@ -1,3 +1,4 @@
+import 'server-only';
 import type { AuthorizationContext } from '~/platform/auth/authorization-context';
 import { createPublicError } from '~/platform/errors';
 import { createPublicInputParser } from '~/platform/public-input';

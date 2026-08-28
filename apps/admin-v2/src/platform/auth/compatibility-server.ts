@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { betterAuth } from 'better-auth';
 import { memoryAdapter, type MemoryDB } from 'better-auth/adapters/memory';
 import { env } from 'virtual:env/server';

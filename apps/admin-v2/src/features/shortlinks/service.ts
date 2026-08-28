@@ -1,3 +1,4 @@
+import 'server-only';
 import type { AuthorizationContext } from '~/platform/auth/authorization-context';
 import * as v from 'valibot';
 import { isPrintedQrShortCode } from '@yah/admin-core/shortlink-policy';

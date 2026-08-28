@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { getRequestEvent } from '@solidjs/web';
 
 /** Capture the request before any await crosses the request-event scope. */

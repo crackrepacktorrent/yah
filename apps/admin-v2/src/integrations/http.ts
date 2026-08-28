@@ -1,3 +1,5 @@
+import 'server-only';
+
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_ERROR_BODY_LENGTH = 2_000;
 
