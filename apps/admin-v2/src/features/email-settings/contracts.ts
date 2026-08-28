@@ -45,6 +45,22 @@ const duration = v.pipe(
 	),
 	v.check(durationFitsGoRange, 'Duration exceeds Listmonk’s supported range.'),
 );
+// Listmonk leaves these empty while their feature toggle is off. The owning
+// schema requires a real value only when the matching toggle is on.
+const optionalDuration = v.pipe(
+	v.string(),
+	v.trim(),
+	v.maxLength(64, 'Duration is too long.'),
+	v.check(
+		(value) => value === '' || new RegExp(`^${GO_DURATION_HTML_PATTERN}$`, 'u').test(value),
+		'Use a Go duration such as 500ms, 15m, 1h, or 1h30m.',
+	),
+	v.check(
+		(value) => value === '' || durationFitsGoRange(value),
+		'Duration exceeds Listmonk’s supported range.',
+	),
+);
+const optionalCronSchedule = v.pipe(v.string(), v.trim(), v.maxLength(100));
 const port = v.pipe(v.number(), v.safeInteger(), v.minValue(1), v.maxValue(65_535));
 const boundedInteger = v.pipe(v.number(), v.safeInteger(), v.minValue(0), v.maxValue(10_000));
 const fromAddress = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(255));
@@ -130,17 +146,33 @@ export const SaveEmailGeneralSettingsCommandSchema = v.strictObject({
 	publicArchiveRssContentEnabled: v.boolean(),
 });
 
-export const EmailPerformanceSettingsSchema = v.strictObject({
-	concurrency: performanceInteger(1, 10_000),
-	messageRate: performanceInteger(1, 100_000),
-	batchSize: performanceInteger(1, 100_000),
-	maxSendErrors: performanceInteger(0, 100_000),
-	slidingWindow: v.boolean(),
-	slidingWindowRate: performanceInteger(0, 10_000_000),
-	slidingWindowDuration: duration,
-	cacheSlowQueries: v.boolean(),
-	cacheSlowQueriesInterval: v.pipe(v.string(), v.trim(), v.minLength(1, 'Enter the five-field cron schedule.'), v.maxLength(100)),
-});
+export const EmailPerformanceSettingsSchema = v.pipe(
+	v.strictObject({
+		concurrency: performanceInteger(1, 10_000),
+		messageRate: performanceInteger(1, 100_000),
+		batchSize: performanceInteger(1, 100_000),
+		maxSendErrors: performanceInteger(0, 100_000),
+		slidingWindow: v.boolean(),
+		slidingWindowRate: performanceInteger(0, 10_000_000),
+		slidingWindowDuration: optionalDuration,
+		cacheSlowQueries: v.boolean(),
+		cacheSlowQueriesInterval: optionalCronSchedule,
+	}),
+	v.forward(
+		v.check(
+			(input) => !input.slidingWindow || input.slidingWindowDuration !== '',
+			'Enter a duration.',
+		),
+		['slidingWindowDuration'],
+	),
+	v.forward(
+		v.check(
+			(input) => !input.cacheSlowQueries || input.cacheSlowQueriesInterval !== '',
+			'Enter the five-field cron schedule.',
+		),
+		['cacheSlowQueriesInterval'],
+	),
+);
 
 export const SaveEmailPerformanceSettingsCommandSchema = EmailPerformanceSettingsSchema;
 
