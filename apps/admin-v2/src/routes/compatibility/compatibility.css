@@ -1,0 +1,102 @@
+.shell {
+	width: min(48rem, calc(100% - 2rem));
+	margin: 0 auto;
+	padding: 5rem 0;
+}
+
+.shell a { color: #8cb4ff; }
+.shell .eyebrow { color: #9ea9ba; }
+
+.snapshot {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+	gap: 0.75rem;
+	margin: 2rem 0;
+}
+
+.snapshot div {
+	padding: 1rem;
+	border: 1px solid #30363d;
+	border-radius: var(--admin-radius-panel);
+	background: #161b22;
+}
+
+.snapshot dt { color: #9ea9ba; font-size: 0.75rem; }
+.snapshot dd { margin: 0.25rem 0 0; font-weight: 650; }
+.shell label { display: block; margin-bottom: 0.5rem; font-weight: 650; }
+.shell .form-row { display: flex; gap: 0.75rem; }
+
+.shell input,
+.shell button {
+	min-height: 2.75rem;
+	border: 1px solid #485363;
+	border-radius: var(--admin-radius-control);
+	font: inherit;
+}
+
+.shell button:disabled { cursor: default; opacity: 0.7; }
+
+.icon-gallery {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+	gap: 0.5rem;
+	padding: 0;
+	list-style: none;
+}
+
+.icon-gallery li {
+	display: flex;
+	gap: 0.625rem;
+	align-items: center;
+	padding: 0.75rem;
+	border: 1px solid #30363d;
+	border-radius: var(--admin-radius-control);
+}
+
+.gallery-icon { flex: 0 0 auto; color: #d2a8ff; }
+.gallery-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.compat-output {
+	display: block;
+	min-height: 2.75rem;
+	padding: 0.75rem;
+	border: 1px solid #30363d;
+	border-radius: var(--admin-radius-control);
+	font-family: ui-monospace, monospace;
+	word-break: break-word;
+}
+
+.compat-fields {
+	display: grid;
+	grid-template-columns: auto minmax(12rem, 1fr);
+	gap: 0.75rem;
+	align-items: center;
+}
+
+.compat-fields label { margin: 0; }
+
+.shell input {
+	flex: 1;
+	min-width: 0;
+	padding: 0 0.75rem;
+	color: inherit;
+	background: #0d1117;
+}
+
+.shell button {
+	padding: 0 1rem;
+	color: #071018;
+	background: #8cb4ff;
+	cursor: pointer;
+}
+
+.shell input:focus-visible,
+.shell button:focus-visible,
+.shell a:focus-visible {
+	outline: 3px solid #d2a8ff;
+	outline-offset: 3px;
+}
+
+@media (max-width: 32rem) {
+	.shell .form-row { flex-direction: column; }
+}

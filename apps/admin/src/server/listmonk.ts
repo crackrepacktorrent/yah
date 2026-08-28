@@ -1,6 +1,7 @@
 // ─── Client ──────────────────────────────────────────────────────────────────
 
 import { env } from '~/server/env';
+import { fetchUpstream, parseJsonResponse, readErrorBody } from '~/server/upstream-http';
 
 class ListmonkClient {
 	private baseUrl: string;
@@ -12,7 +13,7 @@ class ListmonkClient {
 	}
 
 	private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-		const res = await fetch(`${this.baseUrl}/api${path}`, {
+		const res = await fetchUpstream(`${this.baseUrl}/api${path}`, {
 			...options,
 			headers: {
 				Authorization: this.authHeader,
@@ -22,18 +23,15 @@ class ListmonkClient {
 		});
 
 		if (!res.ok) {
-			const text = await res.text().catch(() => '');
+			const { json, text } = await readErrorBody(res);
 			let message = `Listmonk API error: ${res.status} ${res.statusText}`;
-			try {
-				const json = JSON.parse(text);
-				if (json.message) message = json.message;
-			} catch {
-				if (text) message += ` — ${text}`;
-			}
+			if (json && typeof json === 'object' && 'message' in json && typeof json.message === 'string') {
+				message = json.message;
+			} else if (text) message += ` — ${text}`;
 			throw new ListmonkApiError(message, res.status);
 		}
 
-		return res.json();
+		return parseJsonResponse<T>(res, 'Listmonk');
 	}
 
 	async listTemplates(): Promise<ListmonkTemplate[]> {
@@ -79,7 +77,9 @@ class ListmonkClient {
 
 	// ─── Subscribers ──────────────────────────────────────────────────────────
 
-	async listSubscribers(params: { page?: number; per_page?: number | 'all'; query?: string } = {}): Promise<{ data: { results: ListmonkSubscriber[]; total: number; page: number; per_page: number } }> {
+	async listSubscribers(params: { page?: number; per_page?: number | 'all'; query?: string } = {}): Promise<{
+		data: { results: ListmonkSubscriber[]; total: number; page: number; per_page: number };
+	}> {
 		const qs = new URLSearchParams();
 		if (params.page) qs.set('page', String(params.page));
 		if (params.per_page) qs.set('per_page', String(params.per_page));
@@ -97,7 +97,13 @@ class ListmonkClient {
 		return res.data;
 	}
 
-	async createSubscriber(params: { email: string; name?: string; status?: string; lists?: number[]; preconfirm?: boolean }): Promise<ListmonkSubscriber> {
+	async createSubscriber(params: {
+		email: string;
+		name?: string;
+		status?: string;
+		lists?: number[];
+		preconfirm?: boolean;
+	}): Promise<ListmonkSubscriber> {
 		const res = await this.request<{ data: ListmonkSubscriber }>('/subscribers', {
 			method: 'POST',
 			body: JSON.stringify({
@@ -111,7 +117,16 @@ class ListmonkClient {
 		return res.data;
 	}
 
-	async updateSubscriber(id: number, params: { email?: string; name?: string; status?: string; lists?: number[]; preconfirm?: boolean }): Promise<ListmonkSubscriber> {
+	async updateSubscriber(
+		id: number,
+		params: {
+			email?: string;
+			name?: string;
+			status?: string;
+			lists?: number[];
+			preconfirm?: boolean;
+		},
+	): Promise<ListmonkSubscriber> {
 		const res = await this.request<{ data: ListmonkSubscriber }>(`/subscribers/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify({
@@ -178,7 +193,9 @@ class ListmonkClient {
 
 	// ─── Bounces ──────────────────────────────────────────────────────────────
 
-	async listBounces(params: { page?: number; per_page?: number | 'all' } = {}): Promise<{ data: { results: ListmonkBounce[]; total: number; page: number; per_page: number } }> {
+	async listBounces(params: { page?: number; per_page?: number | 'all' } = {}): Promise<{
+		data: { results: ListmonkBounce[]; total: number; page: number; per_page: number };
+	}> {
 		const qs = new URLSearchParams();
 		if (params.page) qs.set('page', String(params.page));
 		if (params.per_page) qs.set('per_page', String(params.per_page));
@@ -197,7 +214,9 @@ class ListmonkClient {
 
 	// ─── Campaigns ───────────────────────────────────────────────────────────
 
-	async listCampaigns(params: { page?: number; per_page?: number | 'all'; status?: string; query?: string } = {}): Promise<{ data: { results: ListmonkCampaign[]; total: number; page: number; per_page: number } }> {
+	async listCampaigns(params: { page?: number; per_page?: number | 'all'; status?: string; query?: string } = {}): Promise<{
+		data: { results: ListmonkCampaign[]; total: number; page: number; per_page: number };
+	}> {
 		const qs = new URLSearchParams();
 		if (params.page) qs.set('page', String(params.page));
 		if (params.per_page) qs.set('per_page', String(params.per_page));
@@ -241,17 +260,20 @@ class ListmonkClient {
 		return res.data;
 	}
 
-	async updateCampaign(id: number, params: {
-		name?: string;
-		subject?: string;
-		from_email?: string;
-		lists: number[];
-		body?: string;
-		content_type?: 'richtext' | 'html' | 'markdown' | 'plain';
-		template_id?: number;
-		tags?: string[];
-		send_at?: string | null;
-	}): Promise<ListmonkCampaign> {
+	async updateCampaign(
+		id: number,
+		params: {
+			name?: string;
+			subject?: string;
+			from_email?: string;
+			lists: number[];
+			body?: string;
+			content_type?: 'richtext' | 'html' | 'markdown' | 'plain';
+			template_id?: number;
+			tags?: string[];
+			send_at?: string | null;
+		},
+	): Promise<ListmonkCampaign> {
 		const res = await this.request<{ data: ListmonkCampaign }>(`/campaigns/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(params),
@@ -275,7 +297,7 @@ class ListmonkClient {
 	// ─── Campaign Preview & Test ─────────────────────────────────────────────
 
 	async previewCampaign(id: number): Promise<string> {
-		const res = await fetch(`${this.baseUrl}/api/campaigns/${id}/preview`, {
+		const res = await fetchUpstream(`${this.baseUrl}/api/campaigns/${id}/preview`, {
 			headers: { Authorization: this.authHeader },
 		});
 		if (!res.ok) {
@@ -311,9 +333,7 @@ class ListmonkClient {
 		qs.set('id', String(params.id));
 		qs.set('from', params.from);
 		qs.set('to', params.to);
-		const res = await this.request<{ data: ListmonkAnalyticsPoint[] }>(
-			`/campaigns/analytics/${params.type}?${qs.toString()}`,
-		);
+		const res = await this.request<{ data: ListmonkAnalyticsPoint[] }>(`/campaigns/analytics/${params.type}?${qs.toString()}`);
 		return res.data;
 	}
 

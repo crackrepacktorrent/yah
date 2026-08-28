@@ -1,8 +1,9 @@
 import { createAsync, type RouteDefinition } from '@solidjs/router';
 import { Show, createEffect, createMemo, createSignal } from 'solid-js';
 import {
-	BarChart, Button, Card, DatePicker, EmptyState, FormField, PageHeader, Section, Spinner,
+	BarChart, Button, Card, EmptyState, FormField, PageHeader, Section, Spinner,
 } from '~/components';
+import { DatePicker } from '~/components/DatePicker';
 import { MultiSelect } from '~/components';
 import { listCampaigns, getCampaignAnalytics } from '../campaigns.server';
 import './index.css';

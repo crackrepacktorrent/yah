@@ -2,7 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
-      "outputs": [".output/**", "build/**", ".svelte-kit/**"]
+      "outputs": [".output/**", "build/**", "dist/**", ".svelte-kit/**"]
     },
     "check": {},
     "lint": {},

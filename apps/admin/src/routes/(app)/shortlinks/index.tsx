@@ -1,7 +1,7 @@
 import { createAsync, revalidate, type RouteDefinition, useNavigate } from '@solidjs/router';
 import { For, Show, batch, createMemo, createSignal } from 'solid-js';
 import { createSolidTable, getCoreRowModel, getFilteredRowModel, getSortedRowModel, createColumnHelper, type SortingState } from '@tanstack/solid-table';
-import { toast } from 'solid-sonner';
+import { toast, toastError } from '~/lib/toast';
 import * as v from 'valibot';
 import {
 	Badge, Button, Input, Switch, FormField,
@@ -10,12 +10,12 @@ import {
 } from '~/components';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { toastError } from '~/lib/utils';
 import { createForm } from '~/lib/use-form';
 import {
 	listShortUrls, createShortUrl, deleteShortUrl,
 } from '../shortlinks.server';
 import type { ShortUrl } from '~/server/shlink';
+import { isPrintedQrShortCode } from '@yah/admin-core/shortlink-policy';
 import './index.css';
 
 export const route: RouteDefinition = {
@@ -140,7 +140,7 @@ export default function ShortlinksPage() {
 				row.original.tags.some((t) => t.toLowerCase().includes(s))
 			);
 		},
-		enableRowSelection: () => canDelete(),
+		enableRowSelection: (row) => canDelete() && !isPrintedQrShortCode(row.original.shortCode),
 		enableColumnFilters: false,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),

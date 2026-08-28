@@ -4,16 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - 'infra/caddy/Caddyfile'
-      - 'infra/docker-compose.yml'
-      - 'infra/config/**'
-      - 'infra/scripts/**'
-      - '.github/workflows/deploy-infra.yml'
+      - "infra/caddy/Caddyfile"
+      - "infra/docker-compose.yml"
+      - "infra/config/**"
+      - "infra/scripts/**"
+      - ".github/workflows/deploy-infra.yml"
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    concurrency:
+      group: production-vps
+      cancel-in-progress: false
     steps:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
@@ -23,8 +26,16 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
+            exec 9>/home/deploy/yah/.production-deploy.lock
+            flock --timeout 900 9
             cd /home/deploy/yah
-            git pull origin main
+            git pull --ff-only origin main
             cd infra
-            docker compose up -d
-            docker exec yah-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+            # A valid Caddy edit can still break permanent printed QR aliases.
+            # Keep this deploy-time barrier in addition to the synchronized CI test.
+            sh scripts/validate-printed-shortlinks.sh caddy/Caddyfile
+            docker compose run --rm --no-deps caddy validate --config /etc/caddy/Caddyfile
+            # Reconcile only Caddy. App workflows deploy exact commit-SHA
+            # images; providers and databases require maintenance runbooks.
+            docker compose up -d --no-deps --pull never --wait caddy
+            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile

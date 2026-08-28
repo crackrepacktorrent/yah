@@ -2,19 +2,19 @@ import { createAsync, type RouteDefinition, useNavigate, useParams, revalidate }
 import { For, Show, batch, createEffect, createMemo, createSignal, on, untrack } from 'solid-js';
 import { Lock } from 'lucide-solid';
 import { createSolidTable, getCoreRowModel, createColumnHelper } from '@tanstack/solid-table';
-import { toast } from 'solid-sonner';
+import { toast, toastError } from '~/lib/toast';
 import {
 	Badge, Breadcrumb, Button, Card, AlertDialog,
 	DataTable, FormField, Input, QRCode, Section, StatCard, Switch, TagInput, Tooltip,
 } from '~/components';
 import { requireSession } from '~/routes/session';
 import { can } from '~/lib/can';
-import { toastError } from '~/lib/utils';
 import {
 	getShortUrl, getShortUrlVisits,
 	editShortUrl, deleteShortUrl, resetShortUrlVisits,
 } from '../shortlinks.server';
 import type { ShortUrl, Visit } from '~/server/shlink';
+import { isPrintedQrShortCode } from '@yah/admin-core/shortlink-policy';
 import './[slug].css';
 
 export const route: RouteDefinition = {
@@ -139,6 +139,7 @@ function ShortlinkDetails(props: { shortUrl: ShortUrl }) {
 
 function ShortlinkEditor(props: { shortUrl: ShortUrl; slug: string }) {
 	const navigate = useNavigate();
+	const printedQr = createMemo(() => isPrintedQrShortCode(props.shortUrl.shortCode));
 
 	const [unlocked, setUnlocked] = createSignal(false);
 	const [saving, setSaving] = createSignal(false);
@@ -265,10 +266,15 @@ function ShortlinkEditor(props: { shortUrl: ShortUrl; slug: string }) {
 						<Button variant="danger-outline" disabled={!unlocked()} onClick={() => setConfirmReset(true)}>
 							Reset Visits
 						</Button>
-						<Button variant="danger-outline" disabled={!unlocked()} onClick={() => setConfirmDelete(true)}>
-							Delete
-						</Button>
+						<Show when={!printedQr()}>
+							<Button variant="danger-outline" disabled={!unlocked()} onClick={() => setConfirmDelete(true)}>
+								Delete
+							</Button>
+						</Show>
 					</div>
+					<Show when={printedQr()}>
+						<p class="table-note">This permanent short URL is printed in QR materials. Its destination can be updated, but the shortlink cannot be deleted.</p>
+					</Show>
 				</div>
 			</Card>
 

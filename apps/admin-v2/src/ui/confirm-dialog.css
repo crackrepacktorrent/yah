@@ -1,0 +1,14 @@
+.confirm-dialog {
+	width: min(30rem, calc(100% - 2rem));
+	padding: 1.5rem;
+	border: 0;
+	border-radius: 0.75rem;
+	color: var(--admin-text);
+	background: var(--admin-surface-raised);
+	box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 30%);
+}
+
+.confirm-dialog::backdrop { background: rgb(20 15 12 / 55%); }
+.confirm-dialog h2 { margin-top: 0; }
+.confirm-dialog__actions { display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap; margin-top: 1.5rem; }
+.confirm-dialog__button { flex: 1 1 10rem; }

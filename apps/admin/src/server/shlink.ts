@@ -115,6 +115,7 @@ export interface OverallVisitsSummary {
 }
 
 import { env } from '~/server/env';
+import { fetchUpstream, parseJsonResponse, readErrorBody } from '~/server/upstream-http';
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 
@@ -128,7 +129,7 @@ class ShlinkClient {
 	}
 
 	private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-		const res = await fetch(`${this.baseUrl}/rest/v3${path}`, {
+		const res = await fetchUpstream(`${this.baseUrl}/rest/v3${path}`, {
 			...options,
 			headers: {
 				'X-Api-Key': this.apiKey,
@@ -141,14 +142,18 @@ class ShlinkClient {
 			return undefined as T;
 		}
 
-		const body = await res.json();
-
 		if (!res.ok) {
-			const err = body as ShlinkError;
-			throw new ShlinkApiError(err.title, err.detail, err.status, err.type);
+			const { json } = await readErrorBody(res);
+			const err = json as Partial<ShlinkError> | null;
+			throw new ShlinkApiError(
+				err?.title ?? `Shlink request failed with status ${res.status}`,
+				err?.detail ?? 'The upstream service did not provide an error description.',
+				err?.status ?? res.status,
+				err?.type ?? 'unknown',
+			);
 		}
 
-		return body as T;
+		return parseJsonResponse<T>(res, 'Shlink');
 	}
 
 	// ─── Short URLs ────────────────────────────────────────────────────────
@@ -237,10 +242,7 @@ class ShlinkClient {
 
 	async deleteShortUrlVisits(shortCode: string, domain?: string) {
 		const query = domain ? `?domain=${encodeURIComponent(domain)}` : '';
-		return this.request<{ deletedVisits: number }>(
-			`/short-urls/${encodeURIComponent(shortCode)}/visits${query}`,
-			{ method: 'DELETE' },
-		);
+		return this.request<{ deletedVisits: number }>(`/short-urls/${encodeURIComponent(shortCode)}/visits${query}`, { method: 'DELETE' });
 	}
 
 	// ─── Tags ──────────────────────────────────────────────────────────────
@@ -270,10 +272,11 @@ class ShlinkClient {
 	// ─── Health ────────────────────────────────────────────────────────────
 
 	async health() {
-		const res = await fetch(`${this.baseUrl}/rest/health`, {
+		const res = await fetchUpstream(`${this.baseUrl}/rest/health`, {
 			headers: { 'X-Api-Key': this.apiKey },
 		});
-		return (await res.json()) as { status: 'pass' | 'fail'; version: string };
+		if (!res.ok) throw new ShlinkApiError('Shlink health check failed', '', res.status, 'health');
+		return parseJsonResponse<{ status: 'pass' | 'fail'; version: string }>(res, 'Shlink');
 	}
 }
 

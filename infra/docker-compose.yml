@@ -105,7 +105,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:3002/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:3002/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -122,7 +122,9 @@ services:
           memory: 256M
 
   shlink:
-    image: shlinkio/shlink:latest
+    # Stateful provider: never reconcile automatically. This is the exact
+    # production v5.0.1 artifact inventoried before the admin-v2 cutover.
+    image: shlinkio/shlink:5.0.1@sha256:a6d8508bc6b0eba5a28e1ee8b64dd5253434cd113c950e715baab4020edcd2a1
     restart: unless-stopped
     environment:
       DEFAULT_DOMAIN: y4h.link
@@ -190,7 +192,9 @@ services:
           memory: 512M
 
   listmonk:
-    image: listmonk/listmonk:latest
+    # Stateful provider: run the documented stopped-service v6.2 migration
+    # before intentionally reconciling this service.
+    image: ${LISTMONK_IMAGE:-listmonk/listmonk:v6.2.0@sha256:f535d59e14991337a9f2d570273685378ae86b0d7698c3e00da444e3bc205286}
     restart: unless-stopped
     environment:
       TZ: America/Los_Angeles
@@ -201,12 +205,13 @@ services:
       - "127.0.0.1:9000:9000"
     volumes:
       - ./config/listmonk-prod.toml:/listmonk/config.toml:ro
+      - listmonk_uploads:/listmonk/uploads
     command: "./listmonk --config /listmonk/config.toml"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:9000/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://0.0.0.0:9000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -275,5 +280,5 @@ volumes:
   caddy_data:
   caddy_config:
   postgres_data:
+  listmonk_uploads:
   uptime_kuma_data:
-

@@ -8,6 +8,12 @@
 	align-items: center;
 }
 
+.role-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
 .remove-btn {
 	background: none;
 	border: none;

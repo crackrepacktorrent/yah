@@ -1,0 +1,50 @@
+.shortlinks-page {
+	color: var(--admin-text);
+}
+
+.shortlink-editor-page h1 { margin-bottom: 0; }
+
+.short-code { font-family: ui-monospace, monospace; font-weight: 700; }
+.row-title { display: block; margin-top: 0.2rem; color: var(--admin-text-muted); }
+.destination { display: block; max-width: 26rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.tag-list > .badge { background: var(--admin-surface-selected); }
+
+.shortlink-editor-page > p { margin-top: 0.5rem; color: oklch(0.44 0.035 44.2); }
+.shortlink-options { display: flex; gap: 1.25rem; padding: 1rem; border: 1px solid var(--admin-border); border-radius: var(--admin-radius-control); }
+.shortlink-options legend { padding: 0 0.25rem; font-weight: 700; }
+.shortlink-options label { display: flex; gap: 0.5rem; align-items: center; }
+.shortlink-options input { width: 1.15rem; height: 1.15rem; }
+.form-actions,
+.detail-actions { display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap; }
+.shortlink-form > .field-error { grid-column: 1 / -1; }
+
+.shortlink-stats {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1rem;
+	margin: 0 0 1.5rem;
+}
+.shortlink-stats div,
+.detail-card { padding: 1.25rem; border: 1px solid var(--admin-border-panel); border-radius: var(--admin-radius-panel); background: var(--admin-surface-raised); }
+.shortlink-stats dt { color: oklch(0.45 0.03 44.2); }
+.shortlink-stats dd { margin: 0.25rem 0 0; font-size: 1.8rem; font-weight: 750; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(17rem, 1fr); gap: 1.25rem; }
+.detail-card h2 { margin-top: 0; }
+.detail-list { margin: 0; }
+.detail-list > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 0.75rem; padding: 0.55rem 0; border-bottom: 1px solid oklch(0.9 0.012 67.7); }
+.detail-list > div:last-child { border-bottom: 0; }
+.detail-list dt { font-weight: 700; }
+.detail-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.qr-card { text-align: center; }
+.visits-card { margin-top: 1.25rem; }
+.user-agent { max-width: 24rem; overflow-wrap: anywhere; }
+.table-note { margin-bottom: 0; color: var(--admin-text-muted); }
+
+@media (max-width: 48rem) {
+	.detail-actions { justify-content: flex-start; }
+	.detail-grid { grid-template-columns: 1fr; }
+	.shortlink-options { flex-direction: column; }
+	.shortlink-stats { grid-template-columns: 1fr; }
+	.detail-list > div { grid-template-columns: 1fr; gap: 0.2rem; }
+}

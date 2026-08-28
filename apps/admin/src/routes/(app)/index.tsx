@@ -1,18 +1,13 @@
-import { createAsync, type RouteDefinition } from '@solidjs/router';
-import { Show } from 'solid-js';
+import { createAsync } from '@solidjs/router';
+import { Show, createMemo } from 'solid-js';
 import { createSolidTable, getCoreRowModel, createColumnHelper } from '@tanstack/solid-table';
-import { PageHeader, StatCard, Section, DataTable } from '~/components';
+import { PageHeader, StatCard, Section, DataTable, EmptyState } from '~/components';
+import { can } from '~/lib/can';
 import { formatDuration } from '~/lib/utils';
+import { requireSession } from '~/routes/session';
 import { getDashboard, getSiteStats } from './dashboard.server';
 import type { ShortUrl } from '~/server/shlink';
 import './index.css';
-
-export const route: RouteDefinition = {
-	preload: () => {
-		void getDashboard();
-		void getSiteStats();
-	},
-};
 
 const columnHelper = createColumnHelper<ShortUrl>();
 
@@ -21,16 +16,25 @@ const recentColumns = [
 		header: 'Short URL',
 		cell: (info) => (
 			<span>
-				<a href={`/shortlinks/${info.getValue()}`} class="code">{info.getValue()}</a>
+				<a href={`/shortlinks/${info.getValue()}`} class="code">
+					{info.getValue()}
+				</a>
 				<Show when={info.row.original.title}>
-					<><br /><span class="row-title">{info.row.original.title}</span></>
+					<>
+						<br />
+						<span class="row-title">{info.row.original.title}</span>
+					</>
 				</Show>
 			</span>
 		),
 	}),
 	columnHelper.accessor('longUrl', {
 		header: 'Destination',
-		cell: (info) => <span class="long-url" title={info.getValue()}>{info.getValue()}</span>,
+		cell: (info) => (
+			<span class="long-url" title={info.getValue()}>
+				{info.getValue()}
+			</span>
+		),
 	}),
 	columnHelper.accessor((row) => row.visitsSummary.total, {
 		id: 'clicks',
@@ -44,11 +48,16 @@ const recentColumns = [
 ];
 
 export default function DashboardPage() {
-	const dashboard = createAsync(() => getDashboard());
-	const siteStats = createAsync(() => getSiteStats());
+	const session = createAsync(() => requireSession());
+	const canViewShortlinks = createMemo(() => can(session(), 'shortlink', 'view'));
+	const canViewAnalytics = createMemo(() => can(session(), 'analytics', 'view'));
+	const dashboard = createAsync(() => (canViewShortlinks() ? getDashboard() : Promise.resolve(null)));
+	const siteStats = createAsync(() => (canViewAnalytics() ? getSiteStats() : Promise.resolve(null)));
 
 	const recentTable = createSolidTable({
-		get data() { return dashboard()?.recentShortUrls ?? []; },
+		get data() {
+			return dashboard()?.recentShortUrls ?? [];
+		},
 		columns: recentColumns,
 		getCoreRowModel: getCoreRowModel(),
 		enableColumnFilters: false,
@@ -58,6 +67,9 @@ export default function DashboardPage() {
 	return (
 		<>
 			<PageHeader title="Dashboard" />
+			<Show when={!canViewShortlinks() && !canViewAnalytics()}>
+				<EmptyState message="No dashboard data is available for your role." />
+			</Show>
 
 			<Show when={dashboard()}>
 				{(data) => (

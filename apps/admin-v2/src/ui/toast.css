@@ -1,0 +1,45 @@
+.toast-region {
+	position: fixed;
+	right: 1rem;
+	bottom: 1rem;
+	z-index: 1000;
+	display: grid;
+	width: min(24rem, calc(100% - 2rem));
+	gap: 0.625rem;
+	pointer-events: none;
+}
+
+.app-toast {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.875rem 1rem;
+	border: 1px solid var(--admin-border);
+	border-radius: var(--admin-radius-panel);
+	color: var(--admin-text);
+	background: var(--admin-surface);
+	box-shadow: 0 0.75rem 2rem rgb(49 35 24 / 18%);
+	pointer-events: none;
+}
+
+.app-toast--success { border-color: var(--admin-success); }
+.app-toast--error { border-color: var(--admin-danger); }
+.app-toast p { margin: 0; }
+
+.app-toast button {
+	pointer-events: auto;
+	min-height: 2rem;
+	padding: 0 0.5rem;
+	border: 0;
+	color: var(--admin-link);
+	background: transparent;
+	font: inherit;
+	font-size: 1.25rem;
+	cursor: pointer;
+}
+
+.app-toast button:focus-visible {
+	outline: 3px solid var(--admin-focus-ring);
+	outline-offset: 2px;
+}
