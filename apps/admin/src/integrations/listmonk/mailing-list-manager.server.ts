@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 import * as v from 'valibot';
 import {
 	MailingListProviderFailure,
@@ -106,13 +107,13 @@ export function createListmonkMailingListManager(
 					'mailing-list catalog',
 				).data;
 				if (response.page !== 1 || response.per_page !== MAX_MAILING_LISTS) {
-					throw new Error('Listmonk did not honor the bounded mailing-list catalog request.');
+					throw providerInvariantError('Listmonk did not honor the bounded mailing-list catalog request.');
 				}
 				if (response.total > MAX_MAILING_LISTS || response.results.length > MAX_MAILING_LISTS) {
-					throw new Error(`Listmonk mailing-list catalog exceeds the ${MAX_MAILING_LISTS}-list safety limit.`);
+					throw providerInvariantError(`Listmonk mailing-list catalog exceeds the ${MAX_MAILING_LISTS}-list safety limit.`);
 				}
 				if (response.total !== response.results.length) {
-					throw new Error('Listmonk returned an incomplete mailing-list catalog.');
+					throw providerInvariantError('Listmonk returned an incomplete mailing-list catalog.');
 				}
 				return response.results.map(normalize);
 			});

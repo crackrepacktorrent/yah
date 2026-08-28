@@ -1,5 +1,6 @@
 import 'server-only';
 import * as v from 'valibot';
+import { providerContractError } from '~/integrations/provider-contract.server';
 import { EMAIL_LOG_PAGE_SIZE, type EmailLogPage } from '~/features/email-logs/contracts';
 import type { EmailLogManager } from '~/features/email-logs/service';
 import type { ProductionConfig } from '~/platform/config/production';
@@ -27,7 +28,7 @@ export function createListmonkEmailLogManager(
 		async list({ page }): Promise<EmailLogPage> {
 			if (!Number.isSafeInteger(page) || page < 1 || page > 10_000) throw new Error('Select a valid log page.');
 			const result = v.safeParse(logResponseSchema, await transport.json('/logs'));
-			if (!result.success) throw new Error('Listmonk returned an invalid log response.');
+			if (!result.success) throw providerContractError('Listmonk', 'log response', result.issues);
 			const total = result.output.data.length;
 			const pageCount = Math.max(1, Math.ceil(total / EMAIL_LOG_PAGE_SIZE));
 			const resolvedPage = Math.min(page, pageCount);

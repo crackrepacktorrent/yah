@@ -1,6 +1,7 @@
 import 'server-only';
 
 import * as v from 'valibot';
+import { providerContractError, providerInvariantError } from '~/integrations/provider-contract.server';
 
 export type ListmonkSettingsDocument = Record<string, unknown>;
 
@@ -8,7 +9,7 @@ export function parseListmonkValue<
 	TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
 >(schema: TSchema, input: unknown, label: string): v.InferOutput<TSchema> {
 	const result = v.safeParse(schema, input);
-	if (!result.success) throw new Error(`Listmonk returned an invalid ${label} response.`);
+	if (!result.success) throw providerContractError('Listmonk', `${label} response`, result.issues);
 	return result.output;
 }
 
@@ -21,7 +22,7 @@ export function settingsRecord(
 	key: string,
 ): Record<string, unknown> {
 	const value = document[key];
-	if (!isSettingsRecord(value)) throw new Error(`Listmonk returned invalid ${key} settings.`);
+	if (!isSettingsRecord(value)) throw providerContractError('Listmonk', `${key} setting (expected an object)`);
 	return value;
 }
 
@@ -31,7 +32,7 @@ export function settingsCollection(
 ): Record<string, unknown>[] {
 	const value = document[key];
 	if (!Array.isArray(value) || value.some((item) => !isSettingsRecord(item))) {
-		throw new Error(`Listmonk returned invalid ${key} settings.`);
+		throw providerContractError('Listmonk', `${key} setting (expected an array of objects)`);
 	}
 	return value;
 }
@@ -45,10 +46,10 @@ export function assertStableSettingsIdentifiers(
 		if (!Array.isArray(collection)) continue;
 		const identifiers = collection.map((item) => isSettingsRecord(item) ? item['uuid'] : undefined);
 		if (identifiers.some((identifier) => typeof identifier !== 'string' || identifier.length === 0)) {
-			throw new Error(`Listmonk ${collectionKey} entries need stable identifiers. Re-enter their credentials and save them once in the private Listmonk operator UI before using YAH settings.`);
+			throw providerInvariantError(`Listmonk ${collectionKey} entries need stable identifiers. Re-enter their credentials and save them once in the private Listmonk operator UI before using YAH settings.`);
 		}
 		if (new Set(identifiers).size !== identifiers.length) {
-			throw new Error(`Listmonk returned duplicate ${collectionKey} identifiers.`);
+			throw providerInvariantError(`Listmonk returned duplicate ${collectionKey} identifiers.`);
 		}
 	}
 }
