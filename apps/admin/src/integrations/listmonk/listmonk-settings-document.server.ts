@@ -10,6 +10,7 @@ import {
 	prepareMaskedSettingsForWrite,
 } from './listmonk-settings-secret-policy';
 import type { ListmonkTransport } from './transport.server';
+import { providerContractError } from '~/integrations/provider-contract.server';
 
 const MAX_PROVIDER_ITEMS = 100;
 const MAX_SETTINGS_LIST_ITEMS = 10_000;
@@ -239,13 +240,12 @@ export type ListmonkSettingsPatch = (
  */
 export function validateListmonkV62SettingsDocument(input: unknown): ListmonkV62SettingsDocument {
 	if (typeof input !== 'object' || input === null || Array.isArray(input)) {
-		throw new Error('Listmonk returned an invalid complete v6.2 settings document.');
+		throw providerContractError('Listmonk', 'complete v6.2 settings document (expected an object)');
 	}
 
 	const result = v.safeParse(settingsDocumentSchema, input, { abortEarly: true });
 	if (!result.success) {
-		const path = result.issues[0]?.path?.map((item) => String(item.key)).join('.');
-		throw new Error(`Listmonk returned an invalid complete v6.2 settings document${path ? ` at ${path}` : ''}.`);
+		throw providerContractError('Listmonk', 'complete v6.2 settings document', result.issues);
 	}
 
 	return input as ListmonkV62SettingsDocument;

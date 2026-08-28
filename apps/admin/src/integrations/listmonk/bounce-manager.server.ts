@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 import * as v from 'valibot';
 import {
 	BOUNCE_PAGE_SIZE,
@@ -69,14 +70,14 @@ function normalize(value: BounceDto): BounceSummary {
 
 function requireUniqueDescending(rows: readonly BounceDto[], endpoint: string): void {
 	if (new Set(rows.map(({ id }) => id)).size !== rows.length) {
-		throw new Error(`Listmonk returned duplicate rows in the ${endpoint} response.`);
+		throw providerInvariantError(`Listmonk returned duplicate rows in the ${endpoint} response.`);
 	}
 	for (let index = 1; index < rows.length; index += 1) {
 		const previous = rows[index - 1];
 		const current = rows[index];
-		if (!previous || !current) throw new Error(`Listmonk returned an invalid ${endpoint} response.`);
+		if (!previous || !current) throw providerInvariantError(`Listmonk returned an invalid ${endpoint} response.`);
 		if (Date.parse(previous.created_at) < Date.parse(current.created_at)) {
-			throw new Error(`Listmonk did not return the ${endpoint} in descending creation order.`);
+			throw providerInvariantError(`Listmonk did not return the ${endpoint} in descending creation order.`);
 		}
 	}
 }
@@ -109,7 +110,7 @@ export function createListmonkBounceManager(config: ListmonkConfig, request?: Li
 			'bounce catalog',
 		).data;
 		if (response.search !== '' || response.query !== '') {
-			throw new Error('Listmonk unexpectedly filtered the bounce catalog response.');
+			throw providerInvariantError('Listmonk unexpectedly filtered the bounce catalog response.');
 		}
 		requireUniqueDescending(response.results, 'bounce catalog');
 
@@ -118,22 +119,22 @@ export function createListmonkBounceManager(config: ListmonkConfig, request?: Li
 			const requestedEnvelope = response.page === page && response.per_page === BOUNCE_PAGE_SIZE &&
 				response.total <= (page - 1) * BOUNCE_PAGE_SIZE;
 			if (!zeroedEnvelope && !requestedEnvelope) {
-				throw new Error('Listmonk returned inconsistent empty bounce catalog metadata.');
+				throw providerInvariantError('Listmonk returned inconsistent empty bounce catalog metadata.');
 			}
 			if (page > 1 && allowFallback) {
 				const fallback = await readPage(1, false);
 				return { ...fallback, requestedPage: page };
 			}
-			if (page !== 1) throw new Error('Listmonk returned an out-of-range bounce page during fallback.');
+			if (page !== 1) throw providerInvariantError('Listmonk returned an out-of-range bounce page during fallback.');
 			return { items: [], total: 0, page: 1, requestedPage: 1, pageSize: BOUNCE_PAGE_SIZE };
 		}
 
 		if (response.page !== page || response.per_page !== BOUNCE_PAGE_SIZE) {
-			throw new Error('Listmonk did not honor the bounded bounce catalog request.');
+			throw providerInvariantError('Listmonk did not honor the bounded bounce catalog request.');
 		}
 		const minimumTotal = (page - 1) * BOUNCE_PAGE_SIZE + response.results.length;
 		if (response.total < minimumTotal) {
-			throw new Error('Listmonk returned inconsistent bounce catalog metadata.');
+			throw providerInvariantError('Listmonk returned inconsistent bounce catalog metadata.');
 		}
 		return {
 			items: response.results.map(normalize),
@@ -159,7 +160,7 @@ export function createListmonkBounceManager(config: ListmonkConfig, request?: Li
 			).data;
 			requireUniqueDescending(response, 'subscriber bounce catalog');
 			if (response.some((bounce) => bounce.subscriber_id !== subscriberId)) {
-				throw new Error('Listmonk returned another subscriber’s bounce in the subscriber bounce catalog.');
+				throw providerInvariantError('Listmonk returned another subscriber’s bounce in the subscriber bounce catalog.');
 			}
 			return response.map(normalize);
 		},

@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 import * as v from 'valibot';
 import {
 	TemplateProviderFailure,
@@ -136,7 +137,7 @@ export function createListmonkTemplateManager(
 				const response = await transport.json(`/templates/${id}/default`, { method: 'PUT' });
 				const templates = parse(templateListResponseSchema, response, 'default-template').data;
 				if (!templates.some((template) => template.id === id && template.is_default)) {
-					throw new Error('Listmonk returned an invalid default-template response.');
+					throw providerInvariantError('Listmonk returned an invalid default-template response.');
 				}
 			});
 		},

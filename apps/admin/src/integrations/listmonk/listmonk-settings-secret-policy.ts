@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 
 import {
 	isSettingsRecord,
@@ -14,7 +15,7 @@ export function isListmonkMaskedSecret(value: unknown): value is string {
 export function maskedSecretPresent(value: unknown, label: string): boolean {
 	if (value === undefined || value === '') return false;
 	if (!isListmonkMaskedSecret(value)) {
-		throw new Error(`Listmonk returned an unmasked ${label}.`);
+		throw providerInvariantError(`Listmonk returned an unmasked ${label}.`);
 	}
 	return true;
 }

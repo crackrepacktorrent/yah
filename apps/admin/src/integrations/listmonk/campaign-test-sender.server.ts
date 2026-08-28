@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 import * as v from 'valibot';
 import {
 	CampaignTestSendAmbiguousFailure,
@@ -75,7 +76,7 @@ function requireCommand(input: unknown): SendCampaignTestCommand {
 function uniquePositiveListIds(campaign: CampaignDto): number[] {
 	const ids = campaign.lists.map(({ id }) => id);
 	if (ids.length === 0 || ids.some((id) => id < 1) || new Set(ids).size !== ids.length) {
-		throw new Error('Listmonk returned invalid campaign list targets.');
+		throw providerInvariantError('Listmonk returned invalid campaign list targets.');
 	}
 	return ids;
 }
@@ -129,7 +130,7 @@ export function createListmonkCampaignTestSender(
 	async function getCampaign(id: number): Promise<CampaignDto | null> {
 		try {
 			const campaign = parse(campaignResponseSchema, await transport.json(`/campaigns/${id}`), 'campaign test-send preflight').data;
-			if (campaign.id !== id) throw new Error('Listmonk returned the wrong campaign test-send target.');
+			if (campaign.id !== id) throw providerInvariantError('Listmonk returned the wrong campaign test-send target.');
 			return campaign;
 		} catch (error) {
 			if (error instanceof ListmonkHttpFailure && [400, 404].includes(error.status)) return null;
@@ -140,9 +141,9 @@ export function createListmonkCampaignTestSender(
 	async function getSubscriber(id: number): Promise<SubscriberDto | null> {
 		try {
 			const subscriber = parse(subscriberResponseSchema, await transport.json(`/subscribers/${id}`), 'subscriber test-send preflight').data;
-			if (subscriber.id !== id) throw new Error('Listmonk returned the wrong subscriber test-send target.');
+			if (subscriber.id !== id) throw providerInvariantError('Listmonk returned the wrong subscriber test-send target.');
 			const listIds = subscriber.lists.map(({ id: listId }) => listId);
-			if (new Set(listIds).size !== listIds.length) throw new Error('Listmonk returned duplicate subscriber memberships.');
+			if (new Set(listIds).size !== listIds.length) throw providerInvariantError('Listmonk returned duplicate subscriber memberships.');
 			return subscriber;
 		} catch (error) {
 			if (error instanceof ListmonkHttpFailure && [400, 404].includes(error.status)) return null;

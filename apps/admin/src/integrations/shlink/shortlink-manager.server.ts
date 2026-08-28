@@ -1,4 +1,5 @@
 import 'server-only';
+import { providerInvariantError } from '~/integrations/provider-contract.server';
 import * as v from 'valibot';
 import {
 	ShortlinkProviderFailure,
@@ -81,10 +82,10 @@ function normalizeSummary(summary: v.InferOutput<typeof visitSummarySchema>): Vi
 
 function normalizeShortlink(value: v.InferOutput<typeof shortlinkSchema>): Shortlink {
 	if (value.domain !== null) {
-		throw new Error('Shlink custom-domain shortlinks are not supported by this admin route model.');
+		throw providerInvariantError('Shlink custom-domain shortlinks are not supported by this admin route model.');
 	}
 	if (value.hasRedirectRules) {
-		throw new Error('Shlink redirect-rule shortlinks are not supported by this admin route model.');
+		throw providerInvariantError('Shlink redirect-rule shortlinks are not supported by this admin route model.');
 	}
 	return {
 		shortCode: value.shortCode,
@@ -171,7 +172,7 @@ export function createShlinkShortlinkManager(config: ShlinkConfig, request: Requ
 			const result = await listPage(MAX_LIST_ITEMS);
 			const { data, pagination } = result.shortUrls;
 			if (pagination.pagesCount > 1 || pagination.totalItems > data.length || data.length > MAX_LIST_ITEMS) {
-				throw new Error(`Shlink returned more than the ${MAX_LIST_ITEMS.toLocaleString('en-US')}-link safety cap.`);
+				throw providerInvariantError(`Shlink returned more than the ${MAX_LIST_ITEMS.toLocaleString('en-US')}-link safety cap.`);
 			}
 			return data.map(normalizeShortlink);
 		},
