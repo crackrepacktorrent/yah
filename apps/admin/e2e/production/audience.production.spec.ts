@@ -12,7 +12,7 @@ import {
 } from '../production-test';
 
 test('mailing lists preserve provider fields and expose only active public subscription sharing', async ({ page, request, context }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic Listmonk assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic Listmonk assertions require the local fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 	await page.setExtraHTTPHeaders({
@@ -133,7 +133,7 @@ test('mailing lists preserve provider fields and expose only active public subsc
 });
 
 test('subscribers use bounded server pages and preserve provider-owned identity and consent state', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic subscriber assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic subscriber assertions require the local fixture.');
 	test.setTimeout(90_000);
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
@@ -283,7 +283,7 @@ test('subscribers use bounded server pages and preserve provider-owned identity 
 });
 
 test('subscriber-only reads never serialize mailing-list or campaign metadata', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'The subscriber-only role is a local disposable fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'The subscriber-only role is a local disposable fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${63 + testInfo.retry}`,
@@ -320,7 +320,7 @@ test('subscriber-only reads never serialize mailing-list or campaign metadata', 
 });
 
 test('bounces use bounded pages and confirmed global and subscriber-scoped clearing', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic bounce assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic bounce assertions require the local fixture.');
 	test.setTimeout(60_000);
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
@@ -395,7 +395,7 @@ test('bounces use bounded pages and confirmed global and subscriber-scoped clear
 });
 
 test('a bounce-view-only role lands on bounded bounce history without clear controls', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'The bounce-only role is a local disposable fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'The bounce-only role is a local disposable fixture.');
 	await request.post(`${upstreamOrigin}/__control/reset`);
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${65 + testInfo.retry}`,
@@ -435,7 +435,7 @@ test('a bounce-view-only role lands on bounded bounce history without clear cont
 });
 
 test('a mailing-list-only role lands on its first authorized email route', async ({ page }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'The list-only role is a local disposable fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'The list-only role is a local disposable fixture.');
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${59 + testInfo.retry}`,
 	});

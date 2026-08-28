@@ -2,7 +2,7 @@ import * as v from 'valibot';
 
 export default {
 	server: {
-		ADMIN_V2_RUNTIME: v.optional(v.picklist(['production', 'platform-disabled']), 'platform-disabled'),
+		ADMIN_RUNTIME: v.optional(v.picklist(['production', 'platform-disabled']), 'platform-disabled'),
 		DATABASE_URL: v.optional(v.string()),
 		BETTER_AUTH_SECRET: v.optional(v.string()),
 		BETTER_AUTH_URL: v.optional(v.string()),
@@ -20,6 +20,6 @@ export default {
 		UMAMI_WEBSITE_ID: v.optional(v.string()),
 	},
 	client: {
-		VITE_ADMIN_V2_TITLE: v.optional(v.pipe(v.string(), v.minLength(1)), 'YAH Admin'),
+		VITE_ADMIN_TITLE: v.optional(v.pipe(v.string(), v.minLength(1)), 'YAH Admin'),
 	},
 };

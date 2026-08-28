@@ -7,7 +7,7 @@ import { getServerRequest } from '~/platform/request';
 
 async function fetchProductionSession(): Promise<ProjectedSession | null> {
 	const request = getServerRequest();
-	if (env.ADMIN_V2_RUNTIME !== 'production') return null;
+	if (env.ADMIN_RUNTIME !== 'production') return null;
 
 	try {
 		const { projectSession } = await import('./authorization.server');

@@ -3,7 +3,7 @@ import { env } from 'virtual:env/server';
 import { handlePublicAuthRequest } from '@yah/admin-core/public-auth-boundary';
 
 const handleAuth: APIHandler = async ({ request }) => {
-	if (env.ADMIN_V2_RUNTIME === 'production') {
+	if (env.ADMIN_RUNTIME === 'production') {
 		return handlePublicAuthRequest(request, async (forwardedRequest) => {
 			const { auth } = await import('~/platform/auth/production-server');
 			return auth.handler(forwardedRequest);

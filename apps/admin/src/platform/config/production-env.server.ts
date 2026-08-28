@@ -2,7 +2,7 @@ import 'server-only';
 import { env } from 'virtual:env/server';
 import { parseProductionConfig } from './production';
 
-if (env.ADMIN_V2_RUNTIME !== 'production') {
+if (env.ADMIN_RUNTIME !== 'production') {
 	throw new Error('Production configuration was loaded outside production mode.');
 }
 

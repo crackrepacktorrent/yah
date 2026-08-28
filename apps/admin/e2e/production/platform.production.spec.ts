@@ -11,7 +11,7 @@ import {
 test('production serves only its completed routes and public assets', async ({ request }) => {
 	const health = await request.get('/api/health');
 	expect(health.status()).toBe(200);
-	expect(await health.json()).toEqual({ app: 'yah-admin-v2', status: 'ok' });
+	expect(await health.json()).toEqual({ app: 'yah-admin', runtime: 'production', status: 'ok' });
 
 	const logo = await request.get('/logo.svg');
 	expect(logo.status()).toBe(200);

@@ -38,6 +38,6 @@ export function surfaceError(error: unknown, log: ErrorLogger = console.error): 
 	if (isSafeError(error)) throw error;
 
 	const errorId = crypto.randomUUID().slice(0, 8);
-	log(`[admin-v2:${errorId}] Unexpected server error`, error);
+	log(`[admin:${errorId}] Unexpected server error`, error);
 	throw createPublicError(`An unexpected error occurred. Reference: ${errorId}`, 500);
 }

@@ -9,7 +9,7 @@
       },
     },
     "apps/admin": {
-      "name": "yah-admin-v2",
+      "name": "yah-admin",
       "version": "0.0.0",
       "dependencies": {
         "@fontsource-variable/rubik": "5.2.8",
@@ -1247,7 +1247,7 @@
 
     "xtend": ["xtend@4.0.2", "", {}, "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ=="],
 
-    "yah-admin-v2": ["yah-admin-v2@workspace:apps/admin"],
+    "yah-admin": ["yah-admin@workspace:apps/admin"],
 
     "yah-dev": ["yah-dev@workspace:apps/web"],
 

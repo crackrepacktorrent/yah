@@ -5,19 +5,19 @@ const exactConfirmation = 'mutate-and-clean-disposable-production-e2e-database';
 
 function environment(databaseUrl: string, confirmation = exactConfirmation): NodeJS.ProcessEnv {
 	return {
-		ADMIN_V2_PRODUCTION_E2E_CONFIRMATION: confirmation,
+		ADMIN_PRODUCTION_E2E_CONFIRMATION: confirmation,
 		DATABASE_URL: databaseUrl,
 	};
 }
 
 describe('production browser database guard', () => {
 	it('accepts an explicitly confirmed TCP test database', () => {
-		const databaseUrl = 'postgres://yah:secret@127.0.0.1:5432/yah_admin_v2_test';
+		const databaseUrl = 'postgres://yah:secret@127.0.0.1:5432/yah_admin_test';
 		expect(requireDisposableProductionE2EDatabase(environment(databaseUrl))).toBe(databaseUrl);
 	});
 
 	it('accepts an explicitly confirmed Unix-socket test database', () => {
-		const databaseUrl = 'socket://yah:secret@/tmp/postgres?db=yah_admin_v2_routes_test';
+		const databaseUrl = 'socket://yah:secret@/tmp/postgres?db=yah_admin_routes_test';
 		expect(requireDisposableProductionE2EDatabase(environment(databaseUrl))).toBe(databaseUrl);
 	});
 

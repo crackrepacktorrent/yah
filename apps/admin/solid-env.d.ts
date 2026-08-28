@@ -8,7 +8,7 @@ declare module 'virtual:env/client' {
     ? O
     : string;
   const env: {
-    readonly "VITE_ADMIN_V2_TITLE": __Out<__Schema["client"]["VITE_ADMIN_V2_TITLE"]>;
+    readonly "VITE_ADMIN_TITLE": __Out<__Schema["client"]["VITE_ADMIN_TITLE"]>;
   };
   export { env };
   export default env;
@@ -20,7 +20,7 @@ declare module 'virtual:env/server' {
     ? O
     : string;
   const env: {
-    readonly "ADMIN_V2_RUNTIME": __Out<__Schema["server"]["ADMIN_V2_RUNTIME"]>;
+    readonly "ADMIN_RUNTIME": __Out<__Schema["server"]["ADMIN_RUNTIME"]>;
     readonly "DATABASE_URL": __Out<__Schema["server"]["DATABASE_URL"]>;
     readonly "BETTER_AUTH_SECRET": __Out<__Schema["server"]["BETTER_AUTH_SECRET"]>;
     readonly "BETTER_AUTH_URL": __Out<__Schema["server"]["BETTER_AUTH_URL"]>;
@@ -36,7 +36,7 @@ declare module 'virtual:env/server' {
     readonly "UMAMI_USERNAME": __Out<__Schema["server"]["UMAMI_USERNAME"]>;
     readonly "UMAMI_PASSWORD": __Out<__Schema["server"]["UMAMI_PASSWORD"]>;
     readonly "UMAMI_WEBSITE_ID": __Out<__Schema["server"]["UMAMI_WEBSITE_ID"]>;
-    readonly "VITE_ADMIN_V2_TITLE": __Out<__Schema["client"]["VITE_ADMIN_V2_TITLE"]>;
+    readonly "VITE_ADMIN_TITLE": __Out<__Schema["client"]["VITE_ADMIN_TITLE"]>;
   };
   export { env };
   export default env;

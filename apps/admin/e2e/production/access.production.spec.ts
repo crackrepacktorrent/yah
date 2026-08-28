@@ -20,7 +20,7 @@ import {
 } from '../production-test';
 
 test('access management is route-based, keyboard-operable, private, and preserves user identities', async ({ page, request }, testInfo) => {
-	test.skip(!!process.env['ADMIN_V2_PRODUCTION_E2E_BASE_URL'], 'Deterministic access assertions require the local fixture.');
+	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic access assertions require the local fixture.');
 	await page.setExtraHTTPHeaders({
 		'x-forwarded-for': `127.0.0.${70 + testInfo.retry}`,
 	});

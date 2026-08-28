@@ -17,7 +17,7 @@ function databaseNameFromUrl(databaseUrl: string): string | null {
 export function requireDisposableProductionE2EDatabase(environment: NodeJS.ProcessEnv = process.env): string {
 	const databaseUrl = environment['DATABASE_URL'];
 	if (!databaseUrl) throw new Error('DATABASE_URL is required for the production browser suite.');
-	if (environment['ADMIN_V2_PRODUCTION_E2E_CONFIRMATION'] !== confirmation) {
+	if (environment['ADMIN_PRODUCTION_E2E_CONFIRMATION'] !== confirmation) {
 		throw new Error('Refusing to start production browser tests without the exact confirmation phrase.');
 	}
 	if (!databaseNameFromUrl(databaseUrl)?.endsWith('_test')) {
