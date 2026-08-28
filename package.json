@@ -8,9 +8,9 @@
     "check": "turbo check",
     "lint": "turbo lint",
     "test": "turbo test",
-    "test:e2e:admin-v2": "bun run --cwd apps/admin-v2 test:e2e",
+    "test:e2e:admin": "bun run --cwd apps/admin test:e2e",
     "dev:web": "bun run --cwd apps/web dev",
-    "dev:admin-v2": "bun run --cwd apps/admin-v2 dev"
+    "dev:admin": "bun run --cwd apps/admin dev"
   },
   "devDependencies": {
     "turbo": "^2"

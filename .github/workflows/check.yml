@@ -41,7 +41,7 @@ jobs:
       - run: bun run test
 
       - name: Bootstrap disposable auth database
-        run: bun run --cwd apps/admin-v2 ops:bootstrap-admin
+        run: bun run --cwd apps/admin ops:bootstrap-admin
         env:
           DATABASE_URL: postgres://yah:yah-ci-only@127.0.0.1:5432/yah_admin_v2_test
           BETTER_AUTH_SECRET: yah-ci-auth-secret-at-least-32-characters
@@ -50,7 +50,7 @@ jobs:
           BOOTSTRAP_ADMIN_PASSWORD: owner-one-test-password-2026
 
       - name: Test Solid 2 production auth and authorization
-        run: bun run --cwd apps/admin-v2 test:auth-integration
+        run: bun run --cwd apps/admin test:auth-integration
         env:
           ADMIN_V2_AUTH_INTEGRATION: '1'
           ADMIN_V2_AUTH_INTEGRATION_CONFIRMATION: mutate-and-clean-disposable-auth-database
@@ -71,12 +71,12 @@ jobs:
           UMAMI_PASSWORD: test
           UMAMI_WEBSITE_ID: test
 
-      - run: bun run --cwd apps/admin-v2 install:e2e
+      - run: bun run --cwd apps/admin install:e2e
 
-      - run: bun run test:e2e:admin-v2
+      - run: bun run test:e2e:admin
 
       - name: Test Solid 2 production routes in a real browser
-        run: bun run --cwd apps/admin-v2 test:e2e:production
+        run: bun run --cwd apps/admin test:e2e:production
         env:
           ADMIN_V2_RUNTIME: production
           ADMIN_V2_PRODUCTION_E2E_CONFIRMATION: mutate-and-clean-disposable-production-e2e-database

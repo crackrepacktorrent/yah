@@ -8,7 +8,7 @@
         "turbo": "^2",
       },
     },
-    "apps/admin-v2": {
+    "apps/admin": {
       "name": "yah-admin-v2",
       "version": "0.0.0",
       "dependencies": {
@@ -1247,7 +1247,7 @@
 
     "xtend": ["xtend@4.0.2", "", {}, "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ=="],
 
-    "yah-admin-v2": ["yah-admin-v2@workspace:apps/admin-v2"],
+    "yah-admin-v2": ["yah-admin-v2@workspace:apps/admin"],
 
     "yah-dev": ["yah-dev@workspace:apps/web"],
 

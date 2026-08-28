@@ -7,25 +7,25 @@ WORKDIR /app
 # Install deps from monorepo root + all workspaces (lockfile requires all workspace package.jsons)
 COPY package.json bun.lock turbo.json ./
 COPY apps/web/package.json ./apps/web/
-COPY apps/admin-v2/package.json ./apps/admin-v2/
+COPY apps/admin/package.json ./apps/admin/
 COPY packages/admin-core/package.json ./packages/admin-core/
 RUN bun install --frozen-lockfile
 
-COPY apps/admin-v2 ./apps/admin-v2
+COPY apps/admin ./apps/admin
 COPY packages/admin-core ./packages/admin-core
 
 # Build with the platform boundary closed. Server environment is read and
 # validated when the resulting process boots, so production credentials and a
 # reachable production database never belong in the image-build context.
-RUN cd apps/admin-v2 && ADMIN_V2_RUNTIME=platform-disabled bun run build
+RUN cd apps/admin && ADMIN_V2_RUNTIME=platform-disabled bun run build
 
 # Dereference Bun's workspace link at the package boundary so the runtime copy
 # does not depend on Bun's internal content-store path.
-RUN cp -RL apps/admin-v2/node_modules/srvx /srvx-runtime
+RUN cp -RL apps/admin/node_modules/srvx /srvx-runtime
 
 # The audited one-shot auth utilities. They operate on Better Auth's database
 # contract and are invoked as ops/*.js inside the running image.
-RUN cd apps/admin-v2 && bun build \
+RUN cd apps/admin && bun build \
     scripts/audit-auth.ts \
     scripts/bootstrap-admin.ts \
     scripts/verify-existing-owners.ts \
@@ -37,10 +37,10 @@ RUN cd apps/admin-v2 && bun build \
 FROM oven/bun:1.3.11-alpine
 WORKDIR /app
 
-COPY --from=builder /app/apps/admin-v2/dist ./dist
-COPY --from=builder /app/apps/admin-v2/server.mjs ./server.mjs
+COPY --from=builder /app/apps/admin/dist ./dist
+COPY --from=builder /app/apps/admin/server.mjs ./server.mjs
 COPY --from=builder /srvx-runtime ./node_modules/srvx
-COPY --from=builder /app/apps/admin-v2/ops ./ops
+COPY --from=builder /app/apps/admin/ops ./ops
 
 ENV NODE_ENV=production
 ENV ADMIN_V2_RUNTIME=production
