@@ -57,7 +57,8 @@ test('anonymous product pages redirect safely and disclose no invitation details
 	await expect(result).toHaveAttribute('aria-live', 'polite');
 });
 
-test('the auth API accepts only GET and POST and rejects untrusted origins', async ({ page }) => {
+test('the auth API accepts only GET and POST and rejects untrusted origins', async ({ page, context }, testInfo) => {
+	// The method allowlist is enforced by the runtime guard, ahead of any session.
 	for (const method of ['HEAD', 'OPTIONS', 'PUT', 'PATCH', 'DELETE', 'PROPFIND']) {
 		const unsupported = await page.request.fetch('/api/auth/get-session', { method });
 		expect(
@@ -70,6 +71,16 @@ test('the auth API accepts only GET and POST and rejects untrusted origins', asy
 		).toEqual({ allow: 'GET, POST', contentType: undefined, status: 405 });
 	}
 
+	// Origin rejection is Better Auth's CSRF check, and a signed-out sign-out
+	// resolves before it. Establish a session so the rejected request has
+	// something it could otherwise have destroyed.
+	await page.setExtraHTTPHeaders({ 'x-forwarded-for': `127.0.0.${90 + testInfo.retry}` });
+	await page.goto('/login');
+	await page.getByLabel('Email').fill(ownerEmail);
+	await page.getByLabel('Password').fill(ownerPassword);
+	await page.getByRole('button', { name: 'Sign in' }).click();
+	await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
 	for (const origin of ['https://attacker.example', 'null']) {
 		const rejected = await page.request.post('/api/auth/sign-out', { data: {}, headers: { origin } });
 		expect(rejected.status(), origin).toBe(403);
@@ -79,6 +90,9 @@ test('the auth API accepts only GET and POST and rejects untrusted origins', asy
 	const missingOrigin = await page.request.post('/api/auth/sign-out', { data: {} });
 	expect(missingOrigin.status()).toBe(403);
 	expect(missingOrigin.headers()['content-type']).not.toContain('text/html');
+
+	// Every rejection must leave the session intact.
+	expect((await context.cookies()).some((cookie) => cookie.name === 'better-auth.session_token')).toBe(true);
 });
 
 test('owner login activates the canonical organization and guest routes redirect without a form flash', async ({ page }, testInfo) => {
