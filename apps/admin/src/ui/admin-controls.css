@@ -54,6 +54,8 @@
 	font-weight: 650;
 }
 
+.form-field { align-content: start; }
+
 .filter-field {
 	max-width: 30rem;
 	margin-bottom: 1rem;

@@ -1,4 +1,5 @@
 import { Show, createSignal, untrack } from 'solid-js';
+import { InputField, TextareaField } from '~/ui/form-field';
 import type { EmailGeneralSettings, SaveEmailGeneralSettingsCommand } from './contracts';
 import { SettingToggle } from './setting-toggle';
 
@@ -42,16 +43,16 @@ export function EmailGeneralSettingsForm(props: {
 			<Show when={props.error}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 			<fieldset class="settings-card" disabled={!props.canEdit || props.pending}>
 				<legend>Recipient-facing identity</legend>
-				<label class="form-field"><span>Site name</span><input value={siteName()} maxlength="300" required onInput={(event) => setSiteName(event.currentTarget.value)} /><small>Shown on Listmonk’s recipient pages and generated messages.</small></label>
+				<InputField label="Site name" help="Shown on Listmonk’s recipient pages and generated messages." value={siteName()} maxlength="300" required onInput={(event) => setSiteName(event.currentTarget.value)} />
 				<div class="settings-domain-grid">
-					<label class="form-field"><span>Logo URL</span><input type="url" value={logoUrl()} maxlength="300" placeholder="https://example.org/logo.png" onInput={(event) => setLogoUrl(event.currentTarget.value)} /><small>Optional HTTP(S) image shown on recipient pages.</small></label>
-					<label class="form-field"><span>Favicon URL</span><input type="url" value={faviconUrl()} maxlength="300" placeholder="https://example.org/favicon.png" onInput={(event) => setFaviconUrl(event.currentTarget.value)} /><small>Optional HTTP(S) icon for recipient pages.</small></label>
+					<InputField label="Logo URL" help="Optional HTTP(S) image shown on recipient pages." type="url" value={logoUrl()} maxlength="300" placeholder="https://example.org/logo.png" onInput={(event) => setLogoUrl(event.currentTarget.value)} />
+					<InputField label="Favicon URL" help="Optional HTTP(S) icon for recipient pages." type="url" value={faviconUrl()} maxlength="300" placeholder="https://example.org/favicon.png" onInput={(event) => setFaviconUrl(event.currentTarget.value)} />
 				</div>
 			</fieldset>
 			<fieldset class="settings-card" disabled={!props.canEdit || props.pending}>
 				<legend>Message defaults</legend>
-				<label class="form-field"><span>Default from address</span><input value={fromEmail()} maxlength="1000" required placeholder="YAH &lt;hello@example.org&gt;" onInput={(event) => setFromEmail(event.currentTarget.value)} /><small>Used by campaigns, transactional email, SMTP tests, and subscriber exports unless a workflow overrides it.</small></label>
-				<label class="form-field"><span>Operator notification emails</span><textarea value={notifyEmails()} rows="4" maxlength="33000" placeholder="operator@example.org" onInput={(event) => setNotifyEmails(event.currentTarget.value)} /><small>One address per line. Listmonk sends campaign, import, and failure notices to these recipients.</small></label>
+				<InputField label="Default from address" help="Used by campaigns, transactional email, SMTP tests, and subscriber exports unless a workflow overrides it." value={fromEmail()} maxlength="1000" required placeholder="YAH &lt;hello@example.org&gt;" onInput={(event) => setFromEmail(event.currentTarget.value)} />
+				<TextareaField label="Operator notification emails" help="One address per line. Listmonk sends campaign, import, and failure notices to these recipients." value={notifyEmails()} rows="4" maxlength="33000" placeholder="operator@example.org" onInput={(event) => setNotifyEmails(event.currentTarget.value)} />
 				<SettingToggle label="Send opt-in confirmation messages" help="Required for YAH’s double-opt-in subscription flow to deliver confirmation email." checked={sendOptInConfirmation()} disabled={!props.canEdit || props.pending} onChange={setSendOptInConfirmation} />
 			</fieldset>
 			<fieldset class="settings-card" disabled={!props.canEdit || props.pending}>

@@ -93,8 +93,8 @@ describe('email policy forms', () => {
 			},
 			canManage: true, pending: false, error: '', onSubmit,
 		}));
-		const maxErrors = container.querySelector<HTMLInputElement>('input[aria-label="Maximum send errors"]')
-			?? [...container.querySelectorAll('label')].find((label) => label.textContent?.includes('Maximum send errors'))!.querySelector('input')!;
+		const maxErrors = [...container.querySelectorAll('input')]
+			.find((input) => input.labels?.[0]?.textContent === 'Maximum send errors')!;
 		maxErrors.value = '900';
 		maxErrors.dispatchEvent(new Event('input', { bubbles: true }));
 		flush();

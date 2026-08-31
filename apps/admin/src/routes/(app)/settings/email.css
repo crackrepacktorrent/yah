@@ -1,20 +1,15 @@
 .email-settings-page { color: oklch(0.26 0.044 44.2); }
 .email-settings-page .page-header p:not(.eyebrow) { max-width: 48rem; }
 .smtp-settings-form { display: grid; gap: 1.25rem; }
-.smtp-server-card { min-width: 0; padding: 1rem; border: 1px solid oklch(0.82 0.02 67.7); border-radius: var(--admin-radius-panel); }
-.smtp-server-card legend { padding: 0 0.4rem; font-size: 1.05rem; font-weight: 750; }
-.smtp-server-heading,
-.smtp-test-row { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.smtp-server-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
 .smtp-check-field { display: flex; align-items: center; gap: 0.5rem; font-weight: 650; }
 .smtp-check-field input { width: 1.1rem; height: 1.1rem; }
 .smtp-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 .smtp-wide { grid-column: span 2; }
 .smtp-align-end { align-self: end; min-height: 2.75rem; }
-.smtp-test-row { justify-content: flex-start; margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid oklch(0.88 0.016 67.7); }
+.smtp-test-row { display: flex; align-items: end; justify-content: flex-start; gap: 1rem; padding-top: 1rem; border-top: 1px solid var(--admin-border); }
 .smtp-test-row .form-field { flex: 1 1 20rem; }
 .smtp-actions { justify-content: space-between; }
-.smtp-server-card:disabled { opacity: 0.75; }
-.smtp-server-card:disabled .button { pointer-events: none; }
 .settings-form { display: grid; gap: 1rem; }
 .settings-card { display: grid; gap: 1rem; min-width: 0; margin: 0; padding: 1rem; border: 1px solid var(--admin-border); border-radius: var(--admin-radius-panel); background: var(--admin-surface); }
 .settings-card legend { padding: 0 0.4rem; font-size: 1.05rem; font-weight: 750; }
@@ -28,9 +23,10 @@
 .settings-note--flush { padding-left: 0; }
 .settings-subsection { display: grid; gap: 0.75rem; margin-top: 0.25rem; padding-top: 1rem; border-top: 1px solid var(--admin-border); }
 .settings-subsection > p { padding-left: 0; }
-.settings-option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.settings-option-grid,
+.settings-domain-grid,
+.settings-inline-toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .settings-warning { margin: 0; padding: 0.75rem; border-left: 0.25rem solid var(--admin-warning); color: var(--admin-text-muted); background: var(--admin-surface-subtle); }
-.settings-domain-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .settings-health { display: grid; gap: 1rem; margin-bottom: 1.25rem; padding: 1rem; border: 1px solid var(--admin-border); border-radius: var(--admin-radius-panel); background: var(--admin-surface); }
 .settings-health h2,
 .settings-health p { margin: 0; }
@@ -48,7 +44,6 @@
 .settings-provider-card { display: grid; gap: 0.85rem; min-width: 0; margin: 0; padding: 0.9rem; border: 1px solid var(--admin-border); border-radius: var(--admin-radius-control); background: var(--admin-surface-subtle); }
 .settings-provider-card legend { font-size: 0.95rem; }
 .settings-provider-card > .form-field { max-width: 36rem; }
-.settings-inline-toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .bounce-action-grid { display: grid; gap: 0.75rem; }
 .bounce-action-row { display: grid; grid-template-columns: minmax(8rem, 0.7fr) minmax(7rem, 0.5fr) minmax(11rem, 1fr); align-items: end; gap: 0.75rem; }
 .bounce-action-row > strong { align-self: center; }

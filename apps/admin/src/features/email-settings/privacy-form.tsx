@@ -1,4 +1,5 @@
 import { For, Show, createSignal, untrack } from 'solid-js';
+import { TextareaField } from '~/ui/form-field';
 import type { EmailExportField, EmailPrivacyPolicy, SaveEmailPrivacyPolicyCommand } from './contracts';
 import { SettingToggle } from './setting-toggle';
 
@@ -82,8 +83,8 @@ export function EmailPrivacyForm(props: {
 			<fieldset class="settings-card" disabled={!props.canEdit || props.pending}>
 				<legend>Subscription domains</legend>
 				<div class="settings-domain-grid">
-					<label class="form-field"><span>Blocked domains</span><textarea value={domainBlocklist()} rows="6" maxlength="256000" placeholder="example.com" onInput={(event) => setDomainBlocklist(event.currentTarget.value)} /><small>One domain per line. Public subscriptions and imports reject these domains.</small></label>
-					<label class="form-field"><span>Allowed domains</span><textarea value={domainAllowlist()} rows="6" maxlength="256000" placeholder="yourcompany.org" onInput={(event) => setDomainAllowlist(event.currentTarget.value)} /><small>When non-empty, subscriptions and imports accept only these domains.</small></label>
+					<TextareaField label="Blocked domains" help="One domain per line. Public subscriptions and imports reject these domains." value={domainBlocklist()} rows="6" maxlength="256000" placeholder="example.com" onInput={(event) => setDomainBlocklist(event.currentTarget.value)} />
+					<TextareaField label="Allowed domains" help="When non-empty, subscriptions and imports accept only these domains." value={domainAllowlist()} rows="6" maxlength="256000" placeholder="yourcompany.org" onInput={(event) => setDomainAllowlist(event.currentTarget.value)} />
 				</div>
 			</fieldset>
 			<Show when={props.canEdit}><div class="form-actions"><button class="button" type="submit" disabled={props.pending}>{props.pending ? 'Saving…' : 'Save privacy policy'}</button></div></Show>
