@@ -1,5 +1,7 @@
 import { For, Show, createSignal, untrack } from 'solid-js';
+import { InputField, SelectField } from '~/ui/form-field';
 import { GO_DURATION_HTML_PATTERN, type SaveEmailSettingsCommand, type SmtpServer, type TestSmtpCommand } from './contracts';
+import { StoredSecretField } from './stored-secret-field';
 
 type SmtpDraft = SmtpServer & { password: string; passwordChanged: boolean; testRecipient: string };
 
@@ -111,9 +113,8 @@ export function EmailSettingsForm(props: {
 			<Show when={localError() || props.error}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 			<For each={servers()} keyed={(server) => server.uuid}>
 				{(server, index) => {
-					const fieldId = (field: string) => `smtp-${field}-${index()}`;
 					return (
-					<fieldset class="smtp-server-card" disabled={!props.canEdit || props.pending}>
+					<fieldset class="settings-card smtp-server-card" disabled={!props.canEdit || props.pending}>
 						<legend>SMTP server {index() + 1}</legend>
 						<div class="smtp-server-heading">
 							<label class="smtp-check-field">
@@ -125,37 +126,33 @@ export function EmailSettingsForm(props: {
 							</Show>
 						</div>
 						<div class="smtp-fields">
-							<label class="form-field smtp-wide"><span>Host</span><input value={server().host} maxlength="255" required onInput={(event) => updateServer(index(), { host: event.currentTarget.value })} /></label>
-							<label class="form-field"><span>Port</span><input type="number" min="1" max="65535" value={server().port} required onInput={(event) => updateServer(index(), { port: event.currentTarget.valueAsNumber })} /></label>
-							<label class="form-field"><span>Authentication</span><select value={server().authProtocol} onChange={(event) => updateServer(index(), { authProtocol: event.currentTarget.value as SmtpDraft['authProtocol'] })}><option value="none">None</option><option value="login">LOGIN</option><option value="plain">PLAIN</option><option value="cram">CRAM-MD5</option></select></label>
-							<label class="form-field"><span>Username</span><input value={server().username} maxlength="1000" disabled={!props.canEdit || props.pending || server().authProtocol === 'none'} onInput={(event) => updateServer(index(), { username: event.currentTarget.value })} /></label>
-							<div class="form-field">
-								<label for={fieldId('password')}>Password</label>
-								<input id={fieldId('password')} aria-describedby={server().hasPassword && !server().passwordChanged ? fieldId('password-help') : undefined} type="password" value={server().password} maxlength="10000" disabled={!props.canEdit || props.pending || server().authProtocol === 'none'} placeholder={server().hasPassword && !server().passwordChanged ? 'Saved password' : undefined} onInput={(event) => updateServer(index(), { password: event.currentTarget.value, passwordChanged: true })} />
-								<Show when={server().hasPassword && !server().passwordChanged}><small id={fieldId('password-help')}>Leave blank to keep the saved password. Re-enter it to run a test.</small></Show>
-							</div>
-							<label class="form-field"><span>TLS</span><select value={server().tlsType} onChange={(event) => updateServer(index(), { tlsType: event.currentTarget.value as SmtpDraft['tlsType'] })}><option value="none">Off</option><option value="STARTTLS">STARTTLS</option><option value="TLS">SSL/TLS</option></select></label>
+							<InputField fieldClass="smtp-wide" label="Host" value={server().host} maxlength="255" required onInput={(event) => updateServer(index(), { host: event.currentTarget.value })} />
+							<InputField label="Port" type="number" min="1" max="65535" value={server().port} required onInput={(event) => updateServer(index(), { port: event.currentTarget.valueAsNumber })} />
+							<SelectField label="Authentication" value={server().authProtocol} onChange={(event) => updateServer(index(), { authProtocol: event.currentTarget.value as SmtpDraft['authProtocol'] })}><option value="none">None</option><option value="login">LOGIN</option><option value="plain">PLAIN</option><option value="cram">CRAM-MD5</option></SelectField>
+							<InputField label="Username" value={server().username} maxlength="1000" disabled={!props.canEdit || props.pending || server().authProtocol === 'none'} onInput={(event) => updateServer(index(), { username: event.currentTarget.value })} />
+							<StoredSecretField
+								label="Password"
+								value={server().password}
+								hasSaved={server().hasPassword && !server().passwordChanged}
+								disabled={!props.canEdit || props.pending || server().authProtocol === 'none'}
+								help={server().hasPassword && !server().passwordChanged ? 'Leave blank to keep the saved password. Re-enter it to run a test.' : undefined}
+								savedPlaceholder="Saved password"
+								onInput={(password) => updateServer(index(), { password, passwordChanged: true })}
+							/>
+							<SelectField label="TLS" value={server().tlsType} onChange={(event) => updateServer(index(), { tlsType: event.currentTarget.value as SmtpDraft['tlsType'] })}><option value="none">Off</option><option value="STARTTLS">STARTTLS</option><option value="TLS">SSL/TLS</option></SelectField>
 							<label class="smtp-check-field smtp-align-end"><input type="checkbox" checked={server().tlsSkipVerify} disabled={!props.canEdit || props.pending || server().tlsType === 'none'} onChange={(event) => updateServer(index(), { tlsSkipVerify: event.currentTarget.checked })} /><span>Skip TLS certificate verification</span></label>
-							<label class="form-field"><span>HELO hostname</span><input value={server().helloHostname} maxlength="255" onInput={(event) => updateServer(index(), { helloHostname: event.currentTarget.value })} /></label>
-							<label class="form-field"><span>Connections</span><input type="number" min="1" max="10000" value={server().maxConnections} required onInput={(event) => updateServer(index(), { maxConnections: event.currentTarget.valueAsNumber })} /></label>
-							<label class="form-field"><span>Message retries</span><input type="number" min="0" max="1000" value={server().maxMessageRetries} required onInput={(event) => updateServer(index(), { maxMessageRetries: event.currentTarget.valueAsNumber })} /></label>
-							<label class="form-field"><span>Retry delay</span><input value={server().messageRetryDelay} pattern={GO_DURATION_HTML_PATTERN} maxlength="64" required onInput={(event) => updateServer(index(), { messageRetryDelay: event.currentTarget.value })} /></label>
-							<label class="form-field"><span>Idle timeout</span><input value={server().idleTimeout} pattern={GO_DURATION_HTML_PATTERN} maxlength="64" required onInput={(event) => updateServer(index(), { idleTimeout: event.currentTarget.value })} /></label>
-							<label class="form-field"><span>Pool wait timeout</span><input value={server().waitTimeout} pattern={GO_DURATION_HTML_PATTERN} maxlength="64" required onInput={(event) => updateServer(index(), { waitTimeout: event.currentTarget.value })} /></label>
-							<div class="form-field">
-								<label for={fieldId('name')}>Server name</label>
-								<input id={fieldId('name')} aria-describedby={fieldId('name-help')} value={server().name} maxlength="100" placeholder="email-primary" onInput={(event) => updateServer(index(), { name: event.currentTarget.value })} />
-								<small id={fieldId('name-help')}>Optional Listmonk messenger name.</small>
-							</div>
-							<div class="form-field smtp-wide">
-								<label for={fieldId('from')}>From addresses or domains</label>
-								<input id={fieldId('from')} aria-describedby={fieldId('from-help')} value={server().fromAddresses.join(', ')} maxlength="26000" placeholder="sender@example.org, example.org" onInput={(event) => updateServer(index(), { fromAddresses: event.currentTarget.value.split(',').map((value) => value.trim()).filter(Boolean) })} />
-								<small id={fieldId('from-help')}>Optional comma-separated routing keys. Existing custom headers are retained but intentionally not editable here.</small>
-							</div>
+							<InputField label="HELO hostname" value={server().helloHostname} maxlength="255" onInput={(event) => updateServer(index(), { helloHostname: event.currentTarget.value })} />
+							<InputField label="Connections" type="number" min="1" max="10000" value={server().maxConnections} required onInput={(event) => updateServer(index(), { maxConnections: event.currentTarget.valueAsNumber })} />
+							<InputField label="Message retries" type="number" min="0" max="1000" value={server().maxMessageRetries} required onInput={(event) => updateServer(index(), { maxMessageRetries: event.currentTarget.valueAsNumber })} />
+							<InputField label="Retry delay" value={server().messageRetryDelay} pattern={GO_DURATION_HTML_PATTERN} maxlength="64" required onInput={(event) => updateServer(index(), { messageRetryDelay: event.currentTarget.value })} />
+							<InputField label="Idle timeout" value={server().idleTimeout} pattern={GO_DURATION_HTML_PATTERN} maxlength="64" required onInput={(event) => updateServer(index(), { idleTimeout: event.currentTarget.value })} />
+							<InputField label="Pool wait timeout" value={server().waitTimeout} pattern={GO_DURATION_HTML_PATTERN} maxlength="64" required onInput={(event) => updateServer(index(), { waitTimeout: event.currentTarget.value })} />
+							<InputField label="Server name" help="Optional Listmonk messenger name." value={server().name} maxlength="100" placeholder="email-primary" onInput={(event) => updateServer(index(), { name: event.currentTarget.value })} />
+							<InputField fieldClass="smtp-wide" label="From addresses or domains" help="Optional comma-separated routing keys. Existing custom headers are retained but intentionally not editable here." value={server().fromAddresses.join(', ')} maxlength="26000" placeholder="sender@example.org, example.org" onInput={(event) => updateServer(index(), { fromAddresses: event.currentTarget.value.split(',').map((value) => value.trim()).filter(Boolean) })} />
 						</div>
 						<Show when={props.canEdit}>
 							<div class="smtp-test-row">
-								<label class="form-field"><span>Test recipient</span><input type="email" value={server().testRecipient} maxlength="320" placeholder="you@example.org" onInput={(event) => updateServer(index(), { testRecipient: event.currentTarget.value })} /></label>
+								<InputField label="Test recipient" type="email" value={server().testRecipient} maxlength="320" placeholder="you@example.org" onInput={(event) => updateServer(index(), { testRecipient: event.currentTarget.value })} />
 								<button class="button button--secondary" type="button" disabled={props.pending || props.testingUuid === server().uuid} onClick={() => test(index())}>{props.testingUuid === server().uuid ? 'Sending…' : 'Send test'}</button>
 							</div>
 						</Show>

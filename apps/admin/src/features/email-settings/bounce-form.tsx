@@ -1,6 +1,8 @@
 import { For, Show, createSignal, createStore, untrack } from 'solid-js';
+import { InputField, SelectField } from '~/ui/form-field';
 import { GO_DURATION_HTML_PATTERN, type BounceMailbox, type EmailBounceSettings, type SaveEmailBounceSettingsCommand } from './contracts';
 import { SettingToggle } from './setting-toggle';
+import { StoredSecretField } from './stored-secret-field';
 
 type MailboxDraft = Omit<BounceMailbox, 'hasPassword'> & { hasPassword: boolean; password: string };
 type BounceKind = keyof EmailBounceSettings['actions'];
@@ -25,29 +27,6 @@ const bounceKinds: Array<{ key: BounceKind; label: string }> = [
 
 function credentialHelp(saved: boolean): string {
 	return saved ? 'Leave blank to retain the saved credential.' : 'Enter a credential before enabling this provider.';
-}
-
-function SecretField(props: {
-	label: string;
-	value: string;
-	hasSaved: boolean;
-	disabled: boolean;
-	onInput: (value: string) => void;
-}) {
-	return (
-		<label class="form-field">
-			<span>{props.label}</span>
-			<input
-				type="password"
-				value={props.value}
-				maxlength="10000"
-				disabled={props.disabled}
-				placeholder={props.hasSaved ? 'Saved credential' : ''}
-				onInput={(event) => props.onInput(event.currentTarget.value)}
-			/>
-			<small>{credentialHelp(props.hasSaved)}</small>
-		</label>
-	);
 }
 
 export function EmailBounceSettingsForm(props: {
@@ -165,19 +144,13 @@ export function EmailBounceSettingsForm(props: {
 					<For each={bounceKinds}>{({ key, label }) => (
 						<div class="bounce-action-row">
 							<strong>{label}</strong>
-							<label class="form-field">
-								<span>Count</span>
-								<input type="number" min="1" max="1000" required value={draft.actions[key].count} disabled={disabled() || !draft.enabled} onInput={(event) => updateAction(key, 'count', Number(event.currentTarget.value))} />
-							</label>
-							<label class="form-field">
-								<span>Action</span>
-								<select value={draft.actions[key].action} disabled={disabled() || !draft.enabled} onChange={(event) => updateAction(key, 'action', event.currentTarget.value as EmailBounceSettings['actions'][BounceKind]['action'])}>
+							<InputField label="Count" type="number" min="1" max="1000" required value={draft.actions[key].count} disabled={disabled() || !draft.enabled} onInput={(event) => updateAction(key, 'count', Number(event.currentTarget.value))} />
+							<SelectField label="Action" value={draft.actions[key].action} disabled={disabled() || !draft.enabled} onChange={(event) => updateAction(key, 'action', event.currentTarget.value as EmailBounceSettings['actions'][BounceKind]['action'])}>
 									<option value="none">Do nothing</option>
 									<option value="unsubscribe">Unsubscribe</option>
 									<option value="blocklist">Blocklist</option>
 									<option value="delete" disabled={!props.canDeleteSubscribers}>Delete subscriber</option>
-								</select>
-							</label>
+							</SelectField>
 						</div>
 					)}</For>
 				</div>
@@ -198,35 +171,28 @@ export function EmailBounceSettingsForm(props: {
 					<div class="settings-provider-card">
 						<SettingToggle label="Azure Communication Services" help="Authenticate Azure event-grid webhook requests with a shared secret." checked={draft.azure.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.azure.enabled = enabled; })} />
 						<div class="settings-domain-grid">
-							<SecretField label="Shared secret" value={draft.azure.secret} hasSaved={draft.azure.hasSecret} disabled={disabled() || !draft.azure.enabled} onInput={(secret) => setDraft((next) => { next.azure.secret = secret; })} />
-							<label class="form-field">
-								<span>Secret header</span>
-								<input value={draft.azure.secretHeader} maxlength="255" disabled={disabled() || !draft.azure.enabled} onInput={(event) => setDraft((next) => { next.azure.secretHeader = event.currentTarget.value; })} />
-								<small>HTTP header containing the shared secret.</small>
-							</label>
+							<StoredSecretField label="Shared secret" value={draft.azure.secret} hasSaved={draft.azure.hasSecret} disabled={disabled() || !draft.azure.enabled} help={credentialHelp(draft.azure.hasSecret)} onInput={(secret) => setDraft((next) => { next.azure.secret = secret; })} />
+							<InputField label="Secret header" help="HTTP header containing the shared secret." value={draft.azure.secretHeader} maxlength="255" disabled={disabled() || !draft.azure.enabled} onInput={(event) => setDraft((next) => { next.azure.secretHeader = event.currentTarget.value; })} />
 						</div>
 					</div>
 					<div class="settings-provider-card">
 						<SettingToggle label="SendGrid" help="Accept signed SendGrid bounce events." checked={draft.sendgrid.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.sendgrid.enabled = enabled; })} />
-						<SecretField label="Verification key" value={draft.sendgrid.key} hasSaved={draft.sendgrid.hasKey} disabled={disabled() || !draft.sendgrid.enabled} onInput={(key) => setDraft((next) => { next.sendgrid.key = key; })} />
+						<StoredSecretField label="Verification key" value={draft.sendgrid.key} hasSaved={draft.sendgrid.hasKey} disabled={disabled() || !draft.sendgrid.enabled} help={credentialHelp(draft.sendgrid.hasKey)} onInput={(key) => setDraft((next) => { next.sendgrid.key = key; })} />
 					</div>
 					<div class="settings-provider-card">
 						<SettingToggle label="Postmark" help="Accept Postmark bounce events with basic authentication." checked={draft.postmark.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.postmark.enabled = enabled; })} />
 						<div class="settings-domain-grid">
-							<label class="form-field">
-								<span>Username</span>
-								<input value={draft.postmark.username} maxlength="1000" disabled={disabled() || !draft.postmark.enabled} onInput={(event) => setDraft((next) => { next.postmark.username = event.currentTarget.value; })} />
-							</label>
-							<SecretField label="Password" value={draft.postmark.password} hasSaved={draft.postmark.hasPassword} disabled={disabled() || !draft.postmark.enabled} onInput={(password) => setDraft((next) => { next.postmark.password = password; })} />
+							<InputField label="Username" value={draft.postmark.username} maxlength="1000" disabled={disabled() || !draft.postmark.enabled} onInput={(event) => setDraft((next) => { next.postmark.username = event.currentTarget.value; })} />
+							<StoredSecretField label="Password" value={draft.postmark.password} hasSaved={draft.postmark.hasPassword} disabled={disabled() || !draft.postmark.enabled} help={credentialHelp(draft.postmark.hasPassword)} onInput={(password) => setDraft((next) => { next.postmark.password = password; })} />
 						</div>
 					</div>
 					<div class="settings-provider-card">
 						<SettingToggle label="Forward Email" help="Accept Forward Email bounce webhooks." checked={draft.forwardEmail.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.forwardEmail.enabled = enabled; })} />
-						<SecretField label="API key" value={draft.forwardEmail.key} hasSaved={draft.forwardEmail.hasKey} disabled={disabled() || !draft.forwardEmail.enabled} onInput={(key) => setDraft((next) => { next.forwardEmail.key = key; })} />
+						<StoredSecretField label="API key" value={draft.forwardEmail.key} hasSaved={draft.forwardEmail.hasKey} disabled={disabled() || !draft.forwardEmail.enabled} help={credentialHelp(draft.forwardEmail.hasKey)} onInput={(key) => setDraft((next) => { next.forwardEmail.key = key; })} />
 					</div>
 					<div class="settings-provider-card">
 						<SettingToggle label="Lettermint" help="Accept Lettermint bounce webhooks." checked={draft.lettermint.enabled} disabled={disabled() || !draft.enabled || !draft.webhooksEnabled} onChange={(enabled) => setDraft((next) => { next.lettermint.enabled = enabled; })} />
-						<SecretField label="API key" value={draft.lettermint.key} hasSaved={draft.lettermint.hasKey} disabled={disabled() || !draft.lettermint.enabled} onInput={(key) => setDraft((next) => { next.lettermint.key = key; })} />
+						<StoredSecretField label="API key" value={draft.lettermint.key} hasSaved={draft.lettermint.hasKey} disabled={disabled() || !draft.lettermint.enabled} help={credentialHelp(draft.lettermint.hasKey)} onInput={(key) => setDraft((next) => { next.lettermint.key = key; })} />
 					</div>
 				</div>
 			</fieldset>
@@ -239,31 +205,15 @@ export function EmailBounceSettingsForm(props: {
 						<legend>Mailbox {index() + 1}</legend>
 						<SettingToggle label="Enable this mailbox" help="Enabling it disables any other mailbox in this draft." checked={mailbox().enabled} disabled={disabled() || !draft.enabled} onChange={(value) => updateMailbox(index(), { enabled: value })} />
 						<div class="smtp-fields">
-							<label class="form-field smtp-wide">
-								<span>Host</span>
-								<input value={mailbox().host} maxlength="255" disabled={disabled()} onInput={(event) => updateMailbox(index(), { host: event.currentTarget.value })} />
-							</label>
-							<label class="form-field">
-								<span>Port</span>
-								<input type="number" min="1" max="65535" value={mailbox().port} disabled={disabled()} onInput={(event) => updateMailbox(index(), { port: Number(event.currentTarget.value) })} />
-							</label>
-							<label class="form-field">
-								<span>Authentication</span>
-								<select value={mailbox().authProtocol} disabled={disabled()} onChange={(event) => updateMailbox(index(), { authProtocol: event.currentTarget.value as MailboxDraft['authProtocol'] })}>
+							<InputField fieldClass="smtp-wide" label="Host" value={mailbox().host} maxlength="255" disabled={disabled()} onInput={(event) => updateMailbox(index(), { host: event.currentTarget.value })} />
+							<InputField label="Port" type="number" min="1" max="65535" value={mailbox().port} disabled={disabled()} onInput={(event) => updateMailbox(index(), { port: Number(event.currentTarget.value) })} />
+							<SelectField label="Authentication" value={mailbox().authProtocol} disabled={disabled()} onChange={(event) => updateMailbox(index(), { authProtocol: event.currentTarget.value as MailboxDraft['authProtocol'] })}>
 									<option value="userpass">Username and password</option>
 									<option value="none">None</option>
-								</select>
-							</label>
-							<label class="form-field">
-								<span>Username</span>
-								<input value={mailbox().username} maxlength="1000" disabled={disabled() || mailbox().authProtocol === 'none'} onInput={(event) => updateMailbox(index(), { username: event.currentTarget.value })} />
-							</label>
-							<SecretField label="Password" value={mailbox().password} hasSaved={mailbox().hasPassword} disabled={disabled() || mailbox().authProtocol === 'none'} onInput={(password) => updateMailbox(index(), { password })} />
-							<label class="form-field">
-								<span>Scan interval</span>
-								<input value={mailbox().scanInterval} pattern={GO_DURATION_HTML_PATTERN} maxlength="64" disabled={disabled()} onInput={(event) => updateMailbox(index(), { scanInterval: event.currentTarget.value })} />
-								<small>At least one minute, for example 15m or 1h.</small>
-							</label>
+							</SelectField>
+							<InputField label="Username" value={mailbox().username} maxlength="1000" disabled={disabled() || mailbox().authProtocol === 'none'} onInput={(event) => updateMailbox(index(), { username: event.currentTarget.value })} />
+							<StoredSecretField label="Password" value={mailbox().password} hasSaved={mailbox().hasPassword} disabled={disabled() || mailbox().authProtocol === 'none'} help={credentialHelp(mailbox().hasPassword)} onInput={(password) => updateMailbox(index(), { password })} />
+							<InputField label="Scan interval" help="At least one minute, for example 15m or 1h." value={mailbox().scanInterval} pattern={GO_DURATION_HTML_PATTERN} maxlength="64" disabled={disabled()} onInput={(event) => updateMailbox(index(), { scanInterval: event.currentTarget.value })} />
 						</div>
 						<div class="settings-inline-toggles">
 							<SettingToggle label="Use TLS" help="Encrypt the POP connection." checked={mailbox().tlsEnabled} disabled={disabled()} onChange={(value) => updateMailbox(index(), { tlsEnabled: value })} />

@@ -10,6 +10,24 @@ afterEach(() => {
 });
 
 describe('EmailTemplateForm preview lifecycle', () => {
+	it('explains why the template type is fixed while editing', () => {
+		const container = document.createElement('div');
+		document.body.append(container);
+		disposers.push(() => container.remove());
+		disposers.push(render(() => createComponent(EmailTemplateForm, {
+			mode: 'edit',
+			initial: { name: 'Campaign', kind: 'campaign', subject: '', body: '{{ template "content" . }}' },
+			pending: false,
+			error: '',
+			cancelHref: '/emails',
+			onSubmit: vi.fn(),
+			onPreview: vi.fn(),
+		}), container));
+
+		expect(container.querySelector<HTMLSelectElement>('select[name="kind"]')?.disabled).toBe(true);
+		expect(container.textContent).toContain("Listmonk 6.2 cannot change an existing template's type. Create a new template instead.");
+	});
+
 	it('ignores a preview response after its body has changed', async () => {
 		const pending: Array<(html: string) => void> = [];
 		const onPreview = vi.fn(

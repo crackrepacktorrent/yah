@@ -27,6 +27,12 @@ test('email operators can safely update SMTP settings, test delivery, and inspec
 	await expect(page.getByText('Unexposed Listmonk settings and custom SMTP headers are preserved on every save.')).toBeVisible();
 	await expect(page.getByLabel('Host', { exact: true })).toHaveValue('smtp.example.test');
 	await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('placeholder', 'Saved password');
+	const usernameBox = await page.getByLabel('Username', { exact: true }).boundingBox();
+	const passwordBox = await page.getByLabel('Password', { exact: true }).boundingBox();
+	expect(usernameBox).not.toBeNull();
+	expect(passwordBox).not.toBeNull();
+	expect(Math.abs((usernameBox?.y ?? 0) - (passwordBox?.y ?? 0))).toBeLessThan(1);
+	expect(Math.abs((usernameBox?.height ?? 0) - (passwordBox?.height ?? 0))).toBeLessThan(1);
 
 	await page.getByLabel('Host', { exact: true }).fill('smtp-updated.example.test');
 	await page.getByLabel('Password', { exact: true }).fill('fixture-new-smtp-password');

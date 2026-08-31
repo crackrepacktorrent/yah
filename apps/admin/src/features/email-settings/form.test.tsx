@@ -30,8 +30,7 @@ const initial: SmtpServer = {
 };
 
 function inputFor(container: ParentNode, label: string): HTMLInputElement {
-	const field = [...container.querySelectorAll('label')].find((candidate) => candidate.querySelector('span')?.textContent === label);
-	const input = field?.querySelector('input');
+	const input = [...container.querySelectorAll('input')].find((candidate) => candidate.labels?.[0]?.textContent === label);
 	if (!(input instanceof HTMLInputElement)) throw new Error(`Missing ${label} input.`);
 	return input;
 }
@@ -108,9 +107,8 @@ describe('EmailSettingsForm', () => {
 		password.dispatchEvent(new InputEvent('input', { bubbles: true }));
 		password.value = '';
 		password.dispatchEvent(new InputEvent('input', { bubbles: true }));
-		const authentication = [...container.querySelectorAll('label')]
-			.find((candidate) => candidate.querySelector('span')?.textContent === 'Authentication')
-			?.querySelector('select');
+		const authentication = [...container.querySelectorAll('select')]
+			.find((candidate) => candidate.labels?.[0]?.textContent === 'Authentication');
 		if (!(authentication instanceof HTMLSelectElement)) throw new Error('Missing Authentication select.');
 		authentication.value = 'none';
 		authentication.dispatchEvent(new Event('change', { bubbles: true }));

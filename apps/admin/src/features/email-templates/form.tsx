@@ -97,7 +97,9 @@ export function EmailTemplateForm(props: {
 					<option value="tx">Transactional</option>
 					<option value="campaign">Campaign / HTML</option>
 				</select>
-				<Show when={props.mode === 'edit'}><small>Template type cannot be changed.</small></Show>
+				<Show when={props.mode === 'edit'}>
+					<small>Listmonk 6.2 cannot change an existing template's type. Create a new template instead.</small>
+				</Show>
 			</label>
 			<Show when={kind() === 'tx'}>
 				<label class="form-field form-field--wide">
