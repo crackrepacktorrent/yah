@@ -155,7 +155,8 @@ test('shortlinks preserve the typed CRUD workflow and dashboard panels fail inde
 	await page.getByLabel('Dots').selectOption({ label: 'Dots' });
 	await page.getByLabel('Corners').selectOption({ label: 'Square' });
 	await page.getByLabel('Include logo').check();
-	await page.getByRole('button', { name: 'Inverted' }).click();
+	await page.getByRole('group', { name: 'QR color', exact: true }).getByRole('button', { name: 'Cream' }).click();
+	await page.getByRole('group', { name: 'Background color', exact: true }).getByRole('button', { name: 'Dark' }).click();
 	await expect
 		.poll(async () =>
 			page
@@ -180,13 +181,14 @@ test('shortlinks preserve the typed CRUD workflow and dashboard panels fail inde
 	expect(await pngCornerColor(page, pngDownload)).toEqual([38, 38, 55, 255]);
 
 	// Exporting a PNG must not cache the previous appearance after edits.
-	await page.getByRole('combobox', { name: 'Background', exact: true }).selectOption('custom');
+	await page.getByLabel('Custom qr color', { exact: true }).fill('#123456');
 	await page.getByLabel('Custom background color').fill('#abcdee');
+	await expect.poll(() => qrPreview.locator('svg').evaluate((svg) => svg.outerHTML)).toContain('#123456');
 	await expect.poll(() => qrPreview.locator('svg').evaluate((svg) => svg.outerHTML)).toContain('#abcdee');
 	const customPngPromise = page.waitForEvent('download');
 	await page.getByRole('button', { name: 'Download PNG' }).click();
 	expect(await pngCornerColor(page, await customPngPromise)).toEqual([171, 205, 238, 255]);
-	await page.getByRole('combobox', { name: 'Background', exact: true }).selectOption('transparent');
+	await page.getByRole('group', { name: 'Background color', exact: true }).getByRole('button', { name: 'Transparent' }).click();
 	const transparentPngPromise = page.waitForEvent('download');
 	await page.getByRole('button', { name: 'Download PNG' }).click();
 	expect(await pngCornerColor(page, await transparentPngPromise)).toEqual([0, 0, 0, 0]);

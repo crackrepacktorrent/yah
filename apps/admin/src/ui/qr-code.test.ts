@@ -38,10 +38,14 @@ function mount(props: Partial<QrCodeProps> = {}) {
 	return container;
 }
 
-function select(container: HTMLElement, label: string, value: string) {
-	const element = Array.from(container.querySelectorAll('label')).find((item) => item.querySelector('span')?.textContent === label)!.querySelector('select')!;
-	element.value = value;
-	element.dispatchEvent(new Event('change', { bubbles: true }));
+function chooseColor(container: HTMLElement, group: string, name: string) {
+	container.querySelector<HTMLButtonElement>(`[role="group"][aria-label="${group}"] button[aria-label="${name}"]`)!.click();
+}
+
+function customColor(container: HTMLElement, label: string, value: string) {
+	const input = container.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+	input.value = value;
+	input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 function downloadButton(container: HTMLElement, format = 'PNG') {
@@ -100,37 +104,37 @@ describe('QrCode', () => {
 		await vi.waitFor(() => expect(lastOptions().image).toBeUndefined());
 	});
 
-	test('lets background choices override presets and restores matching on request', async () => {
+	test('offers independent swatch pickers with custom colors for the QR and background', async () => {
 		const container = mount();
 		await vi.waitFor(() => expect(downloadButton(container).disabled).toBe(false));
-		select(container, 'Background', '#fff7ef');
-		container.querySelector<HTMLButtonElement>('button[aria-label="Magenta"]')!.click();
+		chooseColor(container, 'Background color', 'Cream');
+		chooseColor(container, 'QR color', 'Magenta');
 		await vi.waitFor(() => expect(lastOptions()).toMatchObject({
 			backgroundOptions: { color: '#fff7ef' }, dotsOptions: { color: '#8f005a' },
 		}));
-		select(container, 'Background', 'preset');
-		await vi.waitFor(() => expect(lastOptions().backgroundOptions.color).toBe('#ffffff'));
-		container.querySelector<HTMLButtonElement>('button[aria-label="Inverted"]')!.click();
-		await vi.waitFor(() => expect(lastOptions().backgroundOptions.color).toBe('#262637'));
-		select(container, 'Background', 'custom');
-		await vi.waitFor(() => expect(container.querySelector('input[type="color"]')).not.toBeNull());
-		const input = container.querySelector<HTMLInputElement>('input[type="color"]')!;
-		input.value = '#abccde';
-		input.dispatchEvent(new Event('input', { bubbles: true }));
-		await vi.waitFor(() => expect(lastOptions().backgroundOptions.color).toBe('#abccde'));
-		select(container, 'Background', 'transparent');
+		customColor(container, 'Custom qr color', '#123456');
+		customColor(container, 'Custom background color', '#abccde');
+		await vi.waitFor(() => expect(lastOptions()).toMatchObject({
+			backgroundOptions: { color: '#abccde' }, dotsOptions: { color: '#123456' },
+		}));
+		expect(container.querySelectorAll('.qr-code-custom.qr-code-preset--active')).toHaveLength(2);
+		chooseColor(container, 'QR color', 'Brown');
+		await vi.waitFor(() => expect(lastOptions()).toMatchObject({
+			backgroundOptions: { color: '#abccde' }, dotsOptions: { color: '#361d12' },
+		}));
+		chooseColor(container, 'Background color', 'Transparent');
 		await vi.waitFor(() => expect(lastOptions().backgroundOptions.color).toBe('transparent'));
-		expect(container.querySelector('.qr-code--transparent')).not.toBeNull();
+		expect(container.querySelector('.qr-code.qr-code-transparent')).not.toBeNull();
 	});
 
 	test('prevents exporting an invisible QR when built-in foreground and background colors match', async () => {
 		const container = mount();
 		await vi.waitFor(() => expect(downloadButton(container).disabled).toBe(false));
-		select(container, 'Background', '#fff7ef');
-		container.querySelector<HTMLButtonElement>('button[aria-label="Inverted"]')!.click();
+		chooseColor(container, 'Background color', 'Cream');
+		chooseColor(container, 'QR color', 'Cream');
 		await vi.waitFor(() => expect(container.querySelector('[role="alert"]')?.textContent).toContain('Choose different QR and background colors'));
 		expect(downloadButton(container).disabled).toBe(true);
-		select(container, 'Background', 'preset');
+		chooseColor(container, 'Background color', 'Dark');
 		await vi.waitFor(() => expect(downloadButton(container).disabled).toBe(false));
 	});
 
@@ -139,7 +143,7 @@ describe('QrCode', () => {
 		await vi.waitFor(() => expect(downloadButton(container).disabled).toBe(false));
 		downloadButton(container).click();
 		await vi.waitFor(() => expect(qrMock.download).toHaveBeenCalledTimes(1));
-		select(container, 'Background', '#fff7ef');
+		chooseColor(container, 'Background color', 'Cream');
 		await vi.waitFor(() => {
 			expect(lastOptions().backgroundOptions.color).toBe('#fff7ef');
 			expect(downloadButton(container).disabled).toBe(false);
@@ -171,7 +175,7 @@ describe('QrCode', () => {
 		const container = mount();
 		await vi.waitFor(() => expect(qrMock.constructor).toHaveBeenCalledOnce());
 		expect(downloadButton(container).disabled).toBe(true);
-		select(container, 'Background', '#fff7ef');
+		chooseColor(container, 'Background color', 'Cream');
 		await vi.waitFor(() => expect(qrMock.constructor).toHaveBeenCalledTimes(2));
 		rejectFirst(new Error('superseded'));
 		await Promise.resolve();
