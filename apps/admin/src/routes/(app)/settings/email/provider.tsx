@@ -12,7 +12,7 @@ export default function ProviderEmailSettingsPage() {
 	return (
 		<section class="email-settings-page">
 			{authorized()}
-			<PageHeader eyebrow="System settings" title="Provider-owned settings" description="These controls belong to Listmonk’s deployment or its private operator UI. YAH validates and preserves every known v6.2 field during its own settings writes." />
+			<PageHeader eyebrow="Email settings" title="Provider-owned settings" description="These controls belong to Listmonk’s deployment or its private operator UI. YAH validates and preserves every known v6.2 field during its own settings writes." />
 			<div class="settings-advanced-grid">
 				<section class="settings-card"><h2>Security</h2><p>Listmonk OIDC, CAPTCHA, trusted URLs, and public-page code affect a separate authentication and browser trust boundary.</p></section>
 				<section class="settings-card"><h2>Media and custom messengers</h2><p>Filesystem/S3 credentials and arbitrary postback messengers remain deployment-owned until YAH has a product workflow for them.</p></section>

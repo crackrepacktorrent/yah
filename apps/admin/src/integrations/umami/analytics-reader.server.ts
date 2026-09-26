@@ -94,7 +94,10 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ username: config.UMAMI_USERNAME, password: config.UMAMI_PASSWORD }),
 				});
-				if (!response.ok) throw providerInvariantError(`Umami authentication failed with status ${response.status}.`);
+				if (!response.ok) {
+					await response.body?.cancel().catch(() => undefined);
+					throw providerInvariantError(`Umami authentication failed with status ${response.status}.`);
+				}
 				const payload = parse(loginSchema, await parseJsonResponse<unknown>(response, 'Umami'), 'authentication');
 				cachedToken = { token: payload.token, expiresAt: tokenExpiry(payload.token) };
 				return payload.token;
@@ -118,6 +121,7 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 		for (const [key, value] of Object.entries(params ?? {})) url.searchParams.set(key, value);
 
 		const response = await request(url, { headers: { Authorization: `Bearer ${token}` } });
+		if (!response.ok) await response.body?.cancel().catch(() => undefined);
 		if (response.status === 401) {
 			// Clear only the token rejected by this request. Another concurrent
 			// request may already have installed its replacement.

@@ -1,16 +1,17 @@
 import { can } from '@yah/admin-core/permissions';
 import { revalidate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
-import { Show, createMemo, createSignal } from 'solid-js';
+import { Show, createMemo } from 'solid-js';
 import type { Role, RoleCatalog } from '~/features/roles/contracts';
 import { RoleForm, RolePermissionDetails } from '~/features/roles/form';
 import { decodeRoleRouteId, roleCloneHref } from '~/features/roles/routing';
 import { listRoles, updateRole } from '~/features/roles/server';
-import { requireSession } from '~/platform/auth/session';
+import { getSession, requireSession } from '~/platform/auth/session';
 import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { PageHeader } from '~/ui/page-header';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
+import { createCommandTask } from '~/ui/command-task';
+import { createPublicError } from '~/platform/errors';
 import '../roles.css';
 
 export const route = defineFileRoute('/roles/:id/edit', {
@@ -37,25 +38,18 @@ function RoleEditor(props: { role: Role; catalog: RoleCatalog }) {
 	const session = createMemo(() => requireSession());
 	const canCreate = createMemo(() => can(session(), 'ac', 'create'));
 	const canUpdate = createMemo(() => can(session(), 'ac', 'update'));
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const task = createCommandTask();
 
 	async function handleUpdate(value: { permissions: Parameters<typeof updateRole>[0]['permissions'] }): Promise<void> {
-		setError('');
-		setPending(true);
-		try {
-			const result = await updateRole({ roleId: props.role.id, permissions: value.permissions });
+		const roleId = props.role.id;
+		await task.run(async () => {
+			const result = await updateRole({ roleId, permissions: value.permissions });
 			if (!result.ok) {
-				setError(result.reason === 'built-in' ? 'Built-in roles cannot be changed.' : 'This role no longer exists.');
-				return;
+				throw createPublicError(result.reason === 'built-in' ? 'Built-in roles cannot be changed.' : 'This role no longer exists.', 409);
 			}
-			revalidate(listRoles.key);
+			revalidate([listRoles.key, getSession.key, requireSession.key]);
 			toast.success('Role permissions updated.');
-		} catch (caught) {
-			setError(visibleError(caught, 'The role could not be updated.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The role could not be updated.');
 	}
 
 	const editable = () => props.role.kind === 'custom' && canUpdate();
@@ -72,8 +66,8 @@ function RoleEditor(props: { role: Role; catalog: RoleCatalog }) {
 					initialKey={props.role.key}
 					initialPermissions={props.role.kind === 'custom' ? props.role.permissions : {}}
 					statements={props.catalog.statements}
-					pending={pending()}
-					error={error()}
+					pending={task.pending()}
+					error={task.error()}
 					cancelHref="/roles"
 					onSubmit={(value) => void handleUpdate(value)}
 				/>

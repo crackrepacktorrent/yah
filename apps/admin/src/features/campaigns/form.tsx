@@ -174,7 +174,7 @@ export function CampaignForm(props: {
 					<span>Campaign content <span aria-hidden="true">*</span></span>
 					<Show
 						when={contentType() === 'richtext'}
-						fallback={<textarea name="body" value={body()} onInput={(event) => setBody(event.currentTarget.value)} rows="18" maxlength={5_000_000} required disabled={props.pending} spellcheck={contentType() !== 'html'} />}
+						fallback={<textarea name="body" value={body()} onInput={(event) => setBody(event.currentTarget.value)} rows="18" maxlength={5_000_000} required disabled={props.pending} spellcheck={contentType() === 'html' ? 'false' : 'true'} />}
 					>
 						<RichTextEditor label="Campaign content" value={body()} onChange={setBody} disabled={props.pending} />
 					</Show>

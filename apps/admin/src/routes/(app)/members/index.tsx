@@ -15,8 +15,8 @@ import { canManageMember } from '~/features/membership/ui-model';
 import { PageHeader } from '~/ui/page-header';
 import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
 import '~/features/membership/membership.css';
 
 export const route = defineFileRoute('/members', {
@@ -53,42 +53,29 @@ export default function MembersPage() {
 		const target = confirmTarget();
 		return target?.kind === 'invitation' ? target.invitation : undefined;
 	});
-	const [pending, setPending] = createSignal(false);
-	const [dialogError, setDialogError] = createSignal('');
+	const dialogTask = createCommandTask();
 
 	function openDialog(target: Exclude<ConfirmTarget, null>): void {
-		setDialogError('');
+		dialogTask.clearError();
 		setConfirmTarget(target);
 	}
 
 	async function removeConfirmedMember(member: AdminMember): Promise<void> {
-		setDialogError('');
-		setPending(true);
-		try {
+		await dialogTask.run(async () => {
 			await removeMember({ memberId: member.id });
 			revalidate(listMembers.key);
 			setConfirmTarget(null);
 			toast.success('Member removed. Their account remains available for future invitations.');
-		} catch (error) {
-			setDialogError(visibleError(error, 'The member could not be removed.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The member could not be removed.');
 	}
 
 	async function cancelConfirmedInvitation(invitation: PendingAdminInvitation): Promise<void> {
-		setDialogError('');
-		setPending(true);
-		try {
+		await dialogTask.run(async () => {
 			await cancelInvitation({ invitationId: invitation.id });
 			revalidate(listPendingInvitations.key);
 			setConfirmTarget(null);
 			toast.success('Invitation cancelled.');
-		} catch (error) {
-			setDialogError(visibleError(error, 'The invitation could not be cancelled.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The invitation could not be cancelled.');
 	}
 
 	return (
@@ -181,8 +168,8 @@ export default function MembersPage() {
 				title="Remove member?"
 				description={memberDialogTarget() ? `Remove ${memberDialogTarget()?.email} from this organization? Their account will not be deleted.` : ''}
 				confirmLabel="Remove member"
-				pending={pending()}
-				error={dialogError()}
+				pending={dialogTask.pending()}
+				error={dialogTask.error()}
 				onOpenChange={(open) => !open && setConfirmTarget(null)}
 				onConfirm={() => {
 					const target = confirmTarget();
@@ -194,8 +181,8 @@ export default function MembersPage() {
 				title="Cancel invitation?"
 				description={invitationDialogTarget() ? `Cancel the pending invitation for ${invitationDialogTarget()?.email}?` : ''}
 				confirmLabel="Cancel invitation"
-				pending={pending()}
-				error={dialogError()}
+				pending={dialogTask.pending()}
+				error={dialogTask.error()}
 				onOpenChange={(open) => !open && setConfirmTarget(null)}
 				onConfirm={() => {
 					const target = confirmTarget();

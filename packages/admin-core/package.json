@@ -18,6 +18,6 @@
     "./shortlink-policy": "./src/shortlink-policy.ts"
   },
   "dependencies": {
-    "better-auth": "1.6.30"
+    "better-auth": "1.6.33"
   }
 }

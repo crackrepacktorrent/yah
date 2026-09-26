@@ -1,14 +1,13 @@
 import { can } from '@yah/admin-core/permissions';
-import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
-import type { SaveEmailSettingsCommand, TestSmtpCommand } from '~/features/email-settings/contracts';
+import type { TestSmtpCommand } from '~/features/email-settings/contracts';
 import { EmailSettingsForm } from '~/features/email-settings/form';
 import { getEmailSettings, saveEmailSettings, testSmtp } from '~/features/email-settings/server';
+import { createEmailSettingsSave } from '~/features/email-settings/save-task';
 import { requireSession } from '~/platform/auth/session';
 import { PageHeader } from '~/ui/page-header';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/settings/email', {
 	preload: () => void getEmailSettings(),
@@ -18,46 +17,31 @@ export default function EmailSettingsPage() {
 	const settings = createMemo(() => getEmailSettings());
 	const session = createMemo(() => requireSession());
 	const canEdit = createMemo(() => can(session(), 'provider', 'manage'));
-	const [pending, setPending] = createSignal(false);
 	const [testingUuid, setTestingUuid] = createSignal('');
-	const [error, setError] = createSignal('');
+	const task = createEmailSettingsSave({
+		save: saveEmailSettings,
+		queryKey: getEmailSettings.key,
+		savedMessage: 'SMTP settings saved.',
+		failureMessage: 'The SMTP settings could not be saved.',
+	});
 
-	async function save(command: SaveEmailSettingsCommand): Promise<boolean> {
-		setError('');
-		setPending(true);
-		try {
-			const result = await saveEmailSettings(command);
-			toast.success(result.needsRestart
-				? 'SMTP settings saved. Listmonk will reload after active campaigns finish.'
-				: 'SMTP settings saved. Listmonk is reloading and may be briefly unavailable.');
-			setTimeout(() => void revalidate(getEmailSettings.key), 2_000);
-			return true;
-		} catch (caught) {
-			setError(visibleError(caught, 'The SMTP settings could not be saved.'));
-			return false;
-		} finally {
-			setPending(false);
-		}
-	}
-
-	async function test(command: TestSmtpCommand): Promise<void> {
-		setError('');
-		setTestingUuid(command.server.uuid);
-		try {
-			await testSmtp(command);
-			toast.success('SMTP test message sent.');
-		} catch (caught) {
-			setError(visibleError(caught, 'The SMTP test could not be completed.'));
-		} finally {
-			setTestingUuid('');
-		}
+	function test(command: TestSmtpCommand): Promise<boolean> {
+		return task.run(async () => {
+			setTestingUuid(command.server.uuid);
+			try {
+				await testSmtp(command);
+				toast.success('SMTP test message sent.');
+			} finally {
+				setTestingUuid('');
+			}
+		}, 'The SMTP test could not be completed.');
 	}
 
 	return (
 		<section class="email-settings-page">
-			<PageHeader eyebrow="System settings" title="Email delivery" description="Manage Listmonk’s SMTP servers. Unexposed Listmonk settings and custom SMTP headers are preserved on every save." />
+			<PageHeader eyebrow="Email settings" title="Email delivery" description="Manage Listmonk’s SMTP servers. Unexposed Listmonk settings and custom SMTP headers are preserved on every save." />
 			<Show when={settings()}>
-				{(resolved) => <EmailSettingsForm initial={resolved().smtp} canEdit={canEdit()} pending={pending()} testingUuid={testingUuid()} error={error()} onSubmit={save} onTest={(command) => void test(command)} />}
+				{(resolved) => <EmailSettingsForm initial={resolved().smtp} canEdit={canEdit()} pending={task.pending()} testingUuid={testingUuid()} error={task.error()} onSubmit={task.save} onTest={(command) => void test(command)} />}
 			</Show>
 		</section>
 	);

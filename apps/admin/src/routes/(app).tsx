@@ -1,9 +1,10 @@
-import { can } from '@yah/admin-core/permissions';
-import { revalidate, type RouteDefinition, useNavigate } from '@solidjs/router';
-import { Errored, Loading, Show, createMemo, type ParentProps } from 'solid-js';
+import { revalidate, type RouteDefinition, useLocation, useNavigate } from '@solidjs/router';
+import { Errored, For, Loading, createMemo, type ParentProps } from 'solid-js';
 import { authClient } from '~/platform/auth/client';
 import { getSession, requireSession } from '~/platform/auth/session';
 import { ErrorView } from '~/ui/error-view';
+import { primaryNavigation } from '~/ui/navigation';
+import { NavigationLink } from '~/ui/section-navigation';
 import { toast } from '~/ui/toast';
 import './(app).css';
 
@@ -13,31 +14,9 @@ export const route = {
 
 export default function ProtectedLayout(props: ParentProps) {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const session = createMemo(() => requireSession());
-	const canViewAnalytics = createMemo(() => can(session(), 'analytics', 'view'));
-	const canViewShortlinks = createMemo(() => can(session(), 'shortlink', 'view'));
-	const canViewEmailTemplates = createMemo(() => can(session(), 'template', 'view'));
-	const canViewMailingLists = createMemo(() => can(session(), 'list', 'view'));
-	const canViewCampaigns = createMemo(() => can(session(), 'campaign', 'view'));
-	const canViewSubscribers = createMemo(() => can(session(), 'subscriber', 'view'));
-	const canViewBounces = createMemo(() => can(session(), 'bounce', 'view'));
-	const canViewSettings = createMemo(() => can(session(), 'settings', 'view'));
-	const canViewEmailLogs = createMemo(() => can(session(), 'provider', 'manage'));
-	const canViewRoles = createMemo(() => can(session(), 'ac', 'read'));
-	const canViewMembers = createMemo(
-		() =>
-			can(session(), 'member', 'create') &&
-			can(session(), 'invitation', 'create'),
-	);
-	const emailHref = createMemo(() => {
-		if (canViewEmailTemplates()) return '/emails';
-		if (canViewMailingLists()) return '/emails/lists';
-		if (canViewCampaigns()) return '/emails/campaigns';
-		if (canViewSubscribers()) return '/emails/subscribers';
-		if (canViewBounces()) return '/emails/bounces';
-		if (canViewEmailLogs()) return '/emails/logs';
-		return undefined;
-	});
+	const navigation = createMemo(() => primaryNavigation(session(), location.pathname));
 
 	async function handleLogout(): Promise<void> {
 		try {
@@ -69,31 +48,9 @@ export default function ProtectedLayout(props: ParentProps) {
 							<img src="/logo.svg" alt="" height="48" />
 						</a>
 						<nav aria-label="Primary navigation">
-							<a href="/">
-								Dashboard
-							</a>
-							<Show when={canViewAnalytics()}>
-								<a href="/analytics">
-									Analytics
-								</a>
-							</Show>
-							<Show when={canViewShortlinks()}>
-								<a href="/shortlinks">
-									Shortlinks
-								</a>
-							</Show>
-							<Show when={emailHref()}>
-								{(href) => <a href={href()}>Email</a>}
-							</Show>
-							<Show when={canViewRoles()}>
-								<a href="/roles">Roles</a>
-							</Show>
-							<Show when={canViewMembers()}>
-								<a href="/members">Members</a>
-							</Show>
-							<Show when={canViewSettings()}>
-								<a href="/settings/email">Settings</a>
-							</Show>
+							<For each={navigation()}>
+								{(item) => <NavigationLink item={item} />}
+							</For>
 						</nav>
 						<div class="admin-account-v2">
 							<span class="admin-account-email-v2">{session().user.email}</span>

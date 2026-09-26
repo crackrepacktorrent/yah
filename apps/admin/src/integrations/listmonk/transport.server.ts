@@ -22,6 +22,7 @@ export class ListmonkHttpFailure extends Error {
 async function readBoundedDocument(response: Response, allowPlainText = false): Promise<string> {
 	const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
 	if (!contentType.includes('text/html') && !(allowPlainText && contentType.includes('text/plain'))) {
+		await response.body?.cancel().catch(() => undefined);
 		throw new UpstreamProtocolError(
 			'Listmonk',
 			`expected ${allowPlainText ? 'HTML or plain text' : 'HTML'} but received ${contentType || 'an unknown content type'}`,

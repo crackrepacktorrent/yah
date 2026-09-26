@@ -208,7 +208,7 @@ export function RichTextEditor(props: RichTextEditorProps) {
 	}
 
 	function applyLink(): void {
-		if (!editor) return;
+		if (!ready() || props.disabled || !editor) return;
 		const url = normalizedLinkUrl(linkUrl());
 		if (!url) {
 			setLinkError('Enter an http, https, or mailto URL.');
@@ -222,6 +222,13 @@ export function RichTextEditor(props: RichTextEditorProps) {
 		setLinkEditorOpen(false);
 		setLinkError('');
 		editor.focus();
+	}
+
+	function closeLinkEditor(): void {
+		savedLinkSelection = null;
+		setLinkEditorOpen(false);
+		setLinkError('');
+		editor?.focus();
 	}
 
 	return (
@@ -249,12 +256,20 @@ export function RichTextEditor(props: RichTextEditorProps) {
 				<button type="button" disabled={!ready() || props.disabled} aria-label={linkActive() ? 'Remove link' : 'Add link'} aria-pressed={linkActive() ? 'true' : 'false'} onClick={editLink}>{linkActive() ? 'Unlink' : 'Link'}</button>
 			</div>
 			<Show when={linkEditorOpen()}>
-				<form class="rich-text-editor-link-form" onSubmit={(event) => { event.preventDefault(); applyLink(); }}>
-					<label><span>Link URL</span><input type="url" value={linkUrl()} placeholder="https://example.org" required onInput={(event) => { setLinkUrl(event.currentTarget.value); setLinkError(''); }} /></label>
-					<button type="submit">Apply link</button>
-					<button type="button" onClick={() => { setLinkEditorOpen(false); setLinkError(''); editor?.focus(); }}>Cancel</button>
+				<div class="rich-text-editor-link-form" role="group" aria-label="Insert link">
+					<label><span>Link URL</span><input type="text" inputmode="url" value={linkUrl()} placeholder="https://example.org" aria-invalid={linkError() ? 'true' : undefined} onInput={(event) => { setLinkUrl(event.currentTarget.value); setLinkError(''); }} onKeyDown={(event) => {
+						if (event.isComposing) return;
+						if (event.key === 'Enter' || event.key === 'Escape') {
+							event.preventDefault();
+							event.stopPropagation();
+							if (event.key === 'Enter') applyLink();
+							else closeLinkEditor();
+						}
+					}} /></label>
+					<button type="button" onClick={applyLink}>Apply link</button>
+					<button type="button" onClick={closeLinkEditor}>Cancel</button>
 					<Show when={linkError()}>{(message) => <span class="field-error" role="alert">{message()}</span>}</Show>
-				</form>
+				</div>
 			</Show>
 			<div
 				ref={(element) => {

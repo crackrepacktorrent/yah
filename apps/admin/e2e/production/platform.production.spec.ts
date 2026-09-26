@@ -24,9 +24,11 @@ test('production serves only its completed routes and public assets', async ({ r
 		expect(response.status(), path).toBe(404);
 	}
 
-	const serverPut = await request.put('/_server');
-	expect(serverPut.status()).toBe(405);
-	expect(serverPut.headers()['allow']).toBe('GET, POST');
+	for (const path of ['/_server', '/_server/function-id', '/_server/data/function-id']) {
+		const serverPut = await request.put(path);
+		expect(serverPut.status(), path).toBe(405);
+		expect(serverPut.headers()['allow']).toBe('GET, POST');
+	}
 
 	const pagePost = await request.post('/login');
 	expect(pagePost.status()).toBe(405);
@@ -136,35 +138,51 @@ test('primary and email navigation expose current state without overflowing narr
 
 	await expectSelectedPrimarySection(page, 'Dashboard');
 	const primaryNavigation = page.getByLabel('Primary navigation');
-	for (const name of ['Dashboard', 'Analytics', 'Shortlinks', 'Email', 'Roles', 'Members', 'Settings']) {
+	for (const name of ['Dashboard', 'Analytics', 'Shortlinks', 'Email', 'Roles', 'Members']) {
 		const link = primaryNavigation.getByRole('link', { name, exact: true });
 		await link.scrollIntoViewIfNeeded();
 		await expect(link).toBeVisible();
 	}
+	await expect(primaryNavigation.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
 	await expectNoDocumentOverflow(page);
 
 	await primaryNavigation.getByRole('link', { name: 'Email', exact: true }).click();
 	await expectSelectedPrimarySection(page, 'Email');
 	await expectSelectedEmailSection(page, 'Templates');
 	const emailNavigation = page.getByLabel('Email management');
-	for (const name of ['Campaigns', 'Email analytics', 'Templates', 'Lists', 'Forms', 'Subscribers', 'Bounces', 'Logs']) {
+	for (const name of ['Campaigns', 'Email analytics', 'Templates', 'Lists', 'Forms', 'Subscribers', 'Bounces', 'Logs', 'Settings']) {
 		const link = emailNavigation.getByRole('link', { name, exact: true });
 		await link.scrollIntoViewIfNeeded();
 		await expect(link).toBeVisible();
 	}
 	await expectNoDocumentOverflow(page);
+	await emailNavigation.getByRole('link', { name: 'Settings', exact: true }).click();
+	await expect(page).toHaveURL(/\/settings\/email\/general$/);
+	await expectSelectedPrimarySection(page, 'Email');
+	await expectSelectedEmailSection(page, 'Settings');
+	await expect(page.getByLabel('Email settings').getByRole('link', { name: 'General', exact: true })).toHaveAttribute('aria-current', 'page');
+	await expectNoDocumentOverflow(page);
+	await emailNavigation.getByRole('link', { name: 'Templates', exact: true }).click();
+	await expectSelectedPrimarySection(page, 'Email');
+	await expectSelectedEmailSection(page, 'Templates');
 });
 
-test('an unknown server-function id cannot be invoked and leaks no internals', async ({ request }) => {
+test('an unknown server-function id cannot be invoked and leaks no internals', async ({ page, request }) => {
 	const payload = 'must-not-be-echoed-back';
-	const replay = await request.fetch('/_server', {
+	const serverRequestPromise = page.waitForRequest((candidate) => new URL(candidate.url()).pathname.startsWith('/_server/'));
+	await page.goto('/login');
+	const serverRequest = await serverRequestPromise;
+	const replayUrl = new URL(serverRequest.url());
+	replayUrl.pathname = replayUrl.pathname.replace(/[^/]+$/, encodeURIComponent('src/not-a-real-module.ts#notARealServerFunction'));
+	replayUrl.search = '';
+	const replay = await request.fetch(replayUrl.href, {
 		method: 'POST',
-		headers: { 'content-type': 'application/json', 'x-server-id': 'src/not-a-real-module.ts#notARealServerFunction' },
+		headers: { 'content-type': 'application/json', 'x-server-function-format': '8' },
 		data: JSON.stringify([payload]),
 	});
 
-	// Solid's transport answers with an envelope rather than a transport-level
-	// error, so the body is the security contract, not the status code.
+	expect(replay.status()).toBe(404);
+	expect(replay.headers()['x-server-function-unknown']).toBe('true');
 	const body = await replay.text();
 	expect(body).not.toContain(payload);
 	for (const leak of ['Valibot', 'DATABASE_URL', 'node_modules', 'at Object.', '/home/']) {

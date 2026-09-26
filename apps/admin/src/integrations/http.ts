@@ -58,6 +58,7 @@ export async function parseJsonResponse<T>(response: Response, service: string, 
 	if (response.status === 204) return undefined as T;
 	const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
 	if (!contentType.includes('json')) {
+		await response.body?.cancel().catch(() => undefined);
 		throw new UpstreamProtocolError(service, `expected JSON but received ${contentType || 'an unknown content type'}`);
 	}
 	try {

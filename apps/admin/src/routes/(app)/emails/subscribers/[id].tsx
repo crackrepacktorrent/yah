@@ -18,6 +18,7 @@ import { requireSession } from '~/platform/auth/session';
 import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
@@ -229,37 +230,31 @@ function CampaignTestSendControls(props: { subscriber: SubscriberProfile; campai
 	const [selectedId, setSelectedId] = createSignal('');
 	const selectedCampaign = createMemo(() => campaigns().find(({ id }) => id === Number(selectedId())) ?? null);
 	const [confirmOpen, setConfirmOpen] = createSignal(false);
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const sendTask = createCommandTask();
 	const [accepted, setAccepted] = createSignal('');
 
 	function requestSend(): void {
 		if (!selectedCampaign()) return;
-		setError('');
+		sendTask.clearError();
 		setConfirmOpen(true);
 	}
 
 	async function performSend(): Promise<void> {
 		const campaign = selectedCampaign();
 		if (!campaign) return;
-		setPending(true);
-		setError('');
-		setAccepted('');
-		try {
+		const subscriber = props.subscriber;
+		await sendTask.run(async () => {
+			setAccepted('');
 			await sendCampaignTest({
 				campaignId: campaign.id,
 				expectedCampaignUpdatedAt: campaign.updatedAt,
-				subscriberId: props.subscriber.id,
-				expectedSubscriberUpdatedAt: props.subscriber.updatedAt,
+				subscriberId: subscriber.id,
+				expectedSubscriberUpdatedAt: subscriber.updatedAt,
 			});
 			setConfirmOpen(false);
-			const message = `Test-send request accepted for ${props.subscriber.email}. Delivery is not confirmed.`;
+			const message = `Test-send request accepted for ${subscriber.email}. Delivery is not confirmed.`;
 			setAccepted(message);
-		} catch (caught) {
-			setError(visibleError(caught, 'The campaign test-send request could not be accepted.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The campaign test-send request could not be accepted.');
 	}
 
 	return <div class="campaign-test-send-panel">
@@ -275,10 +270,10 @@ function CampaignTestSendControls(props: { subscriber: SubscriberProfile; campai
 			description={selectedCampaign() ? `Ask Listmonk to queue ${selectedCampaign()!.name} for ${props.subscriber.email}. This is a real email with live links and tracking. Queue acceptance does not confirm delivery.` : ''}
 			confirmLabel="Queue test email"
 			confirmTone="primary"
-			pending={pending()}
-			error={error()}
+			pending={sendTask.pending()}
+			error={sendTask.error()}
 			onConfirm={() => void performSend()}
-			onOpenChange={(open) => { if (!open && !pending()) setConfirmOpen(false); }}
+			onOpenChange={(open) => { if (!open && !sendTask.pending()) setConfirmOpen(false); }}
 		/>
 	</div>;
 }
@@ -299,26 +294,20 @@ function SubscriberActivityView(props: { subscriberId: number }) {
 function SubscriberBounceHistory(props: { subscriberId: number; email: string; canClear: boolean }) {
 	const rows = createMemo(() => listSubscriberBounces(props.subscriberId));
 	const [confirmOpen, setConfirmOpen] = createSignal(false);
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const clearTask = createCommandTask();
 
 	async function clearHistory(): Promise<void> {
-		setPending(true);
-		setError('');
-		try {
-			await clearSubscriberBounces(props.subscriberId);
-			revalidate(listSubscriberBounces.keyFor(props.subscriberId));
+		const id = props.subscriberId;
+		await clearTask.run(async () => {
+			await clearSubscriberBounces(id);
+			revalidate(listSubscriberBounces.keyFor(id));
 			setConfirmOpen(false);
 			toast.success('Subscriber bounce history cleared.');
-		} catch (caught) {
-			setError(visibleError(caught, 'The subscriber bounce history could not be cleared.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The subscriber bounce history could not be cleared.');
 	}
 
 	return <Show when={rows()}>{(resolved) => <>
-		<Show when={props.canClear && resolved().length > 0}><div class="subscriber-detail-actions"><button class="button button--danger-secondary" type="button" onClick={() => { setError(''); setConfirmOpen(true); }}>Clear subscriber bounce history</button></div></Show>
+		<Show when={props.canClear && resolved().length > 0}><div class="subscriber-detail-actions"><button class="button button--danger-secondary" type="button" onClick={() => { clearTask.clearError(); setConfirmOpen(true); }}>Clear subscriber bounce history</button></div></Show>
 		<div class="data-table-scroll">
 			<table class="data-table">
 				<caption class="visually-hidden">Bounce history for {props.email}</caption>
@@ -326,7 +315,7 @@ function SubscriberBounceHistory(props: { subscriberId: number; email: string; c
 				<tbody><Show when={resolved().length > 0} fallback={<tr><td colspan="4">No bounce records for this subscriber.</td></tr>}><For each={resolved()}>{(bounce: BounceSummary) => <tr><td>{bounce.campaignName ?? '—'}</td><td><span class={`badge bounce-type bounce-type--${bounce.type}`}>{bounceTypeLabel(bounce.type)}</span></td><td>{bounce.source || '—'}</td><td>{new Date(bounce.createdAt).toLocaleString()}</td></tr>}</For></Show></tbody>
 			</table>
 		</div>
-		<ConfirmDialog open={confirmOpen()} title="Clear subscriber bounce history?" description={`Permanently clear every bounce record for ${props.email}? This does not restore subscriber or membership state and cannot be undone.`} confirmLabel="Clear bounce history" pending={pending()} error={error()} onConfirm={() => void clearHistory()} onOpenChange={setConfirmOpen} />
+		<ConfirmDialog open={confirmOpen()} title="Clear subscriber bounce history?" description={`Permanently clear every bounce record for ${props.email}? This does not restore subscriber or membership state and cannot be undone.`} confirmLabel="Clear bounce history" pending={clearTask.pending()} error={clearTask.error()} onConfirm={() => void clearHistory()} onOpenChange={setConfirmOpen} />
 	</>}</Show>;
 }
 

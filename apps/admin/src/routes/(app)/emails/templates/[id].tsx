@@ -18,6 +18,7 @@ import { requireSession } from '~/platform/auth/session';
 import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
@@ -51,55 +52,40 @@ function EmailTemplateDetailView(props: { template: EmailTemplateDetail }) {
 			props.template.kind === 'campaign' &&
 			!props.template.isDefault,
 	);
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const updateTask = createCommandTask();
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
-	const [deletePending, setDeletePending] = createSignal(false);
-	const [deleteError, setDeleteError] = createSignal('');
-	const [defaultPending, setDefaultPending] = createSignal(false);
+	const deleteTask = createCommandTask();
+	const defaultTask = createCommandTask();
 
 	async function handleUpdate(values: EmailTemplateFormValues): Promise<void> {
-		setError('');
-		setPending(true);
-		try {
-			await updateEmailTemplate({ id: props.template.id, name: values.name, subject: values.subject, body: values.body });
-			revalidate([getEmailTemplate.keyFor(props.template.id), listEmailTemplates.key]);
+		const id = props.template.id;
+		defaultTask.clearError();
+		await updateTask.run(async () => {
+			await updateEmailTemplate({ id, name: values.name, subject: values.subject, body: values.body });
+			revalidate([getEmailTemplate.keyFor(id), listEmailTemplates.key]);
 			toast.success('Email template updated.');
-		} catch (caught) {
-			setError(visibleError(caught, 'The email template could not be updated.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The email template could not be updated.');
 	}
 
 	async function handleSetDefault(): Promise<void> {
-		setError('');
-		setDefaultPending(true);
-		try {
-			await setDefaultEmailTemplate(props.template.id);
-			revalidate([getEmailTemplate.keyFor(props.template.id), listEmailTemplates.key]);
+		const id = props.template.id;
+		updateTask.clearError();
+		await defaultTask.run(async () => {
+			await setDefaultEmailTemplate(id);
+			revalidate([getEmailTemplate.keyFor(id), listEmailTemplates.key]);
 			toast.success('Default campaign template updated.');
-		} catch (caught) {
-			setError(visibleError(caught, 'The default template could not be changed.'));
-		} finally {
-			setDefaultPending(false);
-		}
+		}, 'The default template could not be changed.');
 	}
 
 	async function handleDelete(): Promise<void> {
-		setDeletePending(true);
-		setDeleteError('');
-		try {
-			await deleteEmailTemplate(props.template.id);
+		const id = props.template.id;
+		await deleteTask.run(async () => {
+			await deleteEmailTemplate(id);
 			revalidate(listEmailTemplates.key);
 			setDeleteOpen(false);
 			toast.success('Email template deleted.');
 			navigate('/emails');
-		} catch (caught) {
-			setDeleteError(visibleError(caught, 'The email template could not be deleted.'));
-		} finally {
-			setDeletePending(false);
-		}
+		}, 'The email template could not be deleted.');
 	}
 
 	return (
@@ -108,14 +94,14 @@ function EmailTemplateDetailView(props: { template: EmailTemplateDetail }) {
 			<PageHeader title={props.template.name} description={`${emailTemplateKindLabel(props.template.kind)}${props.template.isDefault ? ' · Default campaign template' : ''}`}>
 				<div class="template-detail-actions">
 					<Show when={canSetDefault()}>
-						<button class="button button--secondary" type="button" onClick={() => void handleSetDefault()} disabled={defaultPending()}>
-							{defaultPending() ? 'Updating…' : 'Set as default'}
+						<button class="button button--secondary" type="button" onClick={() => void handleSetDefault()} disabled={defaultTask.pending()}>
+							{defaultTask.pending() ? 'Updating…' : 'Set as default'}
 						</button>
 					</Show>
 					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => setDeleteOpen(true)}>Delete</button></Show>
 				</div>
 			</PageHeader>
-			<Show when={error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
+			<Show when={updateTask.error() || defaultTask.error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 
 			<Show
 				when={canEdit()}
@@ -129,7 +115,7 @@ function EmailTemplateDetailView(props: { template: EmailTemplateDetail }) {
 						subject: props.template.subject,
 						body: props.template.body,
 					}}
-					pending={pending()}
+					pending={updateTask.pending()}
 					error=""
 					cancelHref="/emails"
 					onSubmit={(values) => void handleUpdate(values)}
@@ -142,8 +128,8 @@ function EmailTemplateDetailView(props: { template: EmailTemplateDetail }) {
 				title="Delete email template?"
 				description={`Permanently delete ${props.template.name}? This cannot be undone.`}
 				confirmLabel="Delete template"
-				pending={deletePending()}
-				error={deleteError()}
+				pending={deleteTask.pending()}
+				error={deleteTask.error()}
 				onConfirm={() => void handleDelete()}
 				onOpenChange={setDeleteOpen}
 			/>

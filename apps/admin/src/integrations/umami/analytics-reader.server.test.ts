@@ -134,6 +134,7 @@ describe('Umami analytics reader', () => {
 
 	it('shares one replacement login when concurrent requests reject the used token', async () => {
 		let logins = 0;
+		const rejectedResponses: Response[] = [];
 		const request = vi.fn(async (input: string | URL, init?: RequestInit) => {
 			const url = new URL(input);
 			if (url.pathname === '/api/auth/login') {
@@ -141,13 +142,19 @@ describe('Umami analytics reader', () => {
 				return json({ token: token(`login-${logins}`) });
 			}
 			const authorization = (init?.headers as Record<string, string> | undefined)?.['Authorization'];
-			if (authorization === `Bearer ${token('login-1')}`) return json({ error: 'revoked' }, 401);
+			if (authorization === `Bearer ${token('login-1')}`) {
+				const response = json({ error: 'revoked' }, 401);
+				rejectedResponses.push(response);
+				return response;
+			}
 			return successfulPayload(url);
 		});
 		const reader = createUmamiAnalyticsReader(config, { request, now: () => fixedNow });
 
 		await expect(reader.getSnapshot('7d')).resolves.toMatchObject({ period: '7d' });
 		expect(logins).toBe(2);
+		expect(rejectedResponses).toHaveLength(9);
+		expect(rejectedResponses.every((response) => response.bodyUsed)).toBe(true);
 	});
 
 	it('does not clear a replacement token when a late request rejects the old token', async () => {
@@ -235,12 +242,14 @@ describe('Umami analytics reader', () => {
 	});
 
 	it('does not copy credentials or an upstream body into authentication errors', async () => {
-		const request = vi.fn(async () => new Response(`rejected ${config.UMAMI_PASSWORD}`, { status: 403 }));
+		const response = new Response(`rejected ${config.UMAMI_PASSWORD}`, { status: 403 });
+		const request = vi.fn(async () => response);
 		const reader = createUmamiAnalyticsReader(config, { request, now: () => fixedNow });
 
 		const error = await reader.getSnapshot('7d').catch((caught: unknown) => caught);
 		expect(error).toBeInstanceOf(Error);
 		expect(String(error)).not.toContain(config.UMAMI_PASSWORD);
 		expect(String(error)).not.toContain('rejected');
+		expect(response.bodyUsed).toBe(true);
 	});
 });

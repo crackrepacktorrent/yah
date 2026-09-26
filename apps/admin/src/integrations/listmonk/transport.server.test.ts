@@ -72,11 +72,13 @@ describe('Listmonk transport', () => {
 		await expect(transport.html('/templates/2/preview')).resolves.toBe('<main>Preview</main>');
 		expect(new Headers(requests[0]?.init?.headers).get('accept')).toBe('text/html');
 
+		const wrongTypeResponse = new Response('{}', { headers: { 'content-type': 'application/json' } });
 		const wrongType = createListmonkTransport(
 			config,
-			vi.fn(async () => new Response('{}', { headers: { 'content-type': 'application/json' } })),
+			vi.fn(async () => wrongTypeResponse),
 		);
 		await expect(wrongType.html('/templates/2/preview')).rejects.toThrow(/expected HTML/);
+		expect(wrongTypeResponse.bodyUsed).toBe(true);
 	});
 
 	it('accepts plain text only through the campaign-document reader', async () => {

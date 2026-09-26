@@ -17,6 +17,12 @@ function isAuthApi(pathname: string): boolean {
 	return hasPathPrefix(pathname, '/api/auth');
 }
 
+function isServerFunctionTransport(pathname: string): boolean {
+	// Solid addresses actions and query data by an encoded function ID. The
+	// runtime owns ID decoding, registration, argument validation, and auth.
+	return pathname === '/_server' || /^\/_server\/(?:data\/)?[^/]+$/.test(pathname);
+}
+
 function isShortlinkManagementPage(pathname: string): boolean {
 	const match = pathname.match(/^\/shortlinks\/([^/]+)\/(?:details|edit)$/);
 	return !!match?.[1] && decodeShortlinkRouteCode(match[1]) !== '';
@@ -112,13 +118,13 @@ export function createAdminRuntimeGuard(runtime: AdminRuntime): FetchMiddleware 
 			return new Response(null, { status: 404 });
 		}
 		if (runtime === 'production') {
-			const allowed = pathname === '/api/health' || isAuthApi(pathname) || pathname === '/_server' || isProductPage(pathname);
+			const allowed = pathname === '/api/health' || isAuthApi(pathname) || isServerFunctionTransport(pathname) || isProductPage(pathname);
 			if (!allowed) return new Response(null, { status: 404 });
 
 			if (isProductPage(pathname) && request.method !== 'GET' && request.method !== 'HEAD') {
 				return methodNotAllowed('GET, HEAD');
 			}
-			if (pathname === '/_server' && request.method !== 'GET' && request.method !== 'POST') {
+			if (isServerFunctionTransport(pathname) && request.method !== 'GET' && request.method !== 'POST') {
 				return methodNotAllowed('GET, POST');
 			}
 		}

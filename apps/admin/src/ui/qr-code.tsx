@@ -1,5 +1,6 @@
-import QRCodeStyling from 'qr-code-styling';
-import { For, Show, createEffect, createMemo, createSignal, onSettled, untrack } from 'solid-js';
+import QRCodeStyling, { type Options } from 'qr-code-styling';
+import { For, Show, createEffect, createMemo, createSignal } from 'solid-js';
+import { createCommandTask } from './command-task';
 import { logoDataUrl } from './logo-data-url';
 import './qr-code.css';
 
@@ -45,103 +46,88 @@ export function QrCode(props: QrCodeProps) {
 	let instance: QRCodeStyling | undefined;
 	const [ready, setReady] = createSignal(false);
 	const [error, setError] = createSignal<string>();
+	const downloadTask = createCommandTask();
 	const [selectedPreset, setSelectedPreset] = createSignal(0);
+	const [selectedBackground, setSelectedBackground] = createSignal('preset');
+	const [customBackground, setCustomBackground] = createSignal('#ffffff');
 	const [selectedDotStyle, setSelectedDotStyle] = createSignal(0);
 	const [selectedCornerStyle, setSelectedCornerStyle] = createSignal(0);
 	const [showLogo, setShowLogo] = createSignal(false);
 	const selectedForeground = createMemo(() =>
 		selectedPreset() === 0 && props.color ? props.color : colorPresets[selectedPreset()]!.foreground,
 	);
-	const selectedBackground = createMemo(() => colorPresets[selectedPreset()]!.background);
+	const background = createMemo(() => selectedBackground() === 'preset'
+		? colorPresets[selectedPreset()]!.background
+		: selectedBackground() === 'custom' ? customBackground() : selectedBackground());
+	const options = createMemo<Options>(() => {
+		const foreground = selectedForeground();
+		const corner = cornerStyles[selectedCornerStyle()]!.value;
+		return {
+			type: 'svg',
+			width: 1000,
+			height: 1000,
+			// Leave at least four modules clear even for the smallest (21-module) QR.
+			margin: 140,
+			data: props.url,
+			image: showLogo() ? logoDataUrl(foreground) : undefined,
+			imageOptions: { crossOrigin: 'anonymous', hideBackgroundDots: true, imageSize: 0.35, margin: 4 },
+			dotsOptions: { color: foreground, type: dotStyles[selectedDotStyle()]!.value },
+			cornersSquareOptions: { color: foreground, type: corner },
+			cornersDotOptions: { color: foreground, type: corner === 'extra-rounded' ? 'dot' : corner },
+			backgroundOptions: { color: background() },
+			qrOptions: { errorCorrectionLevel: 'H' },
+		};
+	});
 
-	function reportFailure(cause: unknown, message = 'QR preview could not be generated.'): void {
-		console.error('[QrCode] Failed to render QR code', cause);
+	createEffect(options, (state) => {
+		if (!container) return;
+		let active = true;
 		setReady(false);
-		setError(message);
-	}
-
-	onSettled(() => {
 		setError(undefined);
-		const initial = untrack(() => ({
-			background: selectedBackground(),
-			corner: cornerStyles[selectedCornerStyle()]!.value,
-			dot: dotStyles[selectedDotStyle()]!.value,
-			foreground: selectedForeground(),
-			logo: showLogo(),
-			url: props.url,
-		}));
-		try {
-			if (!container) return;
-			instance = new QRCodeStyling({
-				type: 'svg',
-				width: 1000,
-				height: 1000,
-				margin: 8,
-				data: initial.url,
-				image: initial.logo ? logoDataUrl(initial.foreground) : undefined,
-				imageOptions: { crossOrigin: 'anonymous', hideBackgroundDots: true, imageSize: 0.35, margin: 4 },
-				dotsOptions: { color: initial.foreground, type: initial.dot },
-				cornersSquareOptions: { color: initial.foreground, type: initial.corner },
-				cornersDotOptions: { color: initial.foreground, type: initial.corner === 'extra-rounded' ? 'dot' : initial.corner },
-				backgroundOptions: { color: initial.background },
-				qrOptions: { errorCorrectionLevel: 'H' },
-			});
-			container.replaceChildren();
-			instance.append(container);
-			if (initial.url.trim()) setReady(true);
-			else setError('Enter a QR destination.');
-		} catch (cause) {
-			reportFailure(cause);
+		downloadTask.clearError();
+		container.replaceChildren();
+
+		function reportFailure(cause: unknown): void {
+			if (!active) return;
+			console.error('[QrCode] Failed to render QR code', cause);
+			setError('QR preview could not be generated.');
+		}
+
+		if (!state.data?.trim()) {
+			setError('Enter a QR destination.');
+		} else if (state.backgroundOptions?.color?.toLowerCase() === state.dotsOptions?.color?.toLowerCase()) {
+			setError('Choose different QR and background colors so the code is visible.');
+		} else {
+			try {
+				// Each appearance owns its renderer. qr-code-styling retains its PNG
+				// canvas across update(), which otherwise exports an earlier design.
+				const rendered = new QRCodeStyling(state);
+				instance = rendered;
+				rendered.append(container);
+				// Logo drawing is asynchronous; catch failures and enable downloads
+				// only after this particular appearance has finished rendering.
+				void rendered.getRawData('svg').then(() => {
+					if (active) setReady(true);
+				}, reportFailure);
+			} catch (cause) {
+				reportFailure(cause);
+			}
 		}
 
 		return () => {
-			setReady(false);
+			active = false;
 			instance = undefined;
 			container?.replaceChildren();
 		};
 	});
 
-	createEffect(
-		() => ({
-			background: selectedBackground(),
-			corner: cornerStyles[selectedCornerStyle()]!.value,
-			dot: dotStyles[selectedDotStyle()]!.value,
-			foreground: selectedForeground(),
-			logo: showLogo(),
-			url: props.url,
-		}),
-		(state) => {
-			if (!instance) return;
-			if (!state.url.trim()) {
-				setReady(false);
-				setError('Enter a QR destination.');
-				return;
-			}
-
-			try {
-				instance.update({
-					data: state.url,
-					image: state.logo ? logoDataUrl(state.foreground) : undefined,
-					dotsOptions: { color: state.foreground, type: state.dot },
-					cornersSquareOptions: { color: state.foreground, type: state.corner },
-					cornersDotOptions: { color: state.foreground, type: state.corner === 'extra-rounded' ? 'dot' : state.corner },
-					backgroundOptions: { color: state.background },
-				});
-				setError(undefined);
-				setReady(true);
-			} catch (cause) {
-				reportFailure(cause);
-			}
-		},
-	);
-
 	async function download(extension: 'svg' | 'png'): Promise<void> {
-		if (!instance || !ready()) return;
-		try {
-			await instance.download({ name: downloadName(props.title), extension });
-		} catch (cause) {
-			reportFailure(cause, 'QR code could not be downloaded.');
-		}
+		const rendered = instance;
+		if (!rendered || !ready()) return;
+		const name = downloadName(props.title);
+		await downloadTask.run(async () => {
+			await rendered.download({ name, extension });
+		}, 'QR code could not be downloaded. Please try again.');
 	}
 
 	return (
@@ -150,7 +136,7 @@ export function QrCode(props: QrCodeProps) {
 				ref={(element) => {
 					container = element;
 				}}
-				class="qr-code"
+				class={['qr-code', { 'qr-code--transparent': selectedBackground() === 'transparent' }]}
 				role={error() ? undefined : 'img'}
 				aria-label={error() ? undefined : props.label}
 				aria-busy={!error() && !ready() ? 'true' : undefined}
@@ -161,9 +147,10 @@ export function QrCode(props: QrCodeProps) {
 			</Show>
 			<div class="qr-code-controls" role="group" aria-label="QR code appearance">
 				<div class="qr-code-downloads">
-					<button type="button" onClick={() => void download('svg')} disabled={!ready()}>Download SVG</button>
-					<button type="button" onClick={() => void download('png')} disabled={!ready()}>Download PNG</button>
+					<button type="button" onClick={() => void download('svg')} disabled={!ready() || downloadTask.pending()}>Download SVG</button>
+					<button type="button" onClick={() => void download('png')} disabled={!ready() || downloadTask.pending()}>Download PNG</button>
 				</div>
+				<Show when={downloadTask.error()}>{(message) => <p class="qr-code-error" role="alert">{message()}</p>}</Show>
 				<div class="qr-code-presets" role="group" aria-label="Color preset">
 					<For each={colorPresets}>
 						{(preset, index) => (
@@ -179,6 +166,23 @@ export function QrCode(props: QrCodeProps) {
 						)}
 					</For>
 				</div>
+				<label>
+					<span>Background</span>
+					<select value={selectedBackground()} onChange={(event) => setSelectedBackground(event.currentTarget.value)}>
+						<option value="preset">Match color preset</option>
+						<option value="#ffffff">White</option>
+						<option value="#fff7ef">Cream</option>
+						<option value="#262637">Dark</option>
+						<option value="transparent">Transparent</option>
+						<option value="custom">Custom color</option>
+					</select>
+				</label>
+				<Show when={selectedBackground() === 'custom'}>
+					<label>
+						<span>Custom background color</span>
+						<input type="color" value={customBackground()} onInput={(event) => setCustomBackground(event.currentTarget.value)} />
+					</label>
+				</Show>
 				<label>
 					<span>Dots</span>
 					<select value={selectedDotStyle()} onChange={(event) => setSelectedDotStyle(Number(event.currentTarget.value))}>
