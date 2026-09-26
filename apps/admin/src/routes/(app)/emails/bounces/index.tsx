@@ -11,10 +11,10 @@ import { bounceListHref, decodeBounceListLocation } from '~/features/bounces/rou
 import { clearAllBounces, deleteBounces, listBounces } from '~/features/bounces/server';
 import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { createCommandTask } from '~/ui/command-task';
 import { PageHeader } from '~/ui/page-header';
 import { SelectionCheckbox } from '~/ui/selection-checkbox';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/bounces', {
 	preload: ({ location }) => void listBounces(decodeBounceListLocation(location.query)),
@@ -29,35 +29,28 @@ export default function BounceListPage() {
 	const session = createMemo(() => requireSession());
 	const canClearAll = createMemo(() => can(session(), 'bounce', 'clear-all'));
 	const [clearAllOpen, setClearAllOpen] = createSignal(false);
-	const [clearAllPending, setClearAllPending] = createSignal(false);
-	const [clearAllError, setClearAllError] = createSignal('');
+	const clearAllTask = createCommandTask();
 
 	async function clearAllRecords(): Promise<void> {
-		setClearAllPending(true);
-		setClearAllError('');
-		try {
+		await clearAllTask.run(async () => {
 			await clearAllBounces();
 			setClearAllOpen(false);
 			navigate('/emails/bounces', { replace: true });
 			revalidate(listBounces.key);
 			toast.success('All bounce records cleared.');
-		} catch (caught) {
-			setClearAllError(visibleError(caught, 'The bounce history could not be cleared.'));
-		} finally {
-			setClearAllPending(false);
-		}
+		}, 'The bounce history could not be cleared.');
 	}
 
 	return (
 		<section class="bounces-page">
 			<PageHeader eyebrow="Email delivery" title="Bounces">
-				<Show when={canClearAll()}><button class="button button--danger-secondary" type="button" onClick={() => { setClearAllError(''); setClearAllOpen(true); }}>Clear all bounce records</button></Show>
+				<Show when={canClearAll()}><button class="button button--danger-secondary" type="button" onClick={() => { clearAllTask.clearError(); setClearAllOpen(true); }}>Clear all bounce records</button></Show>
 			</PageHeader>
 			<p class="bounce-order-note">Live newest-first provider pages may shift while records arrive or are cleared. Clearing history does not restore blocklisted subscribers or mailing-list memberships.</p>
 			<Loading on={requestIdentity()} fallback={<p class="table-loading" role="status">Loading bounces…</p>}>
 				<Show when={page()}>{(resolved) => <BounceResults page={resolved()} />}</Show>
 			</Loading>
-			<ConfirmDialog open={clearAllOpen()} title="Clear all bounce records?" description="Permanently clear the complete bounce history? This does not restore subscriber or membership state and cannot be undone." confirmLabel="Clear all bounce records" pending={clearAllPending()} error={clearAllError()} onConfirm={() => void clearAllRecords()} onOpenChange={setClearAllOpen} />
+			<ConfirmDialog open={clearAllOpen()} title="Clear all bounce records?" description="Permanently clear the complete bounce history? This does not restore subscriber or membership state and cannot be undone." confirmLabel="Clear all bounce records" pending={clearAllTask.pending()} error={clearAllTask.error()} onConfirm={() => void clearAllRecords()} onOpenChange={setClearAllOpen} />
 		</section>
 	);
 }
@@ -69,8 +62,7 @@ function BounceResults(props: { page: BouncePage }) {
 	const canDelete = createMemo(() => can(session(), 'bounce', 'delete'));
 	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
 	const [dialogOpen, setDialogOpen] = createSignal(false);
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const deleteTask = createCommandTask();
 	const selected = createMemo(() => props.page.items.filter(({ id }) => selectedIds().includes(id)));
 	const selectableIds = createMemo(() => canDelete() ? props.page.items.map(({ id }) => id) : []);
 	const allSelected = createMemo(() => selectableIds().length > 0 && selectableIds().every((id) => selectedIds().includes(id)));
@@ -99,26 +91,21 @@ function BounceResults(props: { page: BouncePage }) {
 	}
 
 	function openDialog(): void {
-		setError('');
+		deleteTask.clearError();
 		setDialogOpen(true);
 	}
 
 	async function clearRecords(): Promise<void> {
-		const selectedCount = selected().length;
-		setPending(true);
-		setError('');
-		try {
-			await deleteBounces({ ids: selected().map(({ id }) => id) });
+		const ids = selected().map(({ id }) => id);
+		const selectedCount = ids.length;
+		await deleteTask.run(async () => {
+			await deleteBounces({ ids });
 			setDialogOpen(false);
 			setSelectedIds([]);
 			navigate('/emails/bounces', { replace: true });
 			revalidate(listBounces.key);
 			toast.success(`${selectedCount} bounce record${selectedCount === 1 ? '' : 's'} cleared.`);
-		} catch (caught) {
-			setError(visibleError(caught, 'The selected bounce records could not be cleared.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The selected bounce records could not be cleared.');
 	}
 
 	return (
@@ -145,7 +132,7 @@ function BounceResults(props: { page: BouncePage }) {
 				<span>Page {props.page.page.toLocaleString()} of {totalPages().toLocaleString()} · {props.page.total.toLocaleString()} total</span>
 				<div><Show when={props.page.page > 1}><a class="button button--secondary" rel="prev" href={bounceListHref({ page: props.page.page - 1 })}>Previous</a></Show><Show when={props.page.page < totalPages()}><a class="button button--secondary" rel="next" href={bounceListHref({ page: props.page.page + 1 })}>Next</a></Show></div>
 			</nav>
-			<ConfirmDialog open={dialogOpen()} title="Clear selected bounce records?" description={`Permanently clear ${selected().length} bounce record${selected().length === 1 ? '' : 's'}? This removes history only and cannot be undone.`} confirmLabel="Clear bounce records" pending={pending()} error={error()} onConfirm={() => void clearRecords()} onOpenChange={setDialogOpen} />
+			<ConfirmDialog open={dialogOpen()} title="Clear selected bounce records?" description={`Permanently clear ${selected().length} bounce record${selected().length === 1 ? '' : 's'}? This removes history only and cannot be undone.`} confirmLabel="Clear bounce records" pending={deleteTask.pending()} error={deleteTask.error()} onConfirm={() => void clearRecords()} onOpenChange={setDialogOpen} />
 		</>
 	);
 }

@@ -12,6 +12,9 @@
 }
 
 .qr-code svg { display: block; width: 100%; height: 100%; }
+.qr-code--transparent {
+	background: repeating-conic-gradient(#e3e3e3 0% 25%, white 0% 50%) 0 / 1rem 1rem;
+}
 .qr-code-error { color: oklch(0.42 0.16 28); }
 .qr-code-controls { display: grid; min-width: 0; gap: 0.75rem; }
 .qr-code-downloads,
@@ -26,6 +29,16 @@
 	color: inherit;
 	background: white;
 	font: inherit;
+}
+
+.qr-code-controls input[type='color'] {
+	width: 100%;
+	height: 2.25rem;
+	padding: 0.2rem;
+	border: 1px solid var(--admin-control-border);
+	border-radius: 0.4rem;
+	background: white;
+	cursor: pointer;
 }
 
 .qr-code-downloads button { cursor: pointer; }

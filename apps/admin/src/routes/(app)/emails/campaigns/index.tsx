@@ -8,10 +8,10 @@ import { deleteCampaigns, listCampaigns } from '~/features/campaigns/server';
 import { MAX_BULK_CAMPAIGN_DELETIONS, type CampaignSummary } from '~/features/campaigns/contracts';
 import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { createCommandTask } from '~/ui/command-task';
 import { PageHeader } from '~/ui/page-header';
 import { SelectionCheckbox } from '~/ui/selection-checkbox';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/campaigns', {
 	preload: () => void listCampaigns(),
@@ -36,8 +36,7 @@ function CampaignTable(props: { campaigns: CampaignSummary[] }) {
 	const canDelete = createMemo(() => can(session(), 'campaign', 'delete'));
 	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
-	const [deletePending, setDeletePending] = createSignal(false);
-	const [deleteError, setDeleteError] = createSignal('');
+	const deleteTask = createCommandTask();
 	const drafts = createMemo(() => props.campaigns.filter((campaign) => campaign.status === 'draft'));
 	const selected = createMemo(() => drafts().filter((campaign) => selectedIds().includes(campaign.id)));
 	const bulkDraftIds = createMemo(() => bulkDraftSelectionIds(props.campaigns));
@@ -53,19 +52,14 @@ function CampaignTable(props: { campaigns: CampaignSummary[] }) {
 	}
 
 	async function handleDelete(): Promise<void> {
-		setDeletePending(true);
-		setDeleteError('');
-		try {
-			await deleteCampaigns({ campaigns: selected().map((campaign) => ({ id: campaign.id, expectedUpdatedAt: campaign.updatedAt })) });
+		const campaigns = selected().map((campaign) => ({ id: campaign.id, expectedUpdatedAt: campaign.updatedAt }));
+		await deleteTask.run(async () => {
+			await deleteCampaigns({ campaigns });
 			setSelectedIds([]);
 			setDeleteOpen(false);
 			revalidate(listCampaigns.key);
 			toast.success('Draft campaigns deleted.');
-		} catch (caught) {
-			setDeleteError(visibleError(caught, 'The selected campaigns could not be deleted.'));
-		} finally {
-			setDeletePending(false);
-		}
+		}, 'The selected campaigns could not be deleted.');
 	}
 
 	return (
@@ -87,7 +81,7 @@ function CampaignTable(props: { campaigns: CampaignSummary[] }) {
 					</tbody>
 				</table>
 			</div>
-			<ConfirmDialog open={deleteOpen()} title="Delete selected draft campaigns?" description={`Permanently delete ${selected().length} draft campaign${selected().length === 1 ? '' : 's'}? This cannot be undone.`} confirmLabel="Delete campaigns" pending={deletePending()} error={deleteError()} onConfirm={() => void handleDelete()} onOpenChange={setDeleteOpen} />
+			<ConfirmDialog open={deleteOpen()} title="Delete selected draft campaigns?" description={`Permanently delete ${selected().length} draft campaign${selected().length === 1 ? '' : 's'}? This cannot be undone.`} confirmLabel="Delete campaigns" pending={deleteTask.pending()} error={deleteTask.error()} onConfirm={() => void handleDelete()} onOpenChange={setDeleteOpen} />
 		</section>
 	);
 }

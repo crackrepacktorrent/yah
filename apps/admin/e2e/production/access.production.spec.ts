@@ -151,7 +151,7 @@ test('live invitations stay private, preserve wrong-account recovery, and accept
 	});
 	const serverPayloads: Array<Promise<string>> = [];
 	page.on('response', (response) => {
-		if (new URL(response.url()).pathname === '/_server') serverPayloads.push(response.text().catch(() => ''));
+		if (new URL(response.url()).pathname.startsWith('/_server/')) serverPayloads.push(response.text().catch(() => ''));
 	});
 
 	await page.goto(`/members/accept/${redactedInvitationId}`);
@@ -159,6 +159,7 @@ test('live invitations stay private, preserve wrong-account recovery, and accept
 	const anonymousText = await page.locator('body').innerText();
 	expect(anonymousText).not.toContain('private-pending-invite@example.test');
 	expect(anonymousText).not.toContain(canonicalOrganizationName);
+	expect(serverPayloads.length).toBeGreaterThan(0);
 	expect((await Promise.all(serverPayloads)).join('\n')).not.toContain('private-pending-invite@example.test');
 
 	await page.goto(`/members/accept/${canceledInvitationId}`);

@@ -36,9 +36,11 @@ describe('admin HTTP boundary', () => {
 		const next = vi.fn(async () => terminalResponse);
 		const guard = createAdminRuntimeGuard('platform-disabled');
 
-		for (const path of ['/', '/login', '/not-a-route', '/api/auth/get-session', '/api/not-an-endpoint', '/_server']) {
-			const response = await guard(new Request(`https://admin.example${path}`), next);
-			expect(response.status, path).toBe(404);
+		for (const path of ['/', '/login', '/not-a-route', '/api/auth/get-session', '/api/not-an-endpoint', '/_server', '/_server/function-id', '/_server/data/function-id']) {
+			for (const method of ['GET', 'POST']) {
+				const response = await guard(new Request(`https://admin.example${path}`, { method }), next);
+				expect(response.status, `${method} ${path}`).toBe(404);
+			}
 		}
 		expect(next).not.toHaveBeenCalled();
 	});
@@ -130,6 +132,11 @@ describe('admin HTTP boundary', () => {
 			'/members/~h80/roles',
 			'/members/invitations/extra/new',
 			'/api/not-an-endpoint',
+			'/_server-unrelated',
+			'/_server/',
+			'/_server/data/',
+			'/_server/function-id/extra',
+			'/_server/data/function-id/extra',
 		]) {
 			expect((await guard(new Request(`https://admin.example${path}`), next)).status, path).toBe(404);
 		}
@@ -143,9 +150,23 @@ describe('admin HTTP boundary', () => {
 		expect(pageResponse.status).toBe(405);
 		expect(pageResponse.headers.get('allow')).toBe('GET, HEAD');
 
-		const serverFunctionResponse = await guard(new Request('https://admin.example/_server', { method: 'DELETE' }), next);
-		expect(serverFunctionResponse.status).toBe(405);
-		expect(serverFunctionResponse.headers.get('allow')).toBe('GET, POST');
+		for (const path of ['/_server', '/_server/function-id', '/_server/data/function-id']) {
+			for (const method of ['HEAD', 'OPTIONS', 'PUT', 'PATCH', 'DELETE', 'PROPFIND']) {
+				const response = await guard(new Request(`https://admin.example${path}`, { method }), next);
+				expect(response.status, `${method} ${path}`).toBe(405);
+				expect(response.headers.get('allow')).toBe('GET, POST');
+			}
+		}
+	});
+
+	it('allows Solid action and data transport addresses without authorizing their function IDs', async () => {
+		const next = vi.fn(async () => terminalResponse);
+		const guard = createAdminRuntimeGuard('production');
+		for (const path of ['/_server/function-id', '/_server/data/function-id', '/_server/data/src%2Fsession.ts%23getSession']) {
+			for (const method of ['GET', 'POST']) {
+				expect(await guard(new Request(`https://admin.example${path}`, { method }), next), `${method} ${path}`).toBe(terminalResponse);
+			}
+		}
 	});
 
 	it('allows GET and POST auth traffic but rejects every other method', async () => {

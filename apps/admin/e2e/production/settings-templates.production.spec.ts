@@ -20,9 +20,14 @@ test('email operators can safely update SMTP settings, test delivery, and inspec
 	await page.getByLabel('Password').fill(ownerPassword);
 	await page.getByRole('button', { name: 'Sign in' }).click();
 
-	await page.getByLabel('Primary navigation').getByRole('link', { name: 'Settings' }).click();
+	await page.getByLabel('Primary navigation').getByRole('link', { name: 'Email', exact: true }).click();
+	await page.getByLabel('Email management').getByRole('link', { name: 'Settings', exact: true }).click();
+	await expect(page).toHaveURL(/\/settings\/email\/general$/);
+	await expectSelectedPrimarySection(page, 'Email');
+	await expectSelectedEmailSection(page, 'Settings');
+	await page.getByLabel('Email settings').getByRole('link', { name: 'SMTP delivery' }).click();
 	await expect(page).toHaveURL(/\/settings\/email$/);
-	await expectSelectedPrimarySection(page, 'Settings');
+	await expectSelectedPrimarySection(page, 'Email');
 	await expect(page.getByRole('heading', { name: 'Email delivery' })).toBeVisible();
 	await expect(page.getByText('Unexposed Listmonk settings and custom SMTP headers are preserved on every save.')).toBeVisible();
 	await expect(page.getByLabel('Host', { exact: true })).toHaveValue('smtp.example.test');
@@ -199,6 +204,8 @@ test('email templates use route editors, provider previews, exact defaults, and 
 	await expectNoSeriousAccessibilityViolations(page, ['iframe[title="Rendered email template preview"]']);
 
 	await page.getByLabel('Breadcrumb').getByRole('link', { name: 'Email templates' }).click();
+	await expect(page).toHaveURL(/\/emails$/);
+	await expect(page.getByRole('table', { name: 'Email templates' })).toBeVisible();
 	await request.post(`${upstreamOrigin}/__control/fail-next?provider=listmonk`);
 	await page.reload();
 	await expect(page.getByRole('alert')).toContainText(/An unexpected error occurred\. Reference: [a-f0-9]{8}/);

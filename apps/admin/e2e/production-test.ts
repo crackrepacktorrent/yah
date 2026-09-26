@@ -101,8 +101,8 @@ export async function expectSelectedEmailSection(page: Page, name: string): Prom
 
 export async function expectSelectedPrimarySection(page: Page, name: string): Promise<void> {
 	const navigation = page.getByLabel('Primary navigation');
-	await expect(navigation.locator('a[data-active]')).toHaveCount(1);
-	await expect(navigation.getByRole('link', { name, exact: true })).toHaveAttribute('data-active');
+	await expect(navigation.locator('a[aria-current="page"]')).toHaveCount(1);
+	await expect(navigation.getByRole('link', { name, exact: true })).toHaveAttribute('aria-current', 'page');
 }
 
 export async function expectNoDocumentOverflow(page: Page): Promise<void> {

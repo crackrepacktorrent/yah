@@ -13,6 +13,7 @@ import { requireSession } from '~/platform/auth/session';
 import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
@@ -64,12 +65,10 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 	const [pending, setPending] = createSignal(false);
 	const [error, setError] = createSignal('');
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
-	const [deletePending, setDeletePending] = createSignal(false);
-	const [deleteError, setDeleteError] = createSignal('');
+	const deleteTask = createCommandTask();
 	const [transitionOpen, setTransitionOpen] = createSignal(false);
 	const [selectedTransition, setSelectedTransition] = createSignal<CampaignTransition>('start');
-	const [transitionPending, setTransitionPending] = createSignal(false);
-	const [transitionError, setTransitionError] = createSignal('');
+	const transitionTask = createCommandTask();
 	const [previewPending, setPreviewPending] = createSignal(false);
 	const [previewDocument, setPreviewDocument] = createSignal('');
 	const [previewError, setPreviewError] = createSignal('');
@@ -94,13 +93,13 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 		sendAt: props.campaign.sendAt,
 	}));
 
-	async function refresh(): Promise<void> {
+	async function refresh(id: number): Promise<void> {
 		revalidate([
-			getCampaign.keyFor(props.campaign.id),
+			getCampaign.keyFor(id),
 			listCampaigns.key,
-			previewCampaign.keyFor(props.campaign.id),
+			previewCampaign.keyFor(id),
 		]);
-		await getCampaign(props.campaign.id);
+		await getCampaign(id);
 	}
 
 	async function handleUpdate(values: CampaignFormValues): Promise<void> {
@@ -122,7 +121,7 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 			});
 			clearPreview();
 			try {
-				await refresh();
+				await refresh(props.campaign.id);
 			} catch {
 				setError('The campaign draft was saved, but its latest provider state could not be reloaded. Reload this page before editing again.');
 				return;
@@ -136,34 +135,29 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 	}
 
 	async function handleDelete(): Promise<void> {
-		setDeletePending(true);
-		setDeleteError('');
-		try {
-			await deleteCampaigns({ campaigns: [{ id: props.campaign.id, expectedUpdatedAt: props.campaign.updatedAt }] });
+		const campaign = props.campaign;
+		await deleteTask.run(async () => {
+			await deleteCampaigns({ campaigns: [{ id: campaign.id, expectedUpdatedAt: campaign.updatedAt }] });
 			revalidate(listCampaigns.key);
 			setDeleteOpen(false);
 			toast.success('Campaign draft deleted.');
 			navigate('/emails/campaigns');
-		} catch (caught) {
-			setDeleteError(visibleError(caught, 'The campaign draft could not be deleted.'));
-		} finally {
-			setDeletePending(false);
-		}
+		}, 'The campaign draft could not be deleted.');
 	}
 
 	function requestTransition(transition: CampaignTransition): void {
 		setSelectedTransition(transition);
-		setTransitionError('');
+		transitionTask.clearError();
 		setTransitionOpen(true);
 	}
 
 	async function handleTransition(): Promise<void> {
-		setTransitionPending(true);
-		setTransitionError('');
-		try {
-			await transitionCampaign({ id: props.campaign.id, expectedUpdatedAt: props.campaign.updatedAt, transition: selectedTransition() });
+		const campaign = props.campaign;
+		const transition = selectedTransition();
+		await transitionTask.run(async () => {
+			await transitionCampaign({ id: campaign.id, expectedUpdatedAt: campaign.updatedAt, transition });
 			try {
-				await refresh();
+				await refresh(campaign.id);
 			} catch {
 				setTransitionOpen(false);
 				toast.error('The campaign status changed, but its latest provider state could not be reloaded. Reload this page before another change.');
@@ -171,11 +165,7 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 			}
 			setTransitionOpen(false);
 			toast.success('Campaign status updated.');
-		} catch (caught) {
-			setTransitionError(visibleError(caught, 'The campaign status could not be changed.'));
-		} finally {
-			setTransitionPending(false);
-		}
+		}, 'The campaign status could not be changed.');
 	}
 
 	async function loadPreview(): Promise<void> {
@@ -221,8 +211,8 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 				<CampaignForm mode="edit" initial={formInitial()} lists={lists()} templates={templates()} pending={pending()} error="" cancelHref="/emails/campaigns" onSubmit={(values) => void handleUpdate(values)} />
 			</Show>
 
-			<ConfirmDialog open={deleteOpen()} title="Delete campaign draft?" description={`Permanently delete ${props.campaign.name}? This cannot be undone.`} confirmLabel="Delete campaign" pending={deletePending()} error={deleteError()} onConfirm={() => void handleDelete()} onOpenChange={setDeleteOpen} />
-			<ConfirmDialog open={transitionOpen()} title={transition().title} description={transition().description} confirmLabel={transition().label} pending={transitionPending()} error={transitionError()} onConfirm={() => void handleTransition()} onOpenChange={setTransitionOpen} />
+			<ConfirmDialog open={deleteOpen()} title="Delete campaign draft?" description={`Permanently delete ${props.campaign.name}? This cannot be undone.`} confirmLabel="Delete campaign" pending={deleteTask.pending()} error={deleteTask.error()} onConfirm={() => void handleDelete()} onOpenChange={setDeleteOpen} />
+			<ConfirmDialog open={transitionOpen()} title={transition().title} description={transition().description} confirmLabel={transition().label} pending={transitionTask.pending()} error={transitionTask.error()} onConfirm={() => void handleTransition()} onOpenChange={setTransitionOpen} />
 		</section>
 	);
 }

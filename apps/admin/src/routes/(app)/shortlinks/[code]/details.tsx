@@ -11,7 +11,7 @@ import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { QrCode } from '~/ui/qr-code';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
+import { createCommandTask } from '~/ui/command-task';
 import '../shortlinks.css';
 
 export const route = defineFileRoute('/shortlinks/:code/details', {
@@ -32,38 +32,27 @@ function ShortlinkDetailRoute(props: { shortCode: string }) {
 	const canDelete = createMemo(() => can(session(), 'shortlink', 'delete'));
 	const printedQr = createMemo(() => isPrintedQrShortCode(detail().shortlink.shortCode));
 	const [dialog, setDialog] = createSignal<'reset' | 'delete' | null>(null);
-	const [pending, setPending] = createSignal(false);
-	const [dialogError, setDialogError] = createSignal('');
+	const task = createCommandTask();
 
 	async function resetVisits(): Promise<void> {
-		setDialogError('');
-		setPending(true);
-		try {
-			const result = await resetShortlinkVisits(detail().shortlink.shortCode);
-			revalidate([getShortlink.keyFor(detail().shortlink.shortCode), getShortlinkOverview.key]);
+		const shortCode = props.shortCode;
+		await task.run(async () => {
+			const result = await resetShortlinkVisits(shortCode);
+			revalidate([getShortlink.keyFor(shortCode), listShortlinks.key, getShortlinkOverview.key]);
 			setDialog(null);
 			toast.success(`Deleted ${result.deletedCount} visit${result.deletedCount === 1 ? '' : 's'}.`);
-		} catch (error) {
-			setDialogError(visibleError(error, 'Visit history could not be reset.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'Visit history could not be reset.');
 	}
 
 	async function removeShortlink(): Promise<void> {
-		setDialogError('');
-		setPending(true);
-		try {
-			await deleteShortlink(detail().shortlink.shortCode);
+		const shortCode = props.shortCode;
+		await task.run(async () => {
+			await deleteShortlink(shortCode);
 			revalidate([listShortlinks.key, getShortlinkOverview.key]);
 			setDialog(null);
 			toast.success('Shortlink deleted.');
 			navigate('/shortlinks');
-		} catch (error) {
-			setDialogError(visibleError(error, 'The shortlink could not be deleted.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The shortlink could not be deleted.');
 	}
 
 	return (
@@ -73,12 +62,12 @@ function ShortlinkDetailRoute(props: { shortCode: string }) {
 				<div class="detail-actions">
 					<Show when={canEdit()}>
 						<a class="button button--secondary" href={shortlinkEditHref(detail().shortlink.shortCode)}>Edit</a>
-						<button type="button" class="button button--danger-secondary" onClick={() => { setDialogError(''); setDialog('reset'); }}>
+						<button type="button" class="button button--danger-secondary" onClick={() => { task.clearError(); setDialog('reset'); }}>
 							Reset visits
 						</button>
 					</Show>
 					<Show when={canDelete() && !printedQr()}>
-						<button type="button" class="button button--danger" onClick={() => { setDialogError(''); setDialog('delete'); }}>Delete</button>
+						<button type="button" class="button button--danger" onClick={() => { task.clearError(); setDialog('delete'); }}>Delete</button>
 					</Show>
 				</div>
 			</PageHeader>
@@ -151,8 +140,8 @@ function ShortlinkDetailRoute(props: { shortCode: string }) {
 				title="Reset visit history?"
 				description={`Delete all tracked visits for ${detail().shortlink.shortCode}? This cannot be undone.`}
 				confirmLabel="Reset visits"
-				pending={pending()}
-				error={dialogError()}
+				pending={task.pending()}
+				error={task.error()}
 				onOpenChange={(open) => !open && setDialog(null)}
 				onConfirm={() => void resetVisits()}
 			/>
@@ -161,8 +150,8 @@ function ShortlinkDetailRoute(props: { shortCode: string }) {
 				title="Delete shortlink?"
 				description={`Permanently delete ${detail().shortlink.shortCode}? This cannot be undone.`}
 				confirmLabel="Delete shortlink"
-				pending={pending()}
-				error={dialogError()}
+				pending={task.pending()}
+				error={task.error()}
 				onOpenChange={(open) => !open && setDialog(null)}
 				onConfirm={() => void removeShortlink()}
 			/>

@@ -29,7 +29,7 @@ describe('createCommandTask', () => {
 
 		expect(commandTask.pending()).toBe(true);
 		resolve();
-		await expect(result).resolves.toBeUndefined();
+		await expect(result).resolves.toBe(true);
 		flush();
 		expect(handled).toBe(true);
 		expect(commandTask.pending()).toBe(false);
@@ -40,14 +40,32 @@ describe('createCommandTask', () => {
 		const commandTask = task();
 
 		await expect(commandTask.run(async () => { throw createPublicError('Approved detail.', 409); }, 'Fallback.'))
-			.resolves.toBeUndefined();
+			.resolves.toBe(false);
 		flush();
 		expect(commandTask.error()).toBe('Approved detail.');
 
 		await expect(commandTask.run(async () => { throw new Error('provider secret'); }, 'Safe fallback.'))
-			.resolves.toBeUndefined();
+			.resolves.toBe(false);
 		flush();
 		expect(commandTask.pending()).toBe(false);
 		expect(commandTask.error()).toBe('Safe fallback.');
+		commandTask.clearError();
+		flush();
+		expect(commandTask.error()).toBe('');
+	});
+
+	it('ignores duplicate commands even before pending signal writes are flushed', async () => {
+		const commandTask = task();
+		let resolve!: () => void;
+		const first = commandTask.run(() => new Promise<void>((accept) => { resolve = accept; }), 'Failed.');
+		let duplicateRan = false;
+		const duplicate = commandTask.run(async () => { duplicateRan = true; }, 'Failed.');
+		await expect(duplicate).resolves.toBe(false);
+		flush();
+		expect(duplicateRan).toBe(false);
+		expect(commandTask.pending()).toBe(true);
+		resolve();
+		await expect(first).resolves.toBe(true);
+		await expect(commandTask.run(async () => {}, 'Failed.')).resolves.toBe(true);
 	});
 });

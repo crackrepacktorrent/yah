@@ -7,10 +7,10 @@ import { decodeSubscriberListLocation, subscriberHref, subscriberListHref } from
 import { blocklistSubscribers, deleteSubscribers, listSubscribers } from '~/features/subscribers/server';
 import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { createCommandTask } from '~/ui/command-task';
 import { PageHeader } from '~/ui/page-header';
 import { SelectionCheckbox } from '~/ui/selection-checkbox';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/subscribers', {
 	preload: ({ location }) => void listSubscribers(decodeSubscriberListLocation(location.query)),
@@ -68,8 +68,7 @@ function SubscriberResults(props: { page: SubscriberPage }) {
 	const [searchParams] = useSearchParams();
 	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
 	const [dialog, setDialog] = createSignal<'delete' | 'blocklist' | null>(null);
-	const [mutationPending, setMutationPending] = createSignal(false);
-	const [mutationError, setMutationError] = createSignal('');
+	const mutationTask = createCommandTask();
 	const selected = createMemo(() => props.page.items.filter((subscriber) => selectedIds().includes(subscriber.id)));
 	const blocklistSelection = createMemo(() => selected().filter((subscriber) => subscriber.status !== 'blocklisted'));
 	const selectableIds = createMemo(() => props.page.items
@@ -107,24 +106,18 @@ function SubscriberResults(props: { page: SubscriberPage }) {
 	async function mutateSelection(): Promise<void> {
 		const operation = dialog();
 		if (!operation) return;
-		setMutationPending(true);
-		setMutationError('');
-		try {
-			const subscribers = (operation === 'blocklist' ? blocklistSelection() : selected()).map((subscriber) => ({
-				id: subscriber.id,
-				expectedUpdatedAt: subscriber.updatedAt,
-			}));
+		const subscribers = (operation === 'blocklist' ? blocklistSelection() : selected()).map((subscriber) => ({
+			id: subscriber.id,
+			expectedUpdatedAt: subscriber.updatedAt,
+		}));
+		await mutationTask.run(async () => {
 			if (operation === 'blocklist') await blocklistSubscribers({ subscribers });
 			else await deleteSubscribers({ subscribers });
 			setDialog(null);
 			setSelectedIds([]);
 			revalidate(listSubscribers.key);
 			toast.success(operation === 'blocklist' ? 'Subscribers blocklisted.' : 'Subscribers deleted.');
-		} catch (caught) {
-			setMutationError(visibleError(caught, `The selected subscribers could not be ${operation === 'blocklist' ? 'blocklisted' : 'deleted'}.`));
-		} finally {
-			setMutationPending(false);
-		}
+		}, `The selected subscribers could not be ${operation === 'blocklist' ? 'blocklisted' : 'deleted'}.`);
 	}
 
 	return (
@@ -132,8 +125,8 @@ function SubscriberResults(props: { page: SubscriberPage }) {
 			<Show when={selected().length > 0}>
 				<div class="bulk-actions subscriber-selection" role="status">
 					<span>{selected().length} subscriber{selected().length === 1 ? '' : 's'} selected on this page</span>
-					<Show when={canBlocklist() && blocklistSelection().length > 0}><button class="button button--danger-secondary" type="button" onClick={() => { setMutationError(''); setDialog('blocklist'); }}>Blocklist {blocklistSelection().length}</button></Show>
-					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => { setMutationError(''); setDialog('delete'); }}>Delete selected</button></Show>
+					<Show when={canBlocklist() && blocklistSelection().length > 0}><button class="button button--danger-secondary" type="button" onClick={() => { mutationTask.clearError(); setDialog('blocklist'); }}>Blocklist {blocklistSelection().length}</button></Show>
+					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => { mutationTask.clearError(); setDialog('delete'); }}>Delete selected</button></Show>
 					<button class="button button--secondary" type="button" onClick={() => setSelectedIds([])}>Clear</button>
 				</div>
 			</Show>
@@ -152,8 +145,8 @@ function SubscriberResults(props: { page: SubscriberPage }) {
 				<span>Page {props.page.page.toLocaleString()} of {totalPages().toLocaleString()} · {props.page.total.toLocaleString()} total</span>
 				<div><Show when={props.page.page > 1}><a class="button button--secondary" rel="prev" href={subscriberListHref({ page: props.page.page - 1, search: props.page.search })}>Previous</a></Show><Show when={props.page.page < totalPages()}><a class="button button--secondary" rel="next" href={subscriberListHref({ page: props.page.page + 1, search: props.page.search })}>Next</a></Show></div>
 			</nav>
-			<ConfirmDialog open={dialog() === 'blocklist'} title="Blocklist selected subscribers?" description={`Blocklist ${blocklistSelection().length} subscriber${blocklistSelection().length === 1 ? '' : 's'}? Listmonk will unsubscribe all of their memberships. Restoring them requires a separate recovery workflow.`} confirmLabel="Blocklist subscribers" pending={mutationPending()} error={mutationError()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
-			<ConfirmDialog open={dialog() === 'delete'} title="Delete selected subscribers?" description={`Permanently delete ${selected().length} subscriber${selected().length === 1 ? '' : 's'} and their Listmonk history? This cannot be undone.`} confirmLabel="Delete subscribers" pending={mutationPending()} error={mutationError()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
+			<ConfirmDialog open={dialog() === 'blocklist'} title="Blocklist selected subscribers?" description={`Blocklist ${blocklistSelection().length} subscriber${blocklistSelection().length === 1 ? '' : 's'}? Listmonk will unsubscribe all of their memberships. Restoring them requires a separate recovery workflow.`} confirmLabel="Blocklist subscribers" pending={mutationTask.pending()} error={mutationTask.error()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
+			<ConfirmDialog open={dialog() === 'delete'} title="Delete selected subscribers?" description={`Permanently delete ${selected().length} subscriber${selected().length === 1 ? '' : 's'} and their Listmonk history? This cannot be undone.`} confirmLabel="Delete subscribers" pending={mutationTask.pending()} error={mutationTask.error()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
 		</>
 	);
 }

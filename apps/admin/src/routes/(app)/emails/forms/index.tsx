@@ -1,12 +1,13 @@
 import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
-import { For, Show, createMemo, createSignal } from 'solid-js';
+import { For, Show, createMemo, createSignal, onCleanup } from 'solid-js';
 import type { MailingList } from '~/features/mailing-lists/contracts';
 import { mailingListKindLabel, mailingListStatusLabel } from '~/features/mailing-lists/form';
 import { mailingListHref } from '~/features/mailing-lists/routing';
 import {
 	getSubscriptionSharingConfig,
+	getMailingList,
 	listMailingLists,
 	setMailingListVisibility,
 } from '~/features/mailing-lists/server';
@@ -15,9 +16,9 @@ import {
 	subscriptionPageUrl,
 } from '~/features/mailing-lists/subscription-sharing';
 import { PageHeader } from '~/ui/page-header';
+import { createCommandTask } from '~/ui/command-task';
 import { requireSession } from '~/platform/auth/session';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
 
 export const route = defineFileRoute('/emails/forms', {
 	preload: () => {
@@ -34,31 +35,42 @@ export default function SubscriptionSharingPage() {
 	const publicLists = createMemo(() => lists().filter((list) => list.kind === 'public' && list.status === 'active'));
 	const otherLists = createMemo(() => lists().filter((list) => list.kind !== 'public' || list.status !== 'active'));
 	const [pendingId, setPendingId] = createSignal<number | null>(null);
-	const [error, setError] = createSignal('');
 	const [copiedUuid, setCopiedUuid] = createSignal('');
+	const visibilityTask = createCommandTask();
+	const copyTask = createCommandTask();
+	let copyTimer: ReturnType<typeof setTimeout> | undefined;
+	let disposed = false;
 
-	async function changeVisibility(list: MailingList, makePublic: boolean): Promise<void> {
-		setPendingId(list.id);
-		setError('');
-		try {
-			await setMailingListVisibility({ id: list.id, expectedUpdatedAt: list.updatedAt, public: makePublic });
-			revalidate(listMailingLists.key);
-			toast.success(makePublic ? `${list.name} published.` : `${list.name} made private.`);
-		} catch (caught) {
-			setError(visibleError(caught, 'The mailing-list visibility could not be changed.'));
-		} finally {
-			setPendingId(null);
-		}
+	onCleanup(() => {
+		disposed = true;
+		if (copyTimer !== undefined) clearTimeout(copyTimer);
+	});
+
+	function changeVisibility(list: MailingList, makePublic: boolean): Promise<boolean> {
+		return visibilityTask.run(async () => {
+			setPendingId(list.id);
+			try {
+				await setMailingListVisibility({ id: list.id, expectedUpdatedAt: list.updatedAt, public: makePublic });
+				revalidate([listMailingLists.key, getMailingList.keyFor(list.id)]);
+				toast.success(makePublic ? `${list.name} published.` : `${list.name} made private.`);
+			} finally {
+				setPendingId(null);
+			}
+		}, 'The mailing-list visibility could not be changed.');
 	}
 
-	async function copySnippet(uuid: string, name: string): Promise<void> {
-		try {
-			await navigator.clipboard.writeText(subscriptionEmbedSnippet(config().publicSiteUrl, uuid, name));
+	function copySnippet(uuid: string, name: string): Promise<boolean> {
+		const snippet = subscriptionEmbedSnippet(config().publicSiteUrl, uuid, name);
+		return copyTask.run(async () => {
+			await navigator.clipboard.writeText(snippet);
+			if (disposed) return;
+			if (copyTimer !== undefined) clearTimeout(copyTimer);
 			setCopiedUuid(uuid);
-			setTimeout(() => setCopiedUuid((current) => current === uuid ? '' : current), 2_000);
-		} catch {
-			setError('The embed code could not be copied. Select and copy it manually.');
-		}
+			copyTimer = setTimeout(() => {
+				copyTimer = undefined;
+				setCopiedUuid('');
+			}, 2_000);
+		}, 'The embed code could not be copied. Select and copy it manually.');
 	}
 
 	return (
@@ -66,7 +78,7 @@ export default function SubscriptionSharingPage() {
 			<PageHeader eyebrow="Email audiences" title="Subscription forms" />
 			<p>Public submission stays on the web application. This page controls which active lists are published and generates safe, list-scoped embeds.</p>
 			<p><a href={subscriptionPageUrl(config().publicSiteUrl)} target="_blank" rel="noreferrer">Open the public subscription page</a></p>
-			<Show when={error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
+			<Show when={visibilityTask.error() || copyTask.error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
 			<p class="visually-hidden" role="status" aria-live="polite">{copiedUuid() ? 'Embed code copied.' : ''}</p>
 
 			<section class="subscription-sharing-section" aria-labelledby="published-lists-heading">
@@ -80,10 +92,10 @@ export default function SubscriptionSharingPage() {
 									<header><div><h3>{list.name}</h3><p>{list.optIn === 'double' ? 'Double' : 'Single'} opt-in · {list.subscriberCount} subscribers</p></div>
 										<div class="subscription-card-actions">
 											<a class="button button--secondary" href={subscriptionPageUrl(config().publicSiteUrl, list.uuid)} target="_blank" rel="noreferrer">Preview</a>
-											<Show when={canEdit()}><button class="button button--secondary" type="button" disabled={pendingId() === list.id} onClick={() => void changeVisibility(list, false)}>{pendingId() === list.id ? 'Updating…' : 'Make private'}</button></Show>
+											<Show when={canEdit()}><button class="button button--secondary" type="button" disabled={visibilityTask.pending()} onClick={() => void changeVisibility(list, false)}>{pendingId() === list.id ? 'Updating…' : 'Make private'}</button></Show>
 										</div>
 									</header>
-									<div class="subscription-embed-header"><strong>List-scoped embed code</strong><button type="button" onClick={() => void copySnippet(list.uuid, list.name)}>{copiedUuid() === list.uuid ? 'Copied' : 'Copy'}</button></div>
+									<div class="subscription-embed-header"><strong>List-scoped embed code</strong><button type="button" disabled={copyTask.pending()} onClick={() => void copySnippet(list.uuid, list.name)}>{copiedUuid() === list.uuid ? 'Copied' : 'Copy'}</button></div>
 									<pre class="subscription-embed"><code>{snippet()}</code></pre>
 								</article>
 							);
@@ -110,7 +122,7 @@ export default function SubscriptionSharingPage() {
 												when={canEdit() && list.kind === 'private' && list.status === 'active'}
 												fallback={list.status === 'archived' ? 'Reactivate from its list detail.' : 'Provider-managed in Listmonk.'}
 											>
-												<button class="button button--secondary" type="button" disabled={pendingId() === list.id} onClick={() => void changeVisibility(list, true)}>{pendingId() === list.id ? 'Publishing…' : 'Publish'}</button>
+												<button class="button button--secondary" type="button" disabled={visibilityTask.pending()} onClick={() => void changeVisibility(list, true)}>{pendingId() === list.id ? 'Publishing…' : 'Publish'}</button>
 											</Show>
 										</td>
 									</tr>

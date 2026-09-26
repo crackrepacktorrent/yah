@@ -10,6 +10,7 @@ import { requireSession } from '~/platform/auth/session';
 import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
+import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
 import { visibleError } from '~/ui/visible-error';
 
@@ -36,8 +37,7 @@ function MailingListDetail(props: { list: MailingList }) {
 	const [pending, setPending] = createSignal(false);
 	const [error, setError] = createSignal('');
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
-	const [deletePending, setDeletePending] = createSignal(false);
-	const [deleteError, setDeleteError] = createSignal('');
+	const deleteTask = createCommandTask();
 
 	async function submit(values: MailingListFormValues): Promise<void> {
 		setError('');
@@ -60,19 +60,14 @@ function MailingListDetail(props: { list: MailingList }) {
 	}
 
 	async function remove(): Promise<void> {
-		setDeletePending(true);
-		setDeleteError('');
-		try {
-			await deleteMailingList(props.list.id);
+		const id = props.list.id;
+		await deleteTask.run(async () => {
+			await deleteMailingList(id);
 			revalidate(listMailingLists.key);
 			setDeleteOpen(false);
 			toast.success('Mailing list deleted.');
 			navigate('/emails/lists');
-		} catch (caught) {
-			setDeleteError(visibleError(caught, 'The mailing list could not be deleted.'));
-		} finally {
-			setDeletePending(false);
-		}
+		}, 'The mailing list could not be deleted.');
 	}
 
 	return (
@@ -96,8 +91,8 @@ function MailingListDetail(props: { list: MailingList }) {
 				title="Delete mailing list?"
 				description={`Permanently delete ${props.list.name}? Its subscriptions will be removed, but subscriber identities remain in Listmonk.`}
 				confirmLabel="Delete list"
-				pending={deletePending()}
-				error={deleteError()}
+				pending={deleteTask.pending()}
+				error={deleteTask.error()}
 				onConfirm={() => void remove()}
 				onOpenChange={setDeleteOpen}
 			/>

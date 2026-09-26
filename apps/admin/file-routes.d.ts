@@ -19,6 +19,8 @@ declare module "virtual:file-routes" {
   export interface FileRouteEntry {
     path: string;
     page?: boolean;
+    /** The page component is a server function; its `$component` is delivered eagerly. */
+    server?: boolean;
     $component?: FileRouteLazyRef<any> | FileRouteEagerRef<any>;
     $$route?: FileRouteEagerRef<any>;
     [key: string]: unknown;
@@ -39,121 +41,16 @@ declare module "virtual:file-routes" {
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)")>;
     },
     {
-      path: "/(auth)";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(auth)")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/(auth)")>;
-    },
-    {
-      path: "/*404";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/[...404]")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/(app)/emails";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/(app)/";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/index")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/(auth)/forgot-password";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(auth)/forgot-password")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/(auth)/login";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(auth)/login")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/(auth)/reset-password";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(auth)/reset-password")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/api/health";
-      page: false;
-      $HEAD: FileRouteLazyRef<typeof import("./src/routes/api/health")>;
-      $GET: FileRouteLazyRef<typeof import("./src/routes/api/health")>;
-      $$route?: undefined;
-    },
-    {
       path: "/(app)/analytics/";
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/analytics/index")>;
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/analytics/index")>;
     },
     {
-      path: "/(app)/emails/";
+      path: "/(app)/emails";
       page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/index")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/index")>;
-    },
-    {
-      path: "/(app)/emails/logs";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/logs")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/logs")>;
-    },
-    {
-      path: "/(app)/members/";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/members/index")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/members/index")>;
-    },
-    {
-      path: "/(app)/roles/";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/roles/index")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/index")>;
-    },
-    {
-      path: "/(app)/roles/new";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/roles/new")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/new")>;
-    },
-    {
-      path: "/(app)/settings/email";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email")>;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails")>;
       $$route?: undefined;
-    },
-    {
-      path: "/(app)/shortlinks/";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/shortlinks/index")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/shortlinks/index")>;
-    },
-    {
-      path: "/(app)/shortlinks/new";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/shortlinks/new")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/shortlinks/new")>;
-    },
-    {
-      path: "/api/auth/*auth";
-      page: false;
-      $GET: FileRouteLazyRef<typeof import("./src/routes/api/auth/[...auth]")>;
-      $POST: FileRouteLazyRef<typeof import("./src/routes/api/auth/[...auth]")>;
-      $HEAD: FileRouteLazyRef<typeof import("./src/routes/api/auth/[...auth]")>;
-      $$route?: undefined;
-    },
-    {
-      path: "/members/accept/:id";
-      page: true;
-      $component: FileRouteLazyRef<typeof import("./src/routes/members/accept/[id]")>;
-      $$route: FileRouteEagerRef<typeof import("./src/routes/members/accept/[id]")>;
     },
     {
       path: "/(app)/emails/analytics/";
@@ -192,6 +89,12 @@ declare module "virtual:file-routes" {
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/forms/index")>;
     },
     {
+      path: "/(app)/emails/";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/index")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/index")>;
+    },
+    {
       path: "/(app)/emails/lists/:id";
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/lists/[id]")>;
@@ -208,6 +111,12 @@ declare module "virtual:file-routes" {
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/lists/new")>;
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/lists/new")>;
+    },
+    {
+      path: "/(app)/emails/logs";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/emails/logs")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/logs")>;
     },
     {
       path: "/(app)/emails/subscribers/:id";
@@ -240,10 +149,22 @@ declare module "virtual:file-routes" {
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/emails/templates/new")>;
     },
     {
+      path: "/(app)/";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/index")>;
+      $$route?: undefined;
+    },
+    {
       path: "/(app)/members/:id/roles";
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/members/[id]/roles")>;
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/members/[id]/roles")>;
+    },
+    {
+      path: "/(app)/members/";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/members/index")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/members/index")>;
     },
     {
       path: "/(app)/members/invitations/new";
@@ -262,6 +183,24 @@ declare module "virtual:file-routes" {
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/roles/[id]/edit")>;
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/[id]/edit")>;
+    },
+    {
+      path: "/(app)/roles/";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/roles/index")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/index")>;
+    },
+    {
+      path: "/(app)/roles/new";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/roles/new")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/new")>;
+    },
+    {
+      path: "/(app)/settings/email";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/settings/email")>;
+      $$route?: undefined;
     },
     {
       path: "/(app)/settings/email/bounces";
@@ -310,6 +249,69 @@ declare module "virtual:file-routes" {
       page: true;
       $component: FileRouteLazyRef<typeof import("./src/routes/(app)/shortlinks/[code]/edit")>;
       $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/shortlinks/[code]/edit")>;
+    },
+    {
+      path: "/(app)/shortlinks/";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/shortlinks/index")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/shortlinks/index")>;
+    },
+    {
+      path: "/(app)/shortlinks/new";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(app)/shortlinks/new")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/shortlinks/new")>;
+    },
+    {
+      path: "/(auth)";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(auth)")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/(auth)")>;
+    },
+    {
+      path: "/(auth)/forgot-password";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(auth)/forgot-password")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/(auth)/login";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(auth)/login")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/(auth)/reset-password";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/(auth)/reset-password")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/*404";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/[...404]")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/api/auth/*auth";
+      page: false;
+      $GET: FileRouteLazyRef<typeof import("./src/routes/api/auth/[...auth]")>;
+      $POST: FileRouteLazyRef<typeof import("./src/routes/api/auth/[...auth]")>;
+      $HEAD: FileRouteLazyRef<typeof import("./src/routes/api/auth/[...auth]")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/api/health";
+      page: false;
+      $HEAD: FileRouteLazyRef<typeof import("./src/routes/api/health")>;
+      $GET: FileRouteLazyRef<typeof import("./src/routes/api/health")>;
+      $$route?: undefined;
+    },
+    {
+      path: "/members/accept/:id";
+      page: true;
+      $component: FileRouteLazyRef<typeof import("./src/routes/members/accept/[id]")>;
+      $$route: FileRouteEagerRef<typeof import("./src/routes/members/accept/[id]")>;
     }
   ];
   export default routes;
@@ -517,6 +519,14 @@ declare module "virtual:file-routes" {
           children?: undefined;
         },
         {
+          path: "/roles/:id/edit";
+          id: "/roles/:id/edit";
+          page: true;
+          $component: FileRouteLazyRef<typeof import("./src/routes/(app)/roles/[id]/edit")>;
+          $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/[id]/edit")>;
+          children?: undefined;
+        },
+        {
           path: "/settings/email";
           id: "/settings/email";
           page: true;
@@ -579,14 +589,6 @@ declare module "virtual:file-routes" {
           page: true;
           $component: FileRouteLazyRef<typeof import("./src/routes/(app)/shortlinks/new")>;
           $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/shortlinks/new")>;
-          children?: undefined;
-        },
-        {
-          path: "/roles/:id/edit";
-          id: "/roles/:id/edit";
-          page: true;
-          $component: FileRouteLazyRef<typeof import("./src/routes/(app)/roles/[id]/edit")>;
-          $$route: FileRouteEagerRef<typeof import("./src/routes/(app)/roles/[id]/edit")>;
           children?: undefined;
         },
         {

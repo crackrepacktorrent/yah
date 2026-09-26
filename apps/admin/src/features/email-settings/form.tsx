@@ -163,7 +163,7 @@ export function EmailSettingsForm(props: {
 			<Show when={props.canEdit}>
 				<div class="form-actions smtp-actions">
 					<button class="button button--secondary" type="button" disabled={props.pending} onClick={() => setServers((current) => [...current, newServer()])}>Add SMTP server</button>
-					<button class="button" type="submit" disabled={props.pending}>{props.pending ? 'Saving…' : 'Save SMTP settings'}</button>
+					<button class="button" type="submit" disabled={props.pending}>{props.pending && !props.testingUuid ? 'Saving…' : 'Save SMTP settings'}</button>
 				</div>
 			</Show>
 		</form>

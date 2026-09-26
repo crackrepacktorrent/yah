@@ -1,4 +1,22 @@
 import { expect, test, ownerEmail, ownerPassword, softNavigate, upstreamOrigin } from '../production-test';
+import type { Download, Page } from '@playwright/test';
+
+async function pngCornerColor(page: Page, download: Download): Promise<number[]> {
+	const stream = await download.createReadStream();
+	const chunks: Buffer[] = [];
+	for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+	return page.evaluate(async (base64) => {
+		const image = new Image();
+		image.src = `data:image/png;base64,${base64}`;
+		await image.decode();
+		const canvas = document.createElement('canvas');
+		canvas.width = image.width;
+		canvas.height = image.height;
+		const context = canvas.getContext('2d')!;
+		context.drawImage(image, 0, 0);
+		return Array.from(context.getImageData(0, 0, 1, 1).data);
+	}, Buffer.concat(chunks).toString('base64'));
+}
 
 test('analytics is permission-discoverable, keyboard-selectable, semantic, and safely retryable', async ({ page, request }, testInfo) => {
 	test.skip(!!process.env['ADMIN_PRODUCTION_E2E_BASE_URL'], 'Deterministic analytics assertions require the local fixture.');
@@ -106,6 +124,7 @@ test('shortlinks preserve the typed CRUD workflow and dashboard panels fail inde
 	await expect(page.locator('.shortlink-stats dd')).toHaveText(['0', '0', '0']);
 	await expect(page.getByText('No visits yet.')).toBeVisible();
 	await page.getByLabel('Breadcrumb').getByRole('link', { name: 'Shortlinks' }).click();
+	await expect(shortlinksTable.getByRole('row').filter({ has: page.getByRole('link', { name: 'press-kit' }) }).getByRole('cell').nth(3)).toHaveText('0');
 
 	await page.getByRole('link', { name: 'New shortlink' }).click();
 	await expect(page.getByLabel('Forward query parameters')).toBeChecked();
@@ -156,7 +175,26 @@ test('shortlinks preserve the typed CRUD workflow and dashboard panels fail inde
 	expect(svgContents).toContain('#262637');
 	const pngDownloadPromise = page.waitForEvent('download');
 	await page.getByRole('button', { name: 'Download PNG' }).click();
-	expect((await pngDownloadPromise).suggestedFilename()).toBe('qr-review-link.png');
+	const pngDownload = await pngDownloadPromise;
+	expect(pngDownload.suggestedFilename()).toBe('qr-review-link.png');
+	expect(await pngCornerColor(page, pngDownload)).toEqual([38, 38, 55, 255]);
+
+	// Exporting a PNG must not cache the previous appearance after edits.
+	await page.getByRole('combobox', { name: 'Background', exact: true }).selectOption('custom');
+	await page.getByLabel('Custom background color').fill('#abcdee');
+	await expect.poll(() => qrPreview.locator('svg').evaluate((svg) => svg.outerHTML)).toContain('#abcdee');
+	const customPngPromise = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Download PNG' }).click();
+	expect(await pngCornerColor(page, await customPngPromise)).toEqual([171, 205, 238, 255]);
+	await page.getByRole('combobox', { name: 'Background', exact: true }).selectOption('transparent');
+	const transparentPngPromise = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Download PNG' }).click();
+	expect(await pngCornerColor(page, await transparentPngPromise)).toEqual([0, 0, 0, 0]);
+	const transparentSvgPromise = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Download SVG' }).click();
+	let transparentSvg = '';
+	for await (const chunk of await (await transparentSvgPromise).createReadStream()) transparentSvg += chunk.toString();
+	expect(transparentSvg).toContain('fill="transparent"');
 	await expect(page.getByText('25', { exact: true })).toBeVisible();
 	await expect(page.getByText('review', { exact: true })).toHaveCount(1);
 

@@ -2,19 +2,44 @@ import 'server-only';
 import type { DirectoryInvitation, DirectoryMember, MembershipDirectory } from '~/features/membership/service';
 import { auth, canonicalOrganizationId } from './production-server';
 
+const MEMBER_PAGE_SIZE = 100;
+const MAX_MEMBERS = 10_000;
+
 export function createProductionMembershipDirectory(headers: Headers): MembershipDirectory {
 	async function listMembers(): Promise<DirectoryMember[]> {
-		const result = await auth.api.listMembers({
-			headers,
-			query: { organizationId: canonicalOrganizationId },
-		});
-		return result.members as DirectoryMember[];
+		const members: DirectoryMember[] = [];
+		while (true) {
+			const result = await auth.api.listMembers({
+				headers,
+				query: {
+					organizationId: canonicalOrganizationId,
+					limit: MEMBER_PAGE_SIZE,
+					offset: members.length,
+					sortBy: 'id',
+					sortDirection: 'asc',
+				},
+			});
+			if (result.total > MAX_MEMBERS) throw new Error('The member directory exceeds its safety limit.');
+			members.push(...result.members as DirectoryMember[]);
+			if (members.length >= result.total) return members;
+			if (result.members.length === 0) throw new Error('The member directory returned an incomplete page.');
+		}
 	}
 
 	return {
 		listMembers,
 		async getMember(memberId) {
-			return (await listMembers()).find((member) => member.id === memberId) ?? null;
+			const result = await auth.api.listMembers({
+				headers,
+				query: {
+					organizationId: canonicalOrganizationId,
+					filterField: 'id',
+					filterOperator: 'eq',
+					filterValue: memberId,
+					limit: 1,
+				},
+			});
+			return result.members[0] as DirectoryMember | undefined ?? null;
 		},
 		async listInvitations() {
 			return (await auth.api.listInvitations({

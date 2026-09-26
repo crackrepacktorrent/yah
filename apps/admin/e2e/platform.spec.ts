@@ -23,6 +23,8 @@ test('platform-disabled mode exposes health and rejects everything else', async 
 		'/logo.svg',
 		'/api/auth/get-session',
 		'/_server',
+		'/_server/function-id',
+		'/_server/data/function-id',
 		'/not-a-route',
 	]) {
 		const response = await request.get(path);

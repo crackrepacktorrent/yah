@@ -16,6 +16,19 @@ describe('upstream response parsing', () => {
 		await expect(parseJsonResponse(response, 'Test')).rejects.toBeInstanceOf(UpstreamProtocolError);
 	});
 
+	it('cancels unexpected content without downloading the body', async () => {
+		let cancelled = false;
+		const response = new Response(
+			new ReadableStream({
+				cancel() { cancelled = true; },
+			}),
+			{ headers: { 'content-type': 'text/html' } },
+		);
+
+		await expect(parseJsonResponse(response, 'Test')).rejects.toBeInstanceOf(UpstreamProtocolError);
+		expect(cancelled).toBe(true);
+	});
+
 	it('caps successful JSON when a provider boundary supplies a byte limit', async () => {
 		let cancelled = false;
 		const response = new Response(

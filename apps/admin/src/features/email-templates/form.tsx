@@ -128,7 +128,7 @@ export function EmailTemplateForm(props: {
 					maxlength={5_000_000}
 					required
 					disabled={props.pending}
-					spellcheck={false}
+					spellcheck="false"
 				/>
 				<small>
 					{kind() === 'campaign'

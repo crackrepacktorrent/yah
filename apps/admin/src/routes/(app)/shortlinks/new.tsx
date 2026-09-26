@@ -1,14 +1,15 @@
 import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
-import { createMemo, createSignal } from 'solid-js';
+import { createMemo } from 'solid-js';
 import { ShortlinkForm } from '~/features/shortlinks/form';
 import { shortlinkDetailHref } from '~/features/shortlinks/routing';
 import { createShortlink, getShortlinkOverview, listShortlinks, requireShortlinkCapability } from '~/features/shortlinks/server';
 import { requireSession } from '~/platform/auth/session';
 import { Breadcrumbs } from '~/ui/breadcrumbs';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
+import { createCommandTask } from '~/ui/command-task';
+import { createPublicError } from '~/platform/errors';
 import './shortlinks.css';
 
 export const route = defineFileRoute('/shortlinks/new', {
@@ -20,26 +21,19 @@ export default function NewShortlinkPage() {
 	const authorized = createMemo(() => requireShortlinkCapability('create'));
 	const session = createMemo(() => requireSession());
 	const canView = createMemo(() => can(session(), 'shortlink', 'view'));
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const task = createCommandTask();
 
 	async function handleSubmit(command: Parameters<typeof createShortlink>[0]): Promise<void> {
-		setError('');
-		setPending(true);
-		try {
+		const showDetail = canView();
+		await task.run(async () => {
 			const result = await createShortlink(command);
 			if (!result.ok) {
-				setError(result.message);
-				return;
+				throw createPublicError(result.message, 409);
 			}
 			revalidate([listShortlinks.key, getShortlinkOverview.key]);
 			toast.success(`Shortlink ${result.shortCode} created.`);
-			navigate(canView() ? shortlinkDetailHref(result.shortCode) : '/');
-		} catch (caught) {
-			setError(visibleError(caught, 'The shortlink could not be created.'));
-		} finally {
-			setPending(false);
-		}
+			navigate(showDetail ? shortlinkDetailHref(result.shortCode) : '/');
+		}, 'The shortlink could not be created.');
 	}
 
 	return (
@@ -50,8 +44,8 @@ export default function NewShortlinkPage() {
 			<p>Create a tracked redirect with an automatic or custom short code.</p>
 			<ShortlinkForm
 				mode="create"
-				pending={pending()}
-				error={error()}
+				pending={task.pending()}
+				error={task.error()}
 				cancelHref={canView() ? '/shortlinks' : '/'}
 				onSubmit={(values) => void handleSubmit(values)}
 			/>

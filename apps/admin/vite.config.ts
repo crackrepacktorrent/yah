@@ -30,13 +30,15 @@ export default defineConfig(({ command }) => ({
 	// through Vite's ESM module runner leaves `require` undefined.
 	...(command === 'build' ? { ssr: { noExternal: true as const } } : {}),
 	test: {
+		// Solid chooses client/server exports per environment during plugin setup.
+		sharedViteServer: false,
 		projects: [
 			{
 				extends: true,
 				test: {
 					name: 'client',
 					environment: 'jsdom',
-					include: ['src/contracts/**/*.test.ts', 'src/ui/**/*.test.ts', 'src/features/**/*.test.tsx'],
+					include: ['src/contracts/**/*.test.ts', 'src/ui/**/*.test.{ts,tsx}', 'src/features/**/*.test.tsx'],
 				},
 			},
 			{
