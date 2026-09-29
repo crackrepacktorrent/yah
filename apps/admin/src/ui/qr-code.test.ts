@@ -127,17 +127,6 @@ describe('QrCode', () => {
 		expect(container.querySelector('.qr-code.qr-code-transparent')).not.toBeNull();
 	});
 
-	test('prevents exporting an invisible QR when built-in foreground and background colors match', async () => {
-		const container = mount();
-		await vi.waitFor(() => expect(downloadButton(container).disabled).toBe(false));
-		chooseColor(container, 'Background color', 'Cream');
-		chooseColor(container, 'QR color', 'Cream');
-		await vi.waitFor(() => expect(container.querySelector('[role="alert"]')?.textContent).toContain('Choose different QR and background colors'));
-		expect(downloadButton(container).disabled).toBe(true);
-		chooseColor(container, 'Background color', 'Dark');
-		await vi.waitFor(() => expect(downloadButton(container).disabled).toBe(false));
-	});
-
 	test('exports each current appearance from its own renderer so cached PNGs cannot go stale', async () => {
 		const container = mount({ title: 'Signup / print' });
 		await vi.waitFor(() => expect(downloadButton(container).disabled).toBe(false));

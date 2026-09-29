@@ -123,8 +123,6 @@ export function QrCode(props: QrCodeProps) {
 
 		if (!state.data?.trim()) {
 			setError('Enter a QR destination.');
-		} else if (state.backgroundOptions?.color?.toLowerCase() === state.dotsOptions?.color?.toLowerCase()) {
-			setError('Choose different QR and background colors so the code is visible.');
 		} else {
 			try {
 				// Each appearance owns its renderer. qr-code-styling retains its PNG
