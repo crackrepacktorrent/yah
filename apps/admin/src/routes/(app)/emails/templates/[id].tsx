@@ -3,7 +3,8 @@ import { revalidate, useNavigate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
 import type { EmailTemplateDetail } from '~/features/email-templates/contracts';
-import { EmailTemplateForm, emailTemplateKindLabel, type EmailTemplateFormValues } from '~/features/email-templates/form';
+import { EmailTemplateForm, type EmailTemplateFormValues } from '~/features/email-templates/form';
+import { emailTemplateKindLabel } from '~/features/email-templates/presentation';
 import { decodeEmailTemplateRouteId } from '~/features/email-templates/routing';
 import {
 	deleteEmailTemplate,
@@ -20,7 +21,7 @@ import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
+import { createPreviewTask } from '~/ui/preview-task';
 
 export const route = defineFileRoute('/emails/templates/:id', {
 	matchFilters: { id: (segment) => decodeEmailTemplateRouteId(segment) > 0 },
@@ -138,21 +139,7 @@ function EmailTemplateDetailView(props: { template: EmailTemplateDetail }) {
 }
 
 function ReadOnlyEmailTemplate(props: { template: EmailTemplateDetail }) {
-	const [previewPending, setPreviewPending] = createSignal(false);
-	const [previewHtml, setPreviewHtml] = createSignal('');
-	const [previewError, setPreviewError] = createSignal('');
-
-	async function loadPreview(): Promise<void> {
-		setPreviewPending(true);
-		setPreviewError('');
-		try {
-			setPreviewHtml(await previewSavedEmailTemplate(props.template.id));
-		} catch (caught) {
-			setPreviewError(visibleError(caught, 'The template preview could not be rendered.'));
-		} finally {
-			setPreviewPending(false);
-		}
-	}
+	const preview = createPreviewTask();
 
 	return (
 		<>
@@ -169,11 +156,14 @@ function ReadOnlyEmailTemplate(props: { template: EmailTemplateDetail }) {
 				<div><dt>Updated</dt><dd>{new Date(props.template.updatedAt).toLocaleString()}</dd></div>
 			</dl>
 			<div class="template-source"><h2>HTML source</h2><pre><code>{props.template.body}</code></pre></div>
-			<button class="button button--secondary" type="button" onClick={() => void loadPreview()} disabled={previewPending()}>
-				{previewPending() ? 'Rendering…' : 'Render saved preview'}
+			<button class="button button--secondary" type="button" onClick={() => {
+				const id = props.template.id;
+				void preview.load(() => previewSavedEmailTemplate(id), 'The template preview could not be rendered.');
+			}} disabled={preview.pending()}>
+				{preview.pending() ? 'Rendering…' : 'Render saved preview'}
 			</button>
-			<Show when={previewError()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
-			<Show when={previewHtml()}>{(html) => <div class="template-read-preview"><iframe srcdoc={html()} sandbox="" referrerpolicy="no-referrer" title="Rendered email template preview" /></div>}</Show>
+			<Show when={preview.error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
+			<Show when={preview.html()}>{(html) => <div class="template-read-preview"><iframe srcdoc={html()} sandbox="" referrerpolicy="no-referrer" title="Rendered email template preview" /></div>}</Show>
 		</>
 	);
 }

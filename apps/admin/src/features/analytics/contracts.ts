@@ -14,6 +14,7 @@ export type AnalyticsPoint = {
 
 export type AnalyticsSnapshot = {
 	period: AnalyticsPeriod;
+	range: { startAt: number; endAt: number };
 	stats: {
 		pageviews: number;
 		visitors: number;

@@ -1,12 +1,6 @@
 import { Show, createSignal, untrack } from 'solid-js';
 import type { AuthorableEmailTemplateKind, CreateEmailTemplateCommand } from './contracts';
-import { visibleError } from '~/ui/visible-error';
-
-export function emailTemplateKindLabel(kind: 'tx' | 'campaign' | 'campaign_visual'): string {
-	if (kind === 'tx') return 'Transactional';
-	if (kind === 'campaign') return 'Campaign / HTML';
-	return 'Campaign / Visual';
-}
+import { createPreviewTask } from '~/ui/preview-task';
 
 export type EmailTemplateFormValues = CreateEmailTemplateCommand;
 
@@ -24,10 +18,7 @@ export function EmailTemplateForm(props: {
 	const [kind, setKind] = createSignal<AuthorableEmailTemplateKind>(initial?.kind ?? 'tx');
 	const [subject, setSubject] = createSignal(initial?.subject ?? '');
 	const [body, setBody] = createSignal(initial?.body ?? '');
-	const [previewHtml, setPreviewHtml] = createSignal('');
-	const [previewPending, setPreviewPending] = createSignal(false);
-	const [previewError, setPreviewError] = createSignal('');
-	let previewGeneration = 0;
+	const preview = createPreviewTask();
 
 	function values(): EmailTemplateFormValues {
 		return {
@@ -36,31 +27,6 @@ export function EmailTemplateForm(props: {
 			subject: kind() === 'tx' ? subject() : '',
 			body: body(),
 		};
-	}
-
-	function invalidatePreview(): void {
-		previewGeneration += 1;
-		setPreviewHtml('');
-		setPreviewError('');
-		setPreviewPending(false);
-	}
-
-	async function preview(): Promise<void> {
-		const generation = ++previewGeneration;
-		setPreviewPending(true);
-		setPreviewError('');
-		try {
-			const current = values();
-			const html = await props.onPreview({ kind: current.kind, body: current.body });
-			if (generation === previewGeneration) setPreviewHtml(html);
-		} catch (error) {
-			if (generation === previewGeneration) {
-				setPreviewHtml('');
-				setPreviewError(visibleError(error, 'The template preview could not be rendered.'));
-			}
-		} finally {
-			if (generation === previewGeneration) setPreviewPending(false);
-		}
 	}
 
 	return (
@@ -90,7 +56,7 @@ export function EmailTemplateForm(props: {
 					value={kind()}
 					onChange={(event) => {
 						setKind(event.currentTarget.value as AuthorableEmailTemplateKind);
-						invalidatePreview();
+						preview.clear();
 					}}
 					disabled={props.mode === 'edit' || props.pending}
 				>
@@ -122,7 +88,7 @@ export function EmailTemplateForm(props: {
 					value={body()}
 					onInput={(event) => {
 						setBody(event.currentTarget.value);
-						invalidatePreview();
+						preview.clear();
 					}}
 					rows="18"
 					maxlength={5_000_000}
@@ -141,18 +107,22 @@ export function EmailTemplateForm(props: {
 				<button
 					type="button"
 					class="button button--secondary"
-					onClick={() => void preview()}
-					disabled={props.pending || previewPending() || body() === ''}
-					aria-busy={previewPending() ? 'true' : undefined}
+					onClick={() => {
+						const render = props.onPreview;
+						const input = { kind: kind(), body: body() };
+						void preview.load(() => render(input), 'The template preview could not be rendered.');
+					}}
+					disabled={props.pending || preview.pending() || body() === ''}
+					aria-busy={preview.pending() ? 'true' : undefined}
 				>
-					{previewPending() ? 'Rendering…' : 'Render preview'}
+					{preview.pending() ? 'Rendering…' : 'Render preview'}
 				</button>
-				<Show when={previewHtml()}>
-					<button type="button" class="button button--secondary" onClick={() => setPreviewHtml('')}>Close preview</button>
+				<Show when={preview.html()}>
+					<button type="button" class="button button--secondary" onClick={preview.clear}>Close preview</button>
 				</Show>
 			</div>
-			<Show when={previewError()}>{(message) => <p class="field-error form-field--wide" role="alert">{message()}</p>}</Show>
-			<Show when={previewHtml()}>
+			<Show when={preview.error()}>{(message) => <p class="field-error form-field--wide" role="alert">{message()}</p>}</Show>
+			<Show when={preview.html()}>
 				{(html) => (
 					<div class="template-preview form-field--wide">
 						<h2>Rendered preview</h2>

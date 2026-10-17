@@ -83,12 +83,15 @@ export type CampaignAnalyticsBucket = Pick<CampaignAnalyticsPoint, 'timestamp' |
 export function aggregateCampaignAnalyticsByTimestamp(
 	points: readonly CampaignAnalyticsPoint[],
 ): CampaignAnalyticsBucket[] {
-	const counts = new Map<string, number>();
+	const buckets = new Map<number, CampaignAnalyticsBucket>();
 	for (const point of points) {
-		const combined = (counts.get(point.timestamp) ?? 0) + point.count;
+		// Equivalent ISO offsets and fractional-second spellings share one instant.
+		const instant = Date.parse(point.timestamp);
+		const bucket = buckets.get(instant);
+		const combined = (bucket?.count ?? 0) + point.count;
 		if (!Number.isSafeInteger(combined)) throw new Error('Campaign analytics total exceeds the safe integer limit.');
-		counts.set(point.timestamp, combined);
+		buckets.set(instant, { timestamp: bucket?.timestamp ?? point.timestamp, count: combined });
 	}
-	return Array.from(counts, ([timestamp, bucketCount]) => ({ timestamp, count: bucketCount }))
+	return Array.from(buckets.values())
 		.sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp));
 }

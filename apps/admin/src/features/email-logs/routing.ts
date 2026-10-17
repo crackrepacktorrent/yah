@@ -1,4 +1,4 @@
-import { EMAIL_LOG_PAGE_SIZE, type EmailLogPageQuery } from './contracts';
+import type { EmailLogPageQuery } from './contracts';
 
 export function decodeEmailLogLocation(query: Record<string, unknown>): EmailLogPageQuery {
 	const raw = Array.isArray(query['page']) ? query['page'][0] : query['page'];
@@ -9,8 +9,4 @@ export function decodeEmailLogLocation(query: Record<string, unknown>): EmailLog
 
 export function emailLogHref(page: number): string {
 	return page <= 1 ? '/emails/logs' : `/emails/logs?page=${page}`;
-}
-
-export function emailLogPageCount(total: number): number {
-	return Math.max(1, Math.ceil(total / EMAIL_LOG_PAGE_SIZE));
 }

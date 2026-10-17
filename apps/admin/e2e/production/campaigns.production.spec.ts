@@ -186,7 +186,9 @@ test('email analytics uses URL-owned native filters and one provider request per
 	await expect(page.getByText('25 total views')).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Link clicks' })).toBeVisible();
 	await expect(page.getByText('7 total clicks')).toBeVisible();
-	await expect(page.locator('.campaign-metric-figure li')).toHaveCount(6);
+	await expect(page.locator('.campaign-metric-figure .time-series-chart-plot svg')).toHaveCount(2);
+	for (const summary of await page.locator('.campaign-metric-figure summary').all()) await summary.click();
+	await expect(page.locator('.campaign-metric-figure tbody tr')).toHaveCount(96);
 	await expect(page.getByText('Aug 23, 2026, 1:00 AM UTC')).toHaveCount(2);
 	await expect(page.getByText('Aug 23, 2026, 2:00 PM UTC')).toHaveCount(2);
 

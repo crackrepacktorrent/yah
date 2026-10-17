@@ -3,6 +3,8 @@ import { defineFileRoute } from '@solidjs/router/fs';
 import { Errored, For, Loading, Show, createMemo, createSignal, isPending, latest } from 'solid-js';
 import { ANALYTICS_PERIODS, type AnalyticsMetric, type AnalyticsPeriod, type AnalyticsSnapshot } from '~/features/analytics/contracts';
 import { getAnalytics } from '~/features/analytics/server';
+import { formatDuration } from '~/features/analytics/presentation';
+import { TimeSeriesChart } from '~/ui/time-series-chart';
 import './index.css';
 
 export const route = defineFileRoute('/analytics', {
@@ -23,19 +25,6 @@ const metricSections = [
 	{ title: 'Devices', key: 'devices' as const, column: 'Device', code: false, emptyLabel: 'Unknown' },
 ] as const;
 
-function formatDuration(seconds: number): string {
-	if (seconds < 60) return `${seconds}s`;
-	return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-}
-
-function formatTimestamp(timestamp: string, period: AnalyticsPeriod): string {
-	const date = new Date(timestamp);
-	if (Number.isNaN(date.getTime())) return timestamp;
-	return period === '24h'
-		? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-		: date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-}
-
 export default function AnalyticsPage() {
 	const [period, setPeriod] = createSignal<AnalyticsPeriod>('7d');
 	const snapshot = createMemo(() => getAnalytics(period()));
@@ -50,7 +39,7 @@ export default function AnalyticsPage() {
 					<h1>Analytics</h1>
 				</div>
 				<fieldset class="period-picker">
-					<legend>Reporting period</legend>
+					<legend class="visually-hidden">Reporting period</legend>
 					<For each={ANALYTICS_PERIODS}>
 						{(option) => (
 							<label>
@@ -81,6 +70,7 @@ export default function AnalyticsPage() {
 }
 
 function AnalyticsSnapshotView(props: { snapshot: AnalyticsSnapshot }) {
+	const points = createMemo(() => props.snapshot.pageviews.map(({ timestamp, pageviews }) => ({ timestamp, value: pageviews })));
 	const stats = createMemo(() => [
 		{ label: 'Pageviews', value: props.snapshot.stats.pageviews.toLocaleString() },
 		{ label: 'Visitors', value: props.snapshot.stats.visitors.toLocaleString() },
@@ -106,9 +96,10 @@ function AnalyticsSnapshotView(props: { snapshot: AnalyticsSnapshot }) {
 				</For>
 			</dl>
 
-			<Show when={props.snapshot.pageviews.length > 0}>
-				<PageviewFigure snapshot={props.snapshot} />
-			</Show>
+			<TimeSeriesChart class="pageview-figure"
+				caption={`Pageviews over the last ${periodLabels[props.snapshot.period]}`}
+				metric="Pageviews" points={points()} interval={props.snapshot.period === '24h' ? 'hour' : 'day'} range={props.snapshot.range}
+				emptyMessage="No pageviews were recorded in this period." />
 
 			<section class="analytics-section" aria-labelledby="geographic-reach">
 				<h2 id="geographic-reach">Geographic Reach</h2>
@@ -129,29 +120,6 @@ function AnalyticsSnapshotView(props: { snapshot: AnalyticsSnapshot }) {
 				</For>
 			</div>
 		</div>
-	);
-}
-
-function PageviewFigure(props: { snapshot: AnalyticsSnapshot }) {
-	const maximum = createMemo(() => Math.max(1, ...props.snapshot.pageviews.map(({ pageviews }) => pageviews)));
-
-	return (
-		<figure class="pageview-figure">
-			<figcaption>Pageviews over the last {periodLabels[props.snapshot.period]}</figcaption>
-			<ul>
-				<For each={props.snapshot.pageviews}>
-					{(point) => (
-						<li>
-							<span>{formatTimestamp(point.timestamp, props.snapshot.period)}</span>
-							<span class="pageview-value">{point.pageviews.toLocaleString()}</span>
-							<span class="pageview-track" aria-hidden="true">
-								<span style={{ width: `${(point.pageviews / maximum()) * 100}%` }} />
-							</span>
-						</li>
-					)}
-				</For>
-			</ul>
-		</figure>
 	);
 }
 

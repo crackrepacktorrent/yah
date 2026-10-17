@@ -59,7 +59,7 @@ function normalize(
 	if (rows.some((row) => !requestedCampaignIds.has(row.campaign_id))) {
 		throw providerInvariantError('Listmonk returned analytics for an unrequested campaign.');
 	}
-	const rowKeys = rows.map((row) => `${row.campaign_id}\u0000${row.timestamp}`);
+	const rowKeys = rows.map((row) => `${row.campaign_id}\u0000${Date.parse(row.timestamp)}`);
 	if (new Set(rowKeys).size !== rowKeys.length) {
 		throw providerInvariantError('Listmonk returned duplicate campaign analytics buckets.');
 	}

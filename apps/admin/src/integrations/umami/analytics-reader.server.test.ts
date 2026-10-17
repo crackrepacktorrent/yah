@@ -74,9 +74,10 @@ describe('Umami analytics reader', () => {
 
 		expect(result).toMatchObject({
 			period: '7d',
+			range: { startAt: fixedNow - 7 * 24 * 60 * 60 * 1000, endAt: fixedNow },
 			stats: { pageviews: 100, visitors: 40, visits: 50, bounceRate: 20, averageVisitSeconds: 125 },
 			activeVisitors: 3,
-			pageviews: [{ timestamp: '2026-08-26T12:00:00Z', pageviews: 12 }],
+			pageviews: [{ timestamp: '2026-08-26T12:00:00.000Z', pageviews: 12 }],
 			pages: [{ label: 'path', visitors: 7 }],
 			operatingSystems: [{ label: 'os', visitors: 7 }],
 		});
@@ -99,6 +100,7 @@ describe('Umami analytics reader', () => {
 		expect(pageviews?.searchParams.get('startAt')).toBe(String(fixedNow - 7 * 24 * 60 * 60 * 1000));
 		expect(pageviews?.searchParams.get('endAt')).toBe(String(fixedNow));
 		expect(pageviews?.searchParams.get('unit')).toBe('day');
+		expect(pageviews?.searchParams.get('timezone')).toBe('UTC');
 
 		const metricLimits = Object.fromEntries(
 			apiRequests
@@ -106,6 +108,28 @@ describe('Umami analytics reader', () => {
 				.map(({ url }) => [url.searchParams.get('type'), url.searchParams.get('limit')]),
 		);
 		expect(metricLimits).toEqual({ path: '10', referrer: '10', browser: '5', os: '5', device: '5', city: '15' });
+	});
+
+	it.each(['2026-08-26 12:00:00', '2026-08-26T12:00:00', '2026-08-26T14:00:00+02:00'])('normalizes the provider timestamp %s to an explicit UTC instant', async (timestamp) => {
+		const request = vi.fn(async (input: string | URL) => {
+			const url = new URL(input);
+			if (url.pathname === '/api/auth/login') return json({ token: token('utc') });
+			if (url.pathname.endsWith('/pageviews')) return json({ pageviews: [{ x: timestamp, y: 12 }], sessions: [] });
+			return successfulPayload(url);
+		});
+		const reader = createUmamiAnalyticsReader(config, { request, now: () => fixedNow });
+		expect((await reader.getSnapshot('24h')).pageviews).toEqual([{ timestamp: '2026-08-26T12:00:00.000Z', pageviews: 12 }]);
+	});
+
+	it.each(['not a date', '1', '2026-02-30 12:00:00', '2026-08-26T24:00:00Z'])('rejects the invalid timestamp %s before it reaches the chart', async (timestamp) => {
+		const request = vi.fn(async (input: string | URL) => {
+			const url = new URL(input);
+			if (url.pathname === '/api/auth/login') return json({ token: token('invalid-time') });
+			if (url.pathname.endsWith('/pageviews')) return json({ pageviews: [{ x: timestamp, y: 12 }], sessions: [] });
+			return successfulPayload(url);
+		});
+		const reader = createUmamiAnalyticsReader(config, { request, now: () => fixedNow });
+		await expect(reader.getSnapshot('24h')).rejects.toThrow('invalid pageview timestamp');
 	});
 
 	it('deduplicates login across concurrent snapshots and uses each period range', async () => {

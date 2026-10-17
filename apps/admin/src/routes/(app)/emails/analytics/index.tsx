@@ -11,16 +11,14 @@ import {
 	decodeCampaignAnalyticsLocation,
 	type CampaignAnalyticsSelection,
 } from '~/features/campaign-analytics/routing';
-import {
-	campaignAnalyticsNeedsTime,
-	formatCampaignAnalyticsTimestamp,
-} from '~/features/campaign-analytics/presentation';
+import { campaignAnalyticsInterval } from '~/features/campaign-analytics/presentation';
 import { getCampaignAnalytics } from '~/features/campaign-analytics/server';
 import { campaignStatusLabel } from '~/features/campaigns/presentation';
 import { listCampaigns } from '~/features/campaigns/server';
 import type { CampaignSummary } from '~/features/campaigns/contracts';
 import { PageHeader } from '~/ui/page-header';
 import { visibleError } from '~/ui/visible-error';
+import { TimeSeriesChart } from '~/ui/time-series-chart';
 import './index.css';
 
 export const route = defineFileRoute('/emails/analytics', {
@@ -76,13 +74,13 @@ function CampaignAnalyticsView(props: {
 		<section class="campaign-analytics-page">
 			<PageHeader eyebrow="Email delivery" title="Campaign analytics" />
 			<p class="campaign-analytics-intro">
-				Compare provider-recorded email views and link clicks. Dates are UTC, and each metric uses one bounded Listmonk request regardless of how many campaigns you select.
+				See total email views and link clicks across the campaigns you select. Dates are UTC.
 			</p>
 
 			<form class="campaign-analytics-filters" action="/emails/analytics" method="get" onSubmit={applyFilters}>
 				<fieldset>
 					<legend>Campaigns</legend>
-					<p>Select up to {MAX_CAMPAIGN_ANALYTICS_IDS} campaigns. Campaigns stay in provider order.</p>
+					<p>Select up to {MAX_CAMPAIGN_ANALYTICS_IDS} campaigns.</p>
 					<Show when={props.campaigns.length > 0} fallback={<p>No campaigns are available.</p>}>
 						<div class="campaign-analytics-options">
 							<For each={props.campaigns}>
@@ -156,17 +154,18 @@ function CampaignMetricPanel(props: { metric: CampaignAnalyticsMetric; selection
 				)}
 			>
 				<Loading on={query()} fallback={<p class="campaign-metric-loading" role="status">Loading {labels().title.toLowerCase()}…</p>}>
-					<Show when={points()}>{(resolved) => <CampaignMetricFigure metric={props.metric} points={resolved()} />}</Show>
+					<Show when={points()}>{(resolved) => <CampaignMetricFigure metric={props.metric} points={resolved()} selection={props.selection} />}</Show>
 				</Loading>
 			</Errored>
 		</section>
 	);
 }
 
-function CampaignMetricFigure(props: { metric: CampaignAnalyticsMetric; points: CampaignAnalyticsPoint[] }) {
+function CampaignMetricFigure(props: { metric: CampaignAnalyticsMetric; points: CampaignAnalyticsPoint[]; selection: CampaignAnalyticsSelection }) {
 	const buckets = createMemo(() => aggregateCampaignAnalyticsByTimestamp(props.points));
-	const includeTime = createMemo(() => campaignAnalyticsNeedsTime(buckets()));
-	const maximum = createMemo(() => Math.max(1, ...buckets().map(({ count }) => count)));
+	const interval = createMemo(() => campaignAnalyticsInterval(props.selection));
+	const range = createMemo(() => ({ startAt: Date.parse(`${props.selection.from}T00:00:00Z`), endAt: Date.parse(`${props.selection.to}T23:59:59.999Z`) }));
+	const points = createMemo(() => buckets().map(({ timestamp, count }) => ({ timestamp, value: count })));
 	const total = createMemo(() => buckets().reduce((sum, { count }) => {
 		const next = sum + count;
 		if (!Number.isSafeInteger(next)) throw new Error('Campaign analytics total exceeds the safe integer limit.');
@@ -175,23 +174,8 @@ function CampaignMetricFigure(props: { metric: CampaignAnalyticsMetric; points: 
 	const labels = createMemo(() => metricLabels[props.metric]);
 
 	return (
-		<Show when={buckets().length > 0} fallback={<p class="campaign-metric-empty">{labels().empty}</p>}>
-			<figure class="campaign-metric-figure">
-				<figcaption>{total().toLocaleString()} total {labels().noun}{total() === 1 ? '' : 's'}</figcaption>
-				<ul>
-					<For each={buckets()}>
-						{(bucket) => (
-							<li>
-								<time datetime={bucket.timestamp}>{formatCampaignAnalyticsTimestamp(bucket.timestamp, includeTime())}</time>
-								<strong>{bucket.count.toLocaleString()}</strong>
-								<span class="campaign-metric-track" aria-hidden="true">
-									<span style={{ width: `${(bucket.count / maximum()) * 100}%` }} />
-								</span>
-							</li>
-						)}
-					</For>
-				</ul>
-			</figure>
-		</Show>
+		<TimeSeriesChart class="campaign-metric-figure"
+			caption={`${total().toLocaleString()} total ${labels().noun}${total() === 1 ? '' : 's'}`}
+			metric={labels().title} points={points()} interval={interval()} range={range()} emptyMessage={labels().empty} />
 	);
 }

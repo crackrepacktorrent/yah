@@ -2,13 +2,15 @@ import { can } from '@yah/admin-core/permissions';
 import { revalidate, useNavigate, useSearchParams } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Loading, Show, createEffect, createMemo, createSignal, untrack } from 'solid-js';
-import { MAX_BULK_SUBSCRIBER_SELECTION, type SubscriberPage, type SubscriberSummary } from '~/features/subscribers/contracts';
+import { MAX_BULK_SUBSCRIBER_SELECTION, type SubscriberPage } from '~/features/subscribers/contracts';
 import { decodeSubscriberListLocation, subscriberHref, subscriberListHref } from '~/features/subscribers/routing';
 import { blocklistSubscribers, deleteSubscribers, listSubscribers } from '~/features/subscribers/server';
 import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { createCommandTask } from '~/ui/command-task';
 import { PageHeader } from '~/ui/page-header';
+import { Pagination } from '~/ui/pagination';
+import { createRowSelection } from '~/ui/row-selection';
 import { SelectionCheckbox } from '~/ui/selection-checkbox';
 import { toast } from '~/ui/toast';
 
@@ -56,35 +58,18 @@ export default function SubscriberListPage() {
 	);
 }
 
-function statusClass(status: SubscriberSummary['status']): string {
-	return `badge subscriber-status subscriber-status--${status}`;
-}
-
 function SubscriberResults(props: { page: SubscriberPage }) {
 	const navigate = useNavigate();
 	const session = createMemo(() => requireSession());
 	const canDelete = createMemo(() => can(session(), 'subscriber', 'delete'));
 	const canBlocklist = createMemo(() => can(session(), 'subscriber', 'blocklist'));
 	const [searchParams] = useSearchParams();
-	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
 	const [dialog, setDialog] = createSignal<'delete' | 'blocklist' | null>(null);
 	const mutationTask = createCommandTask();
-	const selected = createMemo(() => props.page.items.filter((subscriber) => selectedIds().includes(subscriber.id)));
-	const blocklistSelection = createMemo(() => selected().filter((subscriber) => subscriber.status !== 'blocklisted'));
-	const selectableIds = createMemo(() => props.page.items
-		.filter((subscriber) => canDelete() || (canBlocklist() && subscriber.status !== 'blocklisted'))
-		.slice(0, MAX_BULK_SUBSCRIBER_SELECTION)
-		.map(({ id }) => id));
-	const allSelected = createMemo(() => selectableIds().length > 0 && selectableIds().every((id) => selectedIds().includes(id)));
-	const someSelected = createMemo(() => selected().length > 0 && !allSelected());
-	const totalPages = createMemo(() => Math.max(1, Math.ceil(props.page.total / props.page.pageSize)));
+	const selectable = createMemo(() => props.page.items.filter((subscriber) => canDelete() || (canBlocklist() && subscriber.status !== 'blocklisted')));
+	const selection = createRowSelection(selectable, { limit: MAX_BULK_SUBSCRIBER_SELECTION, scope: () => `${props.page.page}:${props.page.search}` });
+	const blocklistSelection = createMemo(() => selection.selected().filter((subscriber) => subscriber.status !== 'blocklisted'));
 
-	createEffect(
-		() => `${props.page.page}:${props.page.search}`,
-		(key, previous) => {
-			if (previous !== undefined && key !== previous) setSelectedIds([]);
-		},
-	);
 	createEffect(
 		() => ({ requested: decodeSubscriberListLocation(searchParams), resolvedPage: props.page.page, resolvedSearch: props.page.search }),
 		({ requested, resolvedPage, resolvedSearch }) => {
@@ -95,18 +80,10 @@ function SubscriberResults(props: { page: SubscriberPage }) {
 		},
 	);
 
-	function toggleSubscriber(id: number, checked: boolean): void {
-		setSelectedIds((current) => {
-			if (!checked) return current.filter((selectedId) => selectedId !== id);
-			if (current.includes(id) || current.length >= MAX_BULK_SUBSCRIBER_SELECTION) return current;
-			return [...current, id];
-		});
-	}
-
 	async function mutateSelection(): Promise<void> {
 		const operation = dialog();
 		if (!operation) return;
-		const subscribers = (operation === 'blocklist' ? blocklistSelection() : selected()).map((subscriber) => ({
+		const subscribers = (operation === 'blocklist' ? blocklistSelection() : selection.selected()).map((subscriber) => ({
 			id: subscriber.id,
 			expectedUpdatedAt: subscriber.updatedAt,
 		}));
@@ -114,7 +91,7 @@ function SubscriberResults(props: { page: SubscriberPage }) {
 			if (operation === 'blocklist') await blocklistSubscribers({ subscribers });
 			else await deleteSubscribers({ subscribers });
 			setDialog(null);
-			setSelectedIds([]);
+			selection.clear();
 			revalidate(listSubscribers.key);
 			toast.success(operation === 'blocklist' ? 'Subscribers blocklisted.' : 'Subscribers deleted.');
 		}, `The selected subscribers could not be ${operation === 'blocklist' ? 'blocklisted' : 'deleted'}.`);
@@ -122,31 +99,29 @@ function SubscriberResults(props: { page: SubscriberPage }) {
 
 	return (
 		<>
-			<Show when={selected().length > 0}>
+			<Show when={selection.selected().length > 0}>
 				<div class="bulk-actions subscriber-selection" role="status">
-					<span>{selected().length} subscriber{selected().length === 1 ? '' : 's'} selected on this page</span>
+					<span>{selection.selected().length} subscriber{selection.selected().length === 1 ? '' : 's'} selected on this page</span>
 					<Show when={canBlocklist() && blocklistSelection().length > 0}><button class="button button--danger-secondary" type="button" onClick={() => { mutationTask.clearError(); setDialog('blocklist'); }}>Blocklist {blocklistSelection().length}</button></Show>
 					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => { mutationTask.clearError(); setDialog('delete'); }}>Delete selected</button></Show>
-					<button class="button button--secondary" type="button" onClick={() => setSelectedIds([])}>Clear</button>
+					<button class="button button--secondary" type="button" onClick={selection.clear}>Clear</button>
 				</div>
 			</Show>
 			<div class="data-table-scroll">
 				<table class="data-table">
 					<caption class="visually-hidden">Subscribers in fixed provider order</caption>
-					<thead><tr><th scope="col"><SelectionCheckbox label="Select all actionable subscribers on this page" checked={allSelected()} indeterminate={someSelected()} disabled={selectableIds().length === 0} onChange={(event) => setSelectedIds(event.currentTarget.checked ? selectableIds() : [])} /></th><th scope="col">Subscriber</th><th scope="col">Status</th><th scope="col">Updated</th></tr></thead>
+					<thead><tr><th scope="col"><SelectionCheckbox label="Select all actionable subscribers on this page" checked={selection.all()} indeterminate={selection.some()} disabled={selectable().length === 0} onChange={(event) => selection.setAll(event.currentTarget.checked)} /></th><th scope="col">Subscriber</th><th scope="col">Status</th><th scope="col">Updated</th></tr></thead>
 					<tbody>
 						<Show when={props.page.items.length > 0} fallback={<tr><td colspan="4">No subscribers match this search.</td></tr>}>
-							<For each={props.page.items}>{(subscriber) => <tr><td><SelectionCheckbox label={`Select ${subscriber.email}`} checked={selectedIds().includes(subscriber.id)} disabled={!canDelete() && (!canBlocklist() || subscriber.status === 'blocklisted')} onChange={(event) => toggleSubscriber(subscriber.id, event.currentTarget.checked)} /></td><td><div class="subscriber-name-cell"><a href={subscriberHref(subscriber.id)}>{subscriber.email}</a><small>{subscriber.name || 'No name'}</small></div></td><td><span class={statusClass(subscriber.status)}>{subscriber.status}</span></td><td>{new Date(subscriber.updatedAt).toLocaleString()}</td></tr>}</For>
+							<For each={props.page.items}>{(subscriber) => <tr><td><SelectionCheckbox label={`Select ${subscriber.email}`} checked={selection.has(subscriber.id)} disabled={!canDelete() && (!canBlocklist() || subscriber.status === 'blocklisted')} onChange={(event) => selection.toggle(subscriber.id, event.currentTarget.checked)} /></td><td><div class="subscriber-name-cell"><a href={subscriberHref(subscriber.id)}>{subscriber.email}</a><small>{subscriber.name || 'No name'}</small></div></td><td><span class={`badge subscriber-status subscriber-status--${subscriber.status}`}>{subscriber.status}</span></td><td>{new Date(subscriber.updatedAt).toLocaleString()}</td></tr>}</For>
 						</Show>
 					</tbody>
 				</table>
 			</div>
-			<nav class="pagination" aria-label="Subscriber pages">
-				<span>Page {props.page.page.toLocaleString()} of {totalPages().toLocaleString()} · {props.page.total.toLocaleString()} total</span>
-				<div><Show when={props.page.page > 1}><a class="button button--secondary" rel="prev" href={subscriberListHref({ page: props.page.page - 1, search: props.page.search })}>Previous</a></Show><Show when={props.page.page < totalPages()}><a class="button button--secondary" rel="next" href={subscriberListHref({ page: props.page.page + 1, search: props.page.search })}>Next</a></Show></div>
-			</nav>
+			<Pagination label="Subscriber pages" page={props.page.page} pageSize={props.page.pageSize} total={props.page.total}
+				href={(page) => subscriberListHref({ page, search: props.page.search })} />
 			<ConfirmDialog open={dialog() === 'blocklist'} title="Blocklist selected subscribers?" description={`Blocklist ${blocklistSelection().length} subscriber${blocklistSelection().length === 1 ? '' : 's'}? Listmonk will unsubscribe all of their memberships. Restoring them requires a separate recovery workflow.`} confirmLabel="Blocklist subscribers" pending={mutationTask.pending()} error={mutationTask.error()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
-			<ConfirmDialog open={dialog() === 'delete'} title="Delete selected subscribers?" description={`Permanently delete ${selected().length} subscriber${selected().length === 1 ? '' : 's'} and their Listmonk history? This cannot be undone.`} confirmLabel="Delete subscribers" pending={mutationTask.pending()} error={mutationTask.error()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
+			<ConfirmDialog open={dialog() === 'delete'} title="Delete selected subscribers?" description={`Permanently delete ${selection.selected().length} subscriber${selection.selected().length === 1 ? '' : 's'} and their Listmonk history? This cannot be undone.`} confirmLabel="Delete subscribers" pending={mutationTask.pending()} error={mutationTask.error()} onConfirm={() => void mutateSelection()} onOpenChange={(open) => { if (!open) setDialog(null); }} />
 		</>
 	);
 }

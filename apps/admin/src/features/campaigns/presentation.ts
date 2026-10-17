@@ -1,11 +1,4 @@
-import { MAX_BULK_CAMPAIGN_DELETIONS, type CampaignStatus, type CampaignType } from './contracts';
-
-export function bulkDraftSelectionIds(campaigns: ReadonlyArray<{ id: number; status: CampaignStatus }>): number[] {
-	return campaigns
-		.filter((campaign) => campaign.status === 'draft')
-		.slice(0, MAX_BULK_CAMPAIGN_DELETIONS)
-		.map((campaign) => campaign.id);
-}
+import type { CampaignStatus, CampaignType } from './contracts';
 
 export function campaignTypeLabel(type: CampaignType): string {
 	return type === 'regular' ? 'Regular' : 'Confirmation';

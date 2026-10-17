@@ -99,4 +99,12 @@ describe('campaign analytics contracts', () => {
 			point(2, 1, '2026-08-01T00:00:00Z'),
 		])).toThrow('safe integer limit');
 	});
+
+	it('combines equivalent instants even when providers use different ISO spellings', () => {
+		expect(aggregateCampaignAnalyticsByTimestamp([
+			point(1, 3, '2026-08-01T08:00:00Z'),
+			point(2, 5, '2026-08-01T10:00:00+02:00'),
+			point(3, 7, '2026-08-01T08:00:00.000Z'),
+		])).toEqual([{ timestamp: '2026-08-01T08:00:00Z', count: 15 }]);
+	});
 });

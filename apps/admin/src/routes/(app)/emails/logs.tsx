@@ -1,9 +1,10 @@
 import { revalidate, useNavigate, useSearchParams } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Loading, Show, createEffect, createMemo, isPending } from 'solid-js';
-import type { EmailLogPage } from '~/features/email-logs/contracts';
-import { emailLogHref, emailLogPageCount, decodeEmailLogLocation } from '~/features/email-logs/routing';
+import { EMAIL_LOG_PAGE_SIZE, type EmailLogPage } from '~/features/email-logs/contracts';
+import { emailLogHref, decodeEmailLogLocation } from '~/features/email-logs/routing';
 import { listEmailLogs } from '~/features/email-logs/server';
+import { Pagination } from '~/ui/pagination';
 import { PageHeader } from '~/ui/page-header';
 
 export const route = defineFileRoute('/emails/logs', {
@@ -48,13 +49,9 @@ function EmailLogResults(props: { page: EmailLogPage }) {
 					<For each={props.page.lines}>{(line) => <div class={/\berror\b/iu.test(line) ? 'email-log-error' : undefined}>{line}</div>}</For>
 				</Show>
 			</div>
-			<nav class="pagination" aria-label="Process log pages">
-				<span>Showing {props.page.lines.length} of {props.page.total} buffered lines · page {props.page.page} of {emailLogPageCount(props.page.total)}</span>
-				<div>
-					<Show when={props.page.page > 1}><a class="button button--secondary" href={emailLogHref(props.page.page - 1)}>Newer</a></Show>
-					<Show when={props.page.page < emailLogPageCount(props.page.total)}><a class="button button--secondary" href={emailLogHref(props.page.page + 1)}>Older</a></Show>
-				</div>
-			</nav>
+			<Pagination label="Process log pages" page={props.page.page} pageSize={EMAIL_LOG_PAGE_SIZE} total={props.page.total}
+				href={emailLogHref} previousLabel="Newer" nextLabel="Older"
+				summary={(totalPages) => <>Showing {props.page.lines.length} of {props.page.total} buffered lines · page {props.page.page} of {totalPages}</>} />
 		</>
 	);
 }
