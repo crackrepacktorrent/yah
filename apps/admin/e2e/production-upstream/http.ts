@@ -75,13 +75,19 @@ export function analyticsPayload(url: URL): unknown {
 			browser: ['Firefox', 'Chrome'],
 			os: ['Linux', 'macOS'],
 			device: ['desktop', 'mobile'],
-			city: ['Austin', ''],
+			country: ['US', 'CA'],
 		};
 		return (labels[type ?? ''] ?? []).map((x, index) => ({
 			x,
 			y: factor * (9 - index),
 		}));
 	}
+	if (url.pathname.endsWith('/reports/breakdown')) return [
+		{ city: 'Austin', region: 'US-TX', visitors: factor * 9 },
+		{ city: 'Honolulu', region: 'US-HI', visitors: factor * 2 },
+		{ city: 'Anchorage', region: 'US-AK', visitors: factor },
+		{ city: null, region: null, visitors: factor },
+	];
 	if (url.pathname.endsWith('/active')) return { visitors: 14 };
 	return null;
 }

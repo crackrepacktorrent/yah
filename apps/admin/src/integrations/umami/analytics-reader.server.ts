@@ -3,6 +3,7 @@ import { providerInvariantError } from '~/integrations/provider-contract.server'
 import * as v from 'valibot';
 import type { AnalyticsMetric, AnalyticsPeriod, AnalyticsSnapshot } from '~/features/analytics/contracts';
 import type { SiteOverview, SiteOverviewPeriod } from '~/features/analytics/contracts';
+import { locateUsCity } from '~/features/analytics/geography.server';
 import { fetchUpstream, parseJsonResponse } from '~/integrations/http';
 import { createProviderResponseParser } from '~/integrations/provider-response.server';
 import type { ProductionConfig } from '~/platform/config/production';
@@ -26,6 +27,7 @@ const pageviewsSchema = v.object({
 	sessions: v.array(timePointSchema),
 });
 const metricsSchema = v.array(pointSchema);
+const citiesSchema = v.array(v.object({ city: v.nullable(v.string()), region: v.nullable(v.string()), visitors: count }));
 const activeVisitorsSchema = v.object({ visitors: count });
 
 type UmamiConfig = Pick<ProductionConfig, 'UMAMI_URL' | 'UMAMI_USERNAME' | 'UMAMI_PASSWORD' | 'UMAMI_WEBSITE_ID'>;
@@ -123,24 +125,28 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 		return tokenPromise;
 	}
 
-	async function get<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
+	async function read<TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>>(
 		path: string,
 		params: Record<string, string> | undefined,
 		schema: TSchema,
 		endpoint: string,
+		body?: unknown,
 		retryUnauthorized = true,
 	): Promise<v.InferOutput<TSchema>> {
 		const token = await getToken();
 		const url = new URL(`${config.UMAMI_URL}/api${path}`);
 		for (const [key, value] of Object.entries(params ?? {})) url.searchParams.set(key, value);
 
-		const response = await request(url, { headers: { Authorization: `Bearer ${token}` } });
+		const response = await request(url, {
+			headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+			...(body ? { method: 'POST', body: JSON.stringify(body) } : {}),
+		});
 		if (!response.ok) await response.body?.cancel().catch(() => undefined);
 		if (response.status === 401) {
 			// Clear only the token rejected by this request. Another concurrent
 			// request may already have installed its replacement.
 			if (cachedToken?.token === token) cachedToken = null;
-			if (retryUnauthorized) return get(path, params, schema, endpoint, false);
+			if (retryUnauthorized) return read(path, params, schema, endpoint, body, false);
 		}
 		if (!response.ok) throw providerInvariantError(`Umami ${endpoint} request failed with status ${response.status}.`);
 		return parse(schema, await parseJsonResponse<unknown>(response, 'Umami'), endpoint);
@@ -152,8 +158,8 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 			const day = 24 * 60 * 60 * 1000;
 			const websitePath = `/websites/${encodeURIComponent(config.UMAMI_WEBSITE_ID)}`;
 			const [today, month] = await Promise.all([
-				get(`${websitePath}/stats`, { startAt: String(endAt - day), endAt: String(endAt) }, statsSchema, 'stats'),
-				get(`${websitePath}/stats`, { startAt: String(endAt - 30 * day), endAt: String(endAt) }, statsSchema, 'stats'),
+				read(`${websitePath}/stats`, { startAt: String(endAt - day), endAt: String(endAt) }, statsSchema, 'stats'),
+				read(`${websitePath}/stats`, { startAt: String(endAt - 30 * day), endAt: String(endAt) }, statsSchema, 'stats'),
 			]);
 			return { today: mapOverviewPeriod(today), month: mapOverviewPeriod(month) };
 		},
@@ -161,16 +167,22 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 			const range = periodRange(period, now());
 			const params = { startAt: String(range.startAt), endAt: String(range.endAt) };
 			const websitePath = `/websites/${encodeURIComponent(config.UMAMI_WEBSITE_ID)}`;
-			const [stats, pageviews, pages, referrers, browsers, operatingSystems, devices, cities, active] = await Promise.all([
-				get(`${websitePath}/stats`, params, statsSchema, 'stats'),
-				get(`${websitePath}/pageviews`, { ...params, unit: range.unit, timezone: 'UTC' }, pageviewsSchema, 'pageviews'),
-				get(`${websitePath}/metrics`, { ...params, type: 'path', limit: '10' }, metricsSchema, 'page metrics'),
-				get(`${websitePath}/metrics`, { ...params, type: 'referrer', limit: '10' }, metricsSchema, 'referrer metrics'),
-				get(`${websitePath}/metrics`, { ...params, type: 'browser', limit: '5' }, metricsSchema, 'browser metrics'),
-				get(`${websitePath}/metrics`, { ...params, type: 'os', limit: '5' }, metricsSchema, 'operating-system metrics'),
-				get(`${websitePath}/metrics`, { ...params, type: 'device', limit: '5' }, metricsSchema, 'device metrics'),
-				get(`${websitePath}/metrics`, { ...params, type: 'city', limit: '15' }, metricsSchema, 'city metrics'),
-				get(`${websitePath}/active`, undefined, activeVisitorsSchema, 'active-visitors'),
+			const [stats, pageviews, pages, referrers, browsers, operatingSystems, devices, countries, cities, active] = await Promise.all([
+				read(`${websitePath}/stats`, params, statsSchema, 'stats'),
+				read(`${websitePath}/pageviews`, { ...params, unit: range.unit, timezone: 'UTC' }, pageviewsSchema, 'pageviews'),
+				read(`${websitePath}/metrics`, { ...params, type: 'path', limit: '10' }, metricsSchema, 'page metrics'),
+				read(`${websitePath}/metrics`, { ...params, type: 'referrer', limit: '10' }, metricsSchema, 'referrer metrics'),
+				read(`${websitePath}/metrics`, { ...params, type: 'browser', limit: '5' }, metricsSchema, 'browser metrics'),
+				read(`${websitePath}/metrics`, { ...params, type: 'os', limit: '5' }, metricsSchema, 'operating-system metrics'),
+				read(`${websitePath}/metrics`, { ...params, type: 'device', limit: '5' }, metricsSchema, 'device metrics'),
+				read(`${websitePath}/metrics`, { ...params, type: 'country', limit: '300' }, metricsSchema, 'country metrics'),
+				read('/reports/breakdown', undefined, citiesSchema, 'US city metrics', {
+					websiteId: config.UMAMI_WEBSITE_ID,
+					type: 'breakdown',
+					parameters: { startDate: new Date(range.startAt).toISOString(), endDate: new Date(range.endAt).toISOString(), fields: ['city', 'region'] },
+					filters: { ...params, country: 'eq.US' },
+				}),
+				read(`${websitePath}/active`, undefined, activeVisitorsSchema, 'active-visitors'),
 			]);
 
 			return {
@@ -187,7 +199,8 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 				browsers: mapMetrics(browsers),
 				operatingSystems: mapMetrics(operatingSystems),
 				devices: mapMetrics(devices),
-				cities: mapMetrics(cities),
+				cities: cities.map(({ city, region, visitors }) => locateUsCity(city ?? '', region ?? '', visitors)),
+				countries: mapMetrics(countries),
 			};
 		},
 	};

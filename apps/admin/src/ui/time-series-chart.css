@@ -8,7 +8,6 @@
 	font-weight: 750;
 }
 
-.time-series-chart-note,
 .time-series-chart-empty {
 	margin: 0.5rem 0 0;
 	color: var(--admin-text-muted);
@@ -22,47 +21,4 @@
 	margin-top: 0.5rem;
 	/* Confined HTML tooltips can retain their old position after a resize. */
 	overflow: hidden;
-}
-
-.time-series-chart-data summary {
-	width: fit-content;
-	padding: 0.5rem 0;
-	color: var(--admin-link);
-	font-size: 0.9rem;
-	font-weight: 650;
-	cursor: pointer;
-}
-
-.time-series-chart-data summary:focus-visible,
-.time-series-chart-table:focus-visible {
-	outline: 3px solid var(--admin-focus-ring);
-	outline-offset: 2px;
-}
-
-.time-series-chart-table {
-	max-height: 22rem;
-	overflow: auto;
-}
-
-.time-series-chart table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 0.9rem;
-}
-
-.time-series-chart th,
-.time-series-chart td {
-	padding: 0.65rem 0.5rem;
-	border-bottom: 1px solid var(--admin-border-subtle);
-	text-align: left;
-}
-
-.time-series-chart tbody th {
-	font-weight: normal;
-}
-
-.time-series-chart td,
-.time-series-chart thead th:last-child {
-	text-align: right;
-	font-variant-numeric: tabular-nums;
 }

@@ -1,0 +1,89 @@
+import { render } from '@solidjs/web';
+import { createSignal, flush, type Setter } from 'solid-js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AnalyticsCity } from './contracts';
+
+const renderer = vi.hoisted(() => ({ init: vi.fn() }));
+vi.mock('echarts/core', () => ({ init: renderer.init, use: vi.fn(), registerMap: vi.fn() }));
+vi.mock('echarts/charts', () => ({ MapChart: {}, ScatterChart: {} }));
+vi.mock('echarts/components', () => ({ GeoComponent: {}, TooltipComponent: {}, VisualMapComponent: {} }));
+vi.mock('echarts/renderers', () => ({ SVGRenderer: {} }));
+
+import { GeographicReach } from './geographic-reach';
+
+const chart = { setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn() };
+const observer = { observe: vi.fn(), disconnect: vi.fn() };
+const cities: AnalyticsCity[] = [
+	{ label: 'Austin, TX', region: 'TX', coordinates: [-97.743, 30.267], visitors: 20 },
+	{ label: 'Anchorage, AK', region: 'AK', coordinates: [-149.9, 61.218], visitors: 4 },
+	{ label: 'Honolulu, HI', region: 'HI', coordinates: [-157.858, 21.307], visitors: 2 },
+	{ label: 'Unknown city', region: '', coordinates: null, visitors: 3 },
+];
+let dispose: () => void;
+
+beforeEach(() => {
+	renderer.init.mockReturnValue(chart);
+	vi.stubGlobal('ResizeObserver', class { observe = observer.observe; disconnect = observer.disconnect; });
+});
+afterEach(() => { dispose(); document.body.replaceChildren(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+
+function mount(initial = cities) {
+	let update!: Setter<AnalyticsCity[]>;
+	dispose = render(() => {
+		const [data, setData] = createSignal(initial);
+		update = setData;
+		return <GeographicReach cities={data()} countries={[{ label: 'US', visitors: 29 }, { label: 'SG', visitors: 8 }, { label: '', visitors: 5 }]} />;
+	}, document.body);
+	flush();
+	return update;
+}
+
+describe('GeographicReach', () => {
+	it('plots cities in the correct US view and retains unresolved locations in the accessible table', () => {
+		mount();
+		const options = chart.setOption.mock.calls.at(-1)![0];
+		expect(options.series.map((series: { data: { name: string }[] }) => series.data.map(({ name }) => name))).toEqual([
+			['Austin, TX'], ['Anchorage, AK'], ['Honolulu, HI'],
+		]);
+		expect(document.querySelector('button')?.textContent).toBe('Show world');
+		expect(document.querySelectorAll('tbody tr')).toHaveLength(4);
+		expect(document.querySelector('tbody')?.textContent).toContain('Unknown cityLocation unavailable3');
+		expect(document.querySelector<HTMLElement>('[role="region"]')?.tabIndex).toBe(0);
+	});
+
+	it('switches to independent country totals, keeps small countries in the table, and resets to US without recreating the chart', () => {
+		mount();
+		document.querySelector('button')!.click();
+		flush();
+		const options = chart.setOption.mock.calls.at(-1)![0];
+		expect(options.series[0]).toMatchObject({ type: 'map', data: [{ name: 'US', value: 29 }, { name: 'SG', value: 8 }] });
+		expect(document.querySelector('button')?.textContent).toBe('Reset to US');
+		expect(document.querySelector('tbody')?.textContent).toBe('United States29Singapore8Unknown country5');
+		document.querySelector('button')!.click();
+		flush();
+		expect(chart.setOption.mock.calls.at(-1)![0].series[0].type).toBe('scatter');
+		expect(renderer.init).toHaveBeenCalledOnce();
+	});
+
+	it('updates counts, handles empty periods, and releases the chart on navigation', () => {
+		const update = mount();
+		update([{ ...cities[0]!, visitors: 100 }]);
+		flush();
+		expect(chart.setOption.mock.calls.at(-1)![0].series[0].data[0].value).toEqual([-97.743, 30.267, 100]);
+		update([]);
+		flush();
+		expect(document.body.textContent).toContain('No US city data for this period.');
+		expect(document.querySelector('details')).toBeNull();
+		dispose();
+		expect(chart.dispose).toHaveBeenCalledOnce();
+		expect(observer.disconnect).toHaveBeenCalledOnce();
+	});
+
+	it('renders provider labels as text in tooltips', () => {
+		mount();
+		const options = chart.setOption.mock.calls.at(-1)![0];
+		const tooltip = options.tooltip.formatter({ name: '<img src=x onerror=alert(1)>', value: [-97, 30, 3] });
+		expect(tooltip.textContent).toBe('<img src=x onerror=alert(1)>: 3 visitors');
+		expect(tooltip.children).toHaveLength(0);
+	});
+});
