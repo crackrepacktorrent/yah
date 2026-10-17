@@ -45,6 +45,10 @@ function mount(initial = cities) {
 	return update;
 }
 
+function button(label: string) {
+	return Array.from(document.querySelectorAll('button')).find((element) => element.getAttribute('aria-label') === label)!;
+}
+
 describe('GeographicReach', () => {
 	it('waits for a visible container and uses the latest data after route loading finishes', () => {
 		const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(0);
@@ -71,7 +75,7 @@ describe('GeographicReach', () => {
 		expect(options.series.map((series: { data: { name: string }[] }) => series.data.map(({ name }) => name))).toEqual([
 			['Austin, TX'], ['Anchorage, AK'], ['Honolulu, HI'],
 		]);
-		expect(document.querySelector('button')?.textContent).toBe('Show world');
+		expect(button('Zoom out to world')).toBeDefined();
 		expect(document.querySelectorAll('tbody tr')).toHaveLength(4);
 		expect(document.querySelector('tbody')?.textContent).toContain('Unknown cityLocation unavailable3');
 		expect(document.querySelector<HTMLElement>('[role="region"]')?.tabIndex).toBe(0);
@@ -79,15 +83,40 @@ describe('GeographicReach', () => {
 
 	it('switches to independent country totals, keeps small countries in the table, and resets to US without recreating the chart', () => {
 		mount();
-		document.querySelector('button')!.click();
+		button('Zoom out to world').click();
 		flush();
 		const options = chart.setOption.mock.calls.at(-1)![0];
 		expect(options.series[0]).toMatchObject({ type: 'map', data: [{ name: 'US', value: 29 }, { name: 'SG', value: 8 }] });
-		expect(document.querySelector('button')?.textContent).toBe('Reset to US');
+		expect(button('Zoom in to United States')).toBeDefined();
+		expect(button('Zoom out').disabled).toBe(true);
 		expect(document.querySelector('tbody')?.textContent).toBe('United States29Singapore8Unknown country5');
-		document.querySelector('button')!.click();
+		button('Zoom in to United States').click();
 		flush();
 		expect(chart.setOption.mock.calls.at(-1)![0].series[0].type).toBe('scatter');
+		expect(renderer.init).toHaveBeenCalledOnce();
+	});
+
+	it('zooms to NYC locations without including nearby towns or assigning citywide counts to a borough', () => {
+		const update = mount([
+			...cities,
+			{ label: 'New York, NY', region: 'NY', coordinates: [-74.006, 40.714], visitors: 14 },
+			{ label: 'Brooklyn, NY', region: 'NY', coordinates: [-73.95, 40.65], visitors: 8 },
+			{ label: 'Great Neck, NY', region: 'NY', coordinates: [-73.728, 40.801], visitors: 3 },
+		]);
+		button('Zoom in to New York City').click();
+		flush();
+		const options = chart.setOption.mock.calls.at(-1)![0];
+		expect(options.geo).toHaveLength(1);
+		expect(options.geo[0].map).toBe('yah-nyc');
+		expect(button('Zoom in').disabled).toBe(true);
+		expect(options.series[0].data.map(({ name }: { name: string }) => name)).toEqual(['New York, NY', 'Brooklyn, NY']);
+		expect(document.querySelector('tbody')?.textContent).toBe('New York, NY14Brooklyn, NY8');
+		update(cities);
+		flush();
+		expect(document.body.textContent).toContain('No NYC location data for this period.');
+		button('Zoom out to United States').click();
+		flush();
+		expect(document.querySelectorAll('tbody tr')).toHaveLength(cities.length);
 		expect(renderer.init).toHaveBeenCalledOnce();
 	});
 

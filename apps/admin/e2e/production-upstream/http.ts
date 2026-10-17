@@ -85,6 +85,13 @@ export function analyticsPayload(url: URL): unknown {
 	if (url.pathname.endsWith('/reports/breakdown')) return [
 		{ city: 'Austin', region: 'US-TX', visitors: factor * 9 },
 		{ city: 'Round Rock', region: 'US-TX', visitors: factor },
+		{ city: 'New York', region: 'US-NY', visitors: factor * 4 },
+		{ city: 'Manhattan', region: 'US-NY', visitors: factor * 3 },
+		{ city: 'Brooklyn', region: 'US-NY', visitors: factor * 2 },
+		{ city: 'Queens', region: 'US-NY', visitors: factor },
+		{ city: 'Bronx', region: 'US-NY', visitors: factor },
+		{ city: 'Staten Island', region: 'US-NY', visitors: factor },
+		{ city: 'Great Neck', region: 'US-NY', visitors: factor },
 		{ city: 'Honolulu', region: 'US-HI', visitors: factor * 2 },
 		{ city: 'Anchorage', region: 'US-AK', visitors: factor },
 		{ city: null, region: null, visitors: factor },

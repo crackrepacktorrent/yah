@@ -61,20 +61,38 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	const geography = page.locator('.geographic-reach');
 	await geography.scrollIntoViewIfNeeded();
 	const cityMarkers = geography.locator('svg path[fill="#ad4a12"]');
-	await expect(cityMarkers).toHaveCount(4);
-	const austin = (await cityMarkers.nth(0).boundingBox())!;
-	const roundRock = (await cityMarkers.nth(1).boundingBox())!;
+	await expect(cityMarkers).toHaveCount(11);
+	const boxes = await cityMarkers.evaluateAll((markers) => markers.map((marker) => {
+		const { x, y, width, height } = marker.getBoundingClientRect();
+		return { x, y, width, height };
+	}));
+	const austin = boxes.reduce((largest, box) => box.width > largest.width ? box : largest);
+	const roundRock = boxes.find((box) => box.width < austin.width
+		&& box.x > austin.x && box.x + box.width < austin.x + austin.width
+		&& box.y > austin.y && box.y + box.height < austin.y + austin.height)!;
 	// Enter the large marker first, then move onto the smaller marker inside it.
 	await page.mouse.move(austin.x + 2, austin.y + austin.height / 2);
 	await expect(geography.getByText('Austin, TX: 63 visitors', { exact: true })).toBeVisible();
 	await page.mouse.move(roundRock.x + roundRock.width / 2, roundRock.y + roundRock.height / 2, { steps: 8 });
 	await expect(geography.getByText('Round Rock, TX: 7 visitors', { exact: true })).toBeVisible();
-	await page.getByRole('button', { name: 'Show world' }).click();
+	page.on('request', trackBreakdownRequest);
+	await page.getByRole('button', { name: 'Zoom out to world' }).click();
 	await expect(page.getByRole('img', { name: 'World · visitors by country' })).toBeVisible();
 	await page.locator('.geographic-reach summary').click();
 	await expect(page.getByRole('table', { name: 'Visitors by country' })).toContainText('United States');
-	await page.getByRole('button', { name: 'Reset to US' }).click();
+	await page.getByRole('button', { name: 'Zoom in to United States' }).click();
 	await expect(page.getByRole('table', { name: 'Visitors by US city' })).toContainText('Austin, TX');
+	await page.getByRole('button', { name: 'Zoom in to New York City' }).click();
+	await expect(page.getByRole('img', { name: 'New York City · visitors by reported location' })).toBeVisible();
+	const nycTable = page.getByRole('table', { name: 'Visitors in New York City' });
+	await expect(nycTable.locator('tbody tr')).toHaveCount(6);
+	await expect(nycTable).toContainText('New York, NY');
+	await expect(nycTable).toContainText('Bronx, NY');
+	await expect(nycTable).not.toContainText('Great Neck');
+	await expect(geography.locator('svg').getByText('Queens', { exact: true })).toBeVisible();
+	await page.getByRole('button', { name: 'Zoom out to United States' }).click();
+	page.off('request', trackBreakdownRequest);
+	expect(breakdownRequests).toEqual([]);
 	await page.locator('.geographic-reach summary').click();
 
 	await request.post(`${upstreamOrigin}/__control/delay-next`);
@@ -104,6 +122,7 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	const graph = page.locator('.pageview-figure .time-series-chart-plot');
 	await graph.hover();
 	await page.setViewportSize({ width: 390, height: 844 });
+	await page.getByRole('button', { name: 'Zoom in to New York City' }).click();
 	await expectNoDocumentOverflow(page);
 });
 
