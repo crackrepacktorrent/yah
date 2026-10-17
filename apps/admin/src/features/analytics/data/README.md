@@ -37,6 +37,12 @@ retained when they fall in water excluded by the shoreline. Nearby towns
 outside NYC are excluded. The map preserves the provider's reported location
 labels and counts; citywide entries are not assigned to a particular borough.
 
+For future sessions, the public web collector can supply a borough label ending
+in `(estimated)` when Cloudflare ZIP and coordinate data agree. The map preserves
+that qualifier and uses the borough's reference point, not visitor coordinates.
+Classifier sources and limitations are documented in
+`apps/web/src/lib/server/analytics/data/README.md`.
+
 Umami's `/api/reports/breakdown` endpoint groups US visitors by city and region
 in a single request, capped upstream at 500 rows. Country totals use the separate
 country metrics endpoint, so they are not calculated from the limited city data.

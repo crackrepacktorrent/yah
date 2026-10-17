@@ -271,6 +271,32 @@ tracker. To roll back the lookup data, copy `.previous` to a temporary file in
 the same directory, rename it to `GeoLite2-City.mmdb`, and recreate only Umami
 with the same flags under the same lock. No database restore is required.
 
+## NYC borough estimates at collection
+
+The public web app provides `POST /api/t` and `OPTIONS /api/t`, forwarding once
+to the fixed private `UMAMI_COLLECT_URL=http://umami:3000/api/t`. Deploy that app
+and the admin's estimated-label support before changing Caddy's `/api/t` target
+from `umami:3000` to `sveltekit:3000`. The tracker script `/t` stays on Umami.
+Preview tracking also uses the main site's collector; its CORS preflight and
+Umami cache token pass through unchanged. Do not point the private URL at the
+public proxy, which would create a loop.
+
+Cloudflare's Visitor Location Headers transform already supplies ZIP, latitude,
+and longitude. The collector uses those in memory only to refine generic NYC
+city labels when ZIP and borough-interior coordinates agree. It forwards only
+the resulting `Borough (estimated)` city label, leaving event bytes, visitor IP,
+user agent, and session token intact. Missing/inconsistent data, shoreline and
+border cases, and common NYC centroid pins retain the original city. Existing
+specific city labels also pass through. IP estimates are not verified visitor
+positions; see `apps/web/src/lib/server/analytics/data/README.md` for sources.
+
+There is no historical backfill. Existing Umami sessions keep their saved
+location, so inferred boroughs appear as new sessions are created. To disable
+enrichment, restore Caddy's `/api/t` target to `umami:3000` and validate/reload
+under the production deploy lock. No app or database rollback is required.
+Use OPTIONS or a deliberately unknown website UUID for production smoke tests;
+never send synthetic pageviews for the real site.
+
 ## Admin runtime modes
 
 `ADMIN_RUNTIME` has two values. `platform-disabled` is the default and serves
