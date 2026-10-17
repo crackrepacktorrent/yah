@@ -5,6 +5,7 @@ import { ANALYTICS_PERIODS, type AnalyticsMetric, type AnalyticsPeriod, type Ana
 import { getAnalytics } from '~/features/analytics/server';
 import { formatDuration } from '~/features/analytics/presentation';
 import { TimeSeriesChart } from '~/ui/time-series-chart';
+import { GeographicReach } from '~/features/analytics/geographic-reach';
 import './index.css';
 
 export const route = defineFileRoute('/analytics', {
@@ -97,57 +98,32 @@ function AnalyticsSnapshotView(props: { snapshot: AnalyticsSnapshot }) {
 			</dl>
 
 			<TimeSeriesChart class="pageview-figure"
-				caption={`Pageviews over the last ${periodLabels[props.snapshot.period]}`}
+				caption={`Pageviews${props.snapshot.period === '24h' ? ' (UTC)' : ''} over the last ${periodLabels[props.snapshot.period]}`}
 				metric="Pageviews" points={points()} interval={props.snapshot.period === '24h' ? 'hour' : 'day'} range={props.snapshot.range}
 				emptyMessage="No pageviews were recorded in this period." />
 
-			<section class="analytics-section" aria-labelledby="geographic-reach">
-				<h2 id="geographic-reach">Geographic Reach</h2>
-				<MetricBars items={props.snapshot.cities} emptyMessage="No city data yet." />
-			</section>
-
-			<div class="analytics-tables">
-				<For each={metricSections}>
-					{(section) => (
-						<MetricTable
-							title={section.title}
-							column={section.column}
-							items={props.snapshot[section.key]}
-							code={section.code}
-							emptyLabel={section.emptyLabel}
-						/>
-					)}
-				</For>
-			</div>
+			<GeographicReach cities={props.snapshot.cities} countries={props.snapshot.countries} />
+			<MetricBreakdown snapshot={props.snapshot} />
 		</div>
 	);
 }
 
-function MetricBars(props: { items: AnalyticsMetric[]; emptyMessage: string }) {
-	const normalized = createMemo(() => {
-		const known = props.items.filter(({ label }) => label).map((item) => ({ ...item }));
-		const unknown = props.items.filter(({ label }) => !label).reduce((total, item) => total + item.visitors, 0);
-		if (unknown > 0) known.push({ label: '(unknown)', visitors: unknown });
-		return known;
-	});
-	const maximum = createMemo(() => Math.max(1, ...normalized().map(({ visitors }) => visitors)));
-
+function MetricBreakdown(props: { snapshot: AnalyticsSnapshot }) {
+	const [selected, setSelected] = createSignal<(typeof metricSections)[number]>(metricSections[0]);
 	return (
-		<Show when={normalized().length > 0} fallback={<p class="analytics-empty">{props.emptyMessage}</p>}>
-			<ul class="metric-bars">
-				<For each={normalized()}>
-					{(item) => (
-						<li>
-							<span>{item.label}</span>
-							<strong>{item.visitors.toLocaleString()}</strong>
-							<span class="metric-track" aria-hidden="true">
-								<span style={{ width: `${(item.visitors / maximum()) * 100}%` }} />
-							</span>
-						</li>
-					)}
+		<section class="metric-table-card" aria-label="Audience breakdown">
+			<fieldset class="breakdown-picker period-picker">
+				<legend class="visually-hidden">Breakdown</legend>
+				<For each={metricSections}>
+					{(section) => <label>
+						<input type="radio" name="analytics-breakdown" value={section.key} checked={selected().key === section.key}
+							onInput={() => setSelected(section)} />
+						<span>{section.title}</span>
+					</label>}
 				</For>
-			</ul>
-		</Show>
+			</fieldset>
+			<MetricTable {...selected()} items={props.snapshot[selected().key]} />
+		</section>
 	);
 }
 
@@ -159,35 +135,33 @@ function MetricTable(props: {
 	emptyLabel: string;
 }) {
 	return (
-		<div class="metric-table-card">
-			<table>
-				<caption>{props.title}</caption>
-				<thead>
-					<tr>
-						<th scope="col">{props.column}</th>
-						<th scope="col">Visitors</th>
-					</tr>
-				</thead>
-				<tbody>
-					<Show
-						when={props.items.length > 0}
-						fallback={
+		<table>
+			<caption class="visually-hidden">{props.title}</caption>
+			<thead>
+				<tr>
+					<th scope="col">{props.column}</th>
+					<th scope="col">Visitors</th>
+				</tr>
+			</thead>
+			<tbody>
+				<Show
+					when={props.items.length > 0}
+					fallback={
+						<tr>
+							<td colspan="2">No {props.title.toLowerCase()} data yet.</td>
+						</tr>
+					}
+				>
+					<For each={props.items}>
+						{(item) => (
 							<tr>
-								<td colspan="2">No {props.title.toLowerCase()} data yet.</td>
+								<td>{props.code ? <code>{item.label || props.emptyLabel}</code> : item.label || props.emptyLabel}</td>
+								<td>{item.visitors.toLocaleString()}</td>
 							</tr>
-						}
-					>
-						<For each={props.items}>
-							{(item) => (
-								<tr>
-									<td>{props.code ? <code>{item.label || props.emptyLabel}</code> : item.label || props.emptyLabel}</td>
-									<td>{item.visitors.toLocaleString()}</td>
-								</tr>
-							)}
-						</For>
-					</Show>
-				</tbody>
-			</table>
-		</div>
+						)}
+					</For>
+				</Show>
+			</tbody>
+		</table>
 	);
 }

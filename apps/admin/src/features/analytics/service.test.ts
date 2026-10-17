@@ -14,6 +14,7 @@ const snapshot: AnalyticsSnapshot = {
 	operatingSystems: [],
 	devices: [],
 	cities: [],
+	countries: [],
 };
 const overview: SiteOverview = {
 	today: { pageviews: 100, visitors: 40, bounceRate: 20, averageVisitSeconds: 125 },

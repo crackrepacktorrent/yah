@@ -26,8 +26,15 @@ function successfulPayload(url: URL): Response {
 		return json({ pageviews: [{ x: '2026-08-26T12:00:00Z', y: 12 }], sessions: [{ x: '2026-08-26T12:00:00Z', y: 8 }] });
 	}
 	if (url.pathname.endsWith('/metrics')) {
+		if (url.searchParams.get('type') === 'country') return json([{ x: 'US', y: 40 }, { x: 'CA', y: 8 }]);
 		return json([{ x: url.searchParams.get('type') ?? '', y: 7 }]);
 	}
+	if (url.pathname.endsWith('/reports/breakdown')) return json([
+		{ city: 'Austin', region: 'US-TX', visitors: 20 },
+		{ city: 'Springfield', region: 'US-IL', visitors: 8 },
+		{ city: 'Springfield', region: 'US-MA', visitors: 5 },
+		{ city: null, region: null, visitors: 2 },
+	]);
 	if (url.pathname.endsWith('/active')) return json({ visitors: 3 });
 	throw new Error(`Unexpected fixture URL: ${url}`);
 }
@@ -92,8 +99,22 @@ describe('Umami analytics reader', () => {
 			password: config.UMAMI_PASSWORD,
 		});
 		const apiRequests = requests.filter(({ url }) => url.pathname !== '/api/auth/login');
-		expect(apiRequests).toHaveLength(9);
-		for (const { init } of apiRequests) expect(init?.headers).toEqual({ Authorization: `Bearer ${token('normal')}` });
+		expect(apiRequests).toHaveLength(10);
+		for (const { init } of apiRequests) expect(init?.headers).toMatchObject({ Authorization: `Bearer ${token('normal')}` });
+		const breakdown = apiRequests.find(({ url }) => url.pathname.endsWith('/reports/breakdown'));
+		expect(breakdown?.init?.method).toBe('POST');
+		expect(JSON.parse(String(breakdown?.init?.body))).toEqual({
+			websiteId: config.UMAMI_WEBSITE_ID, type: 'breakdown',
+			filters: { startAt: String(fixedNow - 7 * 24 * 60 * 60 * 1000), endAt: String(fixedNow), country: 'eq.US' },
+			parameters: { startDate: new Date(fixedNow - 7 * 24 * 60 * 60 * 1000).toISOString(), endDate: new Date(fixedNow).toISOString(), fields: ['city', 'region'] },
+		});
+		expect(result.countries).toEqual([{ label: 'US', visitors: 40 }, { label: 'CA', visitors: 8 }]);
+		expect(result.cities).toEqual([
+			{ label: 'Austin, TX', region: 'TX', visitors: 20, coordinates: [-97.743, 30.267] },
+			{ label: 'Springfield, IL', region: 'IL', visitors: 8, coordinates: [-89.644, 39.802] },
+			{ label: 'Springfield, MA', region: 'MA', visitors: 5, coordinates: [-72.59, 42.101] },
+			{ label: 'Unknown city', region: '', visitors: 2, coordinates: null },
+		]);
 
 		const pageviews = apiRequests.find(({ url }) => url.pathname.endsWith('/pageviews'))?.url;
 		expect(pageviews?.pathname).toBe('/api/websites/website%2Fid/pageviews');
@@ -107,7 +128,7 @@ describe('Umami analytics reader', () => {
 				.filter(({ url }) => url.pathname.endsWith('/metrics'))
 				.map(({ url }) => [url.searchParams.get('type'), url.searchParams.get('limit')]),
 		);
-		expect(metricLimits).toEqual({ path: '10', referrer: '10', browser: '5', os: '5', device: '5', city: '15' });
+		expect(metricLimits).toEqual({ path: '10', referrer: '10', browser: '5', os: '5', device: '5', country: '300' });
 	});
 
 	it.each(['2026-08-26 12:00:00', '2026-08-26T12:00:00', '2026-08-26T14:00:00+02:00'])('normalizes the provider timestamp %s to an explicit UTC instant', async (timestamp) => {
@@ -177,7 +198,7 @@ describe('Umami analytics reader', () => {
 
 		await expect(reader.getSnapshot('7d')).resolves.toMatchObject({ period: '7d' });
 		expect(logins).toBe(2);
-		expect(rejectedResponses).toHaveLength(9);
+		expect(rejectedResponses).toHaveLength(10);
 		expect(rejectedResponses.every((response) => response.bodyUsed)).toBe(true);
 	});
 

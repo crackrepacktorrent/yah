@@ -1,5 +1,5 @@
 import { expect, test, ownerEmail, ownerPassword, softNavigate, upstreamOrigin, expectNoDocumentOverflow } from '../production-test';
-import type { Download, Page } from '@playwright/test';
+import type { Download, Page, Request } from '@playwright/test';
 
 async function pngCornerColor(page: Page, download: Download): Promise<number[]> {
 	const stream = await download.createReadStream();
@@ -40,14 +40,31 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	await expect(pageviewStat).toHaveText('700');
 	await expect(page.getByRole('figure', { name: /Pageviews over the last 7 days/ })).toBeVisible();
 	await expect(page.locator('.pageview-figure .time-series-chart-plot svg')).toBeVisible();
-	await page.getByText('View data', { exact: true }).click();
+	await page.locator('.pageview-figure').getByText('View data', { exact: true }).click();
 	await expect(page.getByRole('table', { name: 'Pageviews data' }).locator('tbody tr')).toHaveCount(8);
 	await expect(page.getByRole('table', { name: 'Pageviews data' }).locator('tbody tr').nth(6).locator('td')).toHaveText('0');
-	await page.getByText('View data', { exact: true }).click();
+	await page.locator('.pageview-figure').getByText('View data', { exact: true }).click();
+	const breakdownRequests: string[] = [];
+	const trackBreakdownRequest = (request: Request) => {
+		if (['document', 'fetch', 'xhr'].includes(request.resourceType())) breakdownRequests.push(request.url());
+	};
+	page.on('request', trackBreakdownRequest);
 	for (const caption of ['Top Pages', 'Referrers', 'Browsers', 'Operating Systems', 'Devices']) {
-		await expect(page.getByRole('table', { name: caption })).toBeVisible();
+		await page.getByRole('radio', { name: caption, exact: true }).check();
+		await expect(page.getByRole('table', { name: caption, exact: true })).toBeVisible();
 	}
-	await expect(page.getByRole('columnheader', { name: 'Visitors' })).toHaveCount(5);
+	page.off('request', trackBreakdownRequest);
+	expect(breakdownRequests).toEqual([]);
+	await expect(page.getByRole('columnheader', { name: 'Visitors' })).toHaveCount(1);
+
+	await expect(page.getByRole('img', { name: 'United States · visitors by city' })).toBeVisible();
+	await page.getByRole('button', { name: 'Show world' }).click();
+	await expect(page.getByRole('img', { name: 'World · visitors by country' })).toBeVisible();
+	await page.locator('.geographic-reach summary').click();
+	await expect(page.getByRole('table', { name: 'Visitors by country' })).toContainText('United States');
+	await page.getByRole('button', { name: 'Reset to US' }).click();
+	await expect(page.getByRole('table', { name: 'Visitors by US city' })).toContainText('Austin, TX');
+	await page.locator('.geographic-reach summary').click();
 
 	await request.post(`${upstreamOrigin}/__control/delay-next`);
 	await page.getByLabel('7d').focus();
@@ -57,6 +74,7 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	await expect(page.getByRole('status').filter({ hasText: 'Updating analytics…' })).toHaveClass(/visually-hidden/);
 	await expect(pageviewStat).toHaveText('700');
 	await expect(pageviewStat).toHaveText('100');
+	await expect(page.getByRole('figure', { name: 'Pageviews (UTC) over the last 24 hours' })).toBeVisible();
 	await expect(page.locator('.pageview-figure .time-series-chart-plot svg')).toBeVisible();
 	await page.keyboard.press('ArrowLeft');
 	await expect(page.getByLabel('30d')).toBeChecked();

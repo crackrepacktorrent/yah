@@ -1,0 +1,42 @@
+.chart-data summary {
+	width: fit-content;
+	padding: 0.5rem 0;
+	color: var(--admin-link);
+	font-size: 0.9rem;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.chart-data summary:focus-visible,
+.chart-data-table:focus-visible {
+	outline: 3px solid var(--admin-focus-ring);
+	outline-offset: 2px;
+}
+
+.chart-data-table {
+	max-height: 22rem;
+	overflow: auto;
+}
+
+.chart-data table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9rem;
+}
+
+.chart-data th,
+.chart-data td {
+	padding: 0.65rem 0.5rem;
+	border-bottom: 1px solid var(--admin-border-subtle);
+	text-align: left;
+}
+
+.chart-data tbody th {
+	font-weight: normal;
+}
+
+.chart-data td,
+.chart-data thead th:last-child {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}

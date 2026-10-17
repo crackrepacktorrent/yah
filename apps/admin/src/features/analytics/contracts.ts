@@ -12,6 +12,11 @@ export type AnalyticsPoint = {
 	pageviews: number;
 };
 
+export type AnalyticsCity = AnalyticsMetric & {
+	region: string;
+	coordinates: [longitude: number, latitude: number] | null;
+};
+
 export type AnalyticsSnapshot = {
 	period: AnalyticsPeriod;
 	range: { startAt: number; endAt: number };
@@ -29,7 +34,8 @@ export type AnalyticsSnapshot = {
 	browsers: AnalyticsMetric[];
 	operatingSystems: AnalyticsMetric[];
 	devices: AnalyticsMetric[];
-	cities: AnalyticsMetric[];
+	cities: AnalyticsCity[];
+	countries: AnalyticsMetric[];
 };
 
 export type SiteOverviewPeriod = {

@@ -4,6 +4,7 @@ import { init, use, type ComposeOption, type EChartsType } from 'echarts/core';
 import { SVGRenderer } from 'echarts/renderers';
 import { For, Show, createEffect, createMemo, createUniqueId, onCleanup } from 'solid-js';
 import './time-series-chart.css';
+import './chart-data.css';
 
 use([LineChart, GridComponent, TooltipComponent, SVGRenderer]);
 
@@ -51,12 +52,11 @@ export function TimeSeriesChart(props: TimeSeriesChartProps) {
 		<figure class={['time-series-chart', props.class]} aria-labelledby={`${id}-caption`}>
 			<figcaption id={`${id}-caption`}>{props.caption}</figcaption>
 			<Show when={points().length > 0} fallback={<p class="time-series-chart-empty">{props.emptyMessage}</p>}>
-				<p class="time-series-chart-note" id={`${id}-description`}>Times are UTC. Hours or days with no events are shown as zero; the first and last intervals may be partial. Open “View data” for exact values.</p>
 				<TimeSeriesPlot points={points()} metric={props.metric} includeTime={props.interval === 'hour'} startAt={startAt()} endAt={props.range.endAt}
-					labelledBy={`${id}-caption`} describedBy={`${id}-description`} />
-				<details class="time-series-chart-data">
+					labelledBy={`${id}-caption`} />
+				<details class="chart-data">
 					<summary>View data</summary>
-					<div class="time-series-chart-table" role="region" aria-label={`${props.metric} data`} tabindex={0}>
+					<div class="chart-data-table" role="region" aria-label={`${props.metric} data`} tabindex={0}>
 						<table>
 							<caption class="visually-hidden">{props.metric} data</caption>
 							<thead><tr><th scope="col">Date (UTC)</th><th scope="col">{props.metric}</th></tr></thead>
@@ -80,7 +80,6 @@ function TimeSeriesPlot(props: {
 	startAt: number;
 	endAt: number;
 	labelledBy: string;
-	describedBy: string;
 }) {
 	let container: HTMLDivElement | undefined;
 	let chart: EChartsType | undefined;
@@ -145,5 +144,5 @@ function TimeSeriesPlot(props: {
 	});
 
 	return <div ref={(element) => { container = element; }} class="time-series-chart-plot" role="img"
-		aria-labelledby={props.labelledBy} aria-describedby={props.describedBy} />;
+		aria-labelledby={props.labelledBy} />;
 }
