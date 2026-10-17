@@ -3,6 +3,7 @@ import { init, registerMap, use, type ComposeOption, type EChartsType } from 'ec
 import { MapChart, ScatterChart, type MapSeriesOption, type ScatterSeriesOption } from 'echarts/charts';
 import { GeoComponent, TooltipComponent, VisualMapComponent, type GeoComponentOption, type TooltipComponentOption, type VisualMapComponentOption } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
+import { geoEqualEarth } from 'd3-geo';
 import type { AnalyticsCity, AnalyticsMetric } from './contracts';
 import us from './data/us.geo.json?raw';
 import alaska from './data/alaska.geo.json?raw';
@@ -20,6 +21,7 @@ registerMap('yah-world', world);
 type MapOptions = ComposeOption<MapSeriesOption | ScatterSeriesOption | GeoComponentOption | TooltipComponentOption | VisualMapComponentOption>;
 type Props = { cities: readonly AnalyticsCity[]; countries: readonly AnalyticsMetric[] };
 const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
+const equalEarth = geoEqualEarth();
 
 function countryName(code: string): string {
 	return /^[A-Z]{2}$/.test(code) ? countryNames.of(code) ?? code : code || 'Unknown country';
@@ -31,7 +33,6 @@ export function GeographicReach(props: Props) {
 	const rows = createMemo(() => worldView()
 		? props.countries.map(({ label, visitors }) => ({ label: countryName(label), visitors, unavailable: false }))
 		: props.cities.map(({ label, visitors, coordinates }) => ({ label, visitors, unavailable: !coordinates })));
-	const unmapped = createMemo(() => props.cities.filter(({ coordinates }) => !coordinates).length);
 	const scope = () => worldView() ? 'World · visitors by country' : 'United States · visitors by city';
 
 	return (
@@ -47,14 +48,11 @@ export function GeographicReach(props: Props) {
 			</header>
 			<GeographicPlot {...props} worldView={worldView()} labelledBy={`${id}-scope`} />
 			<Show when={rows().length > 0} fallback={<p class="geographic-reach-note">No {worldView() ? 'country' : 'US city'} data for this period.</p>}>
-				<Show when={!worldView()}>
-					<p class="geographic-reach-note">Larger dots mean more visitors. Locations are approximate.
-						{unmapped() > 0 ? ` ${unmapped()} ${unmapped() === 1 ? 'location is' : 'locations are'} available only in the table.` : ''}
-						{props.cities.length === 500 ? ' Showing the top 500 city entries.' : ''}
-					</p>
-				</Show>
 				<details class="chart-data">
 					<summary>View data</summary>
+					<Show when={!worldView() && props.cities.length === 500}>
+						<p class="geographic-reach-note">Showing the top 500 city entries.</p>
+					</Show>
 					<div class="chart-data-table" role="region" aria-label={scope()} tabindex={0}>
 						<table>
 							<caption class="visually-hidden">{worldView() ? 'Visitors by country' : 'Visitors by US city'}</caption>
@@ -119,6 +117,10 @@ function GeographicPlot(props: Props & { worldView: boolean; labelledBy: string 
 					visualMap: { show: countries.length > 0, min: 0, max: maximum, left: 'center', bottom: 0, orient: 'horizontal',
 						inRange: { color: ['#eee5da', '#cf8b50', '#8a350e'] }, text: [maximum.toLocaleString(), '0'], calculable: false },
 					series: [{ type: 'map', map: 'yah-world', top: 8, bottom: 58, left: 8, right: 8,
+						projection: {
+							project: (point) => equalEarth([point[0]!, point[1]!])!,
+							unproject: (point) => equalEarth.invert!([point[0]!, point[1]!])!,
+						},
 						roam: false, selectedMode: false, preserveAspect: true, itemStyle: land,
 						emphasis: { label: { show: false }, itemStyle: { borderColor: '#74320e', borderWidth: 1.5 } },
 						data: countries.filter(({ label }) => label).map(({ label, visitors }) => ({ name: label, value: visitors })),
@@ -131,13 +133,14 @@ function GeographicPlot(props: Props & { worldView: boolean; labelledBy: string 
 					].map((layout) => ({ ...layout, preserveAspect: true, roam: false, silent: true, itemStyle: land, emphasis: { disabled: true } })),
 					series: ['', 'AK', 'HI'].map((state, geoIndex): ScatterSeriesOption => ({
 						type: 'scatter', coordinateSystem: 'geo', geoIndex, name: 'Visitors',
-						data: cities.filter(({ region, coordinates, visitors }) => coordinates && visitors > 0 && (state ? region === state : region !== 'AK' && region !== 'HI')).map((city) => ({
+						// Keep smaller markers above larger ones, including while hovering.
+						data: cities.filter(({ region, coordinates, visitors }) => coordinates && visitors > 0 && (state ? region === state : region !== 'AK' && region !== 'HI')).sort((a, b) => b.visitors - a.visitors).map((city) => ({
 							name: city.label,
 							value: [city.region === 'AK' && city.coordinates![0] > 0 ? city.coordinates![0] - 360 : city.coordinates![0], city.coordinates![1], city.visitors],
 						})),
 						symbolSize: (value: number[]) => 6 + 22 * Math.sqrt((value[2] ?? 0) / maximum),
 						itemStyle: { color: '#ad4a12', opacity: 0.75, borderColor: '#fff7ef', borderWidth: 1 },
-						emphasis: { scale: 1.3, itemStyle: { opacity: 1 } },
+						emphasis: { disabled: true },
 					})),
 				}),
 			};

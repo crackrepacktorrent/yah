@@ -58,6 +58,17 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	await expect(page.getByRole('columnheader', { name: 'Visitors' })).toHaveCount(1);
 
 	await expect(page.getByRole('img', { name: 'United States · visitors by city' })).toBeVisible();
+	const geography = page.locator('.geographic-reach');
+	await geography.scrollIntoViewIfNeeded();
+	const cityMarkers = geography.locator('svg path[fill="#ad4a12"]');
+	await expect(cityMarkers).toHaveCount(4);
+	const austin = (await cityMarkers.nth(0).boundingBox())!;
+	const roundRock = (await cityMarkers.nth(1).boundingBox())!;
+	// Enter the large marker first, then move onto the smaller marker inside it.
+	await page.mouse.move(austin.x + 2, austin.y + austin.height / 2);
+	await expect(geography.getByText('Austin, TX: 63 visitors', { exact: true })).toBeVisible();
+	await page.mouse.move(roundRock.x + roundRock.width / 2, roundRock.y + roundRock.height / 2, { steps: 8 });
+	await expect(geography.getByText('Round Rock, TX: 7 visitors', { exact: true })).toBeVisible();
 	await page.getByRole('button', { name: 'Show world' }).click();
 	await expect(page.getByRole('img', { name: 'World · visitors by country' })).toBeVisible();
 	await page.locator('.geographic-reach summary').click();

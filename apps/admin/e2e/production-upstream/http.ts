@@ -84,6 +84,7 @@ export function analyticsPayload(url: URL): unknown {
 	}
 	if (url.pathname.endsWith('/reports/breakdown')) return [
 		{ city: 'Austin', region: 'US-TX', visitors: factor * 9 },
+		{ city: 'Round Rock', region: 'US-TX', visitors: factor },
 		{ city: 'Honolulu', region: 'US-HI', visitors: factor * 2 },
 		{ city: 'Anchorage', region: 'US-AK', visitors: factor },
 		{ city: null, region: null, visitors: factor },
