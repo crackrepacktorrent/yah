@@ -14,6 +14,15 @@ describe('US city coordinates', () => {
 		expect(locateUsCity('', '', 3)).toEqual({ label: 'Unknown city', region: '', visitors: 3, coordinates: null });
 	});
 
+	it('maps inferred boroughs while retaining the estimate label and counts', () => {
+		for (const borough of ['Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island']) {
+			const result = locateUsCity(`${borough} (estimated)`, 'US-NY', 7);
+			expect(result).toEqual({ label: `${borough} (estimated), NY`, region: 'NY', visitors: 7, coordinates: locateUsCity(borough, 'NY', 7).coordinates });
+			expect(result.coordinates).not.toBeNull();
+		}
+		expect(locateUsCity('Brooklyn (estimated)', 'NJ', 7).coordinates).toBeNull();
+	});
+
 	it('locates NYC aliases without merging boroughs or assuming New York state', () => {
 		const city = locateUsCity('New York City', 'NY', 8).coordinates;
 		expect(locateUsCity('New York', 'US-NY', 8)).toEqual({ label: 'New York, NY', region: 'NY', visitors: 8, coordinates: city });

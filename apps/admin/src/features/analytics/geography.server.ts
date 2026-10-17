@@ -7,6 +7,11 @@ const cityAliases: Record<string, string> = {
 	'NY:new york': 'NY:new york city',
 	'NY:nyc': 'NY:new york city',
 	'NY:bronx': 'NY:the bronx',
+	'NY:manhattan estimated': 'NY:manhattan',
+	'NY:bronx estimated': 'NY:the bronx',
+	'NY:brooklyn estimated': 'NY:brooklyn',
+	'NY:queens estimated': 'NY:queens',
+	'NY:staten island estimated': 'NY:staten island',
 };
 
 export function locateUsCity(city: string, region: string, visitors: number): AnalyticsCity {

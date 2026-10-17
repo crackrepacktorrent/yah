@@ -40,6 +40,7 @@ services:
       ORIGIN: https://y4h.org
       PROTOCOL_HEADER: X-Forwarded-Proto
       HOST_HEADER: X-Forwarded-Host
+      UMAMI_COLLECT_URL: http://umami:3000/api/t
     expose:
       - "3000"
     depends_on:
