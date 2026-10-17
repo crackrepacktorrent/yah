@@ -49,10 +49,16 @@ function button(label: string) {
 	return Array.from(document.querySelectorAll('button')).find((element) => element.getAttribute('aria-label') === label)!;
 }
 
+function showUS() {
+	button('Zoom out to United States').click();
+	flush();
+}
+
 describe('GeographicReach', () => {
 	it('waits for a visible container and uses the latest data after route loading finishes', () => {
 		const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(0);
 		const update = mount();
+		showUS();
 		expect(renderer.init).not.toHaveBeenCalled();
 		update([{ ...cities[0]!, visitors: 100 }]);
 		flush();
@@ -71,6 +77,7 @@ describe('GeographicReach', () => {
 
 	it('plots cities in the correct US view and retains unresolved locations in the accessible table', () => {
 		mount();
+		showUS();
 		const options = chart.setOption.mock.calls.at(-1)![0];
 		expect(options.series.map((series: { data: { name: string }[] }) => series.data.map(({ name }) => name))).toEqual([
 			['Austin, TX'], ['Anchorage, AK'], ['Honolulu, HI'],
@@ -83,6 +90,7 @@ describe('GeographicReach', () => {
 
 	it('switches to independent country totals, keeps small countries in the table, and resets to US without recreating the chart', () => {
 		mount();
+		showUS();
 		button('Zoom out to world').click();
 		flush();
 		const options = chart.setOption.mock.calls.at(-1)![0];
@@ -96,15 +104,13 @@ describe('GeographicReach', () => {
 		expect(renderer.init).toHaveBeenCalledOnce();
 	});
 
-	it('zooms to NYC locations without including nearby towns or assigning citywide counts to a borough', () => {
+	it('starts in NYC without including nearby towns or assigning citywide counts to a borough', () => {
 		const update = mount([
 			...cities,
 			{ label: 'New York, NY', region: 'NY', coordinates: [-74.006, 40.714], visitors: 14 },
 			{ label: 'Brooklyn, NY', region: 'NY', coordinates: [-73.95, 40.65], visitors: 8 },
 			{ label: 'Great Neck, NY', region: 'NY', coordinates: [-73.728, 40.801], visitors: 3 },
 		]);
-		button('Zoom in to New York City').click();
-		flush();
 		const options = chart.setOption.mock.calls.at(-1)![0];
 		expect(options.geo).toHaveLength(1);
 		expect(options.geo[0].map).toBe('yah-nyc');
@@ -122,6 +128,7 @@ describe('GeographicReach', () => {
 
 	it('updates counts, handles empty periods, and releases the chart on navigation', () => {
 		const update = mount();
+		showUS();
 		update([{ ...cities[0]!, visitors: 100 }]);
 		flush();
 		expect(chart.setOption.mock.calls.at(-1)![0].series[0].data[0].value).toEqual([-97.743, 30.267, 100]);
