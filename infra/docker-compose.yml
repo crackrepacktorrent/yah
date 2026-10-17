@@ -164,7 +164,8 @@ services:
           memory: 512M
 
   umami:
-    image: ghcr.io/umami-software/umami:postgresql-latest
+    # Keep the running v3.0.3 artifact while refreshing GeoIP independently.
+    image: ghcr.io/umami-software/umami@sha256:28f263fe06f79ebffa5a6a6e9bd33b7a278e9342a88e0bdac812416c9f9e4361
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@postgres:5432/umami
@@ -172,6 +173,14 @@ services:
       TRACKER_SCRIPT_NAME: t
       COLLECT_API_ENDPOINT: /api/t
       CLIENT_IP_HEADER: CF-Connecting-IP
+    volumes:
+      # Prepare this directory with the GeoIP runbook before reconciling Umami.
+      - type: bind
+        source: ./data/umami-geo
+        target: /app/geo
+        read_only: true
+        bind:
+          create_host_path: false
     expose:
       - "3000"
     depends_on:

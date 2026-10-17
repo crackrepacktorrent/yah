@@ -22,6 +22,21 @@ City locations are approximate; small places outside cities500 and unresolved
 names remain visible in the data table without a map marker. The 110m world map
 omits some small countries; their counts also remain in the data table.
 
+NYC borough boundaries use NYC Planning's shoreline-clipped Borough Boundaries
+26b (downloaded October 17, 2026):
+https://data.cityofnewyork.us/d/gthc-hcne
+GeoJSON: https://data.cityofnewyork.us/resource/gthc-hcne.geojson
+
+To rebuild the NYC assets, download that GeoJSON as `nyc.json`, install
+`shapely==2.1.2` in a Python virtual environment, and run
+`python3 scripts/build-analytics-nyc.py /path/to/nyc.json` from apps/admin.
+The generator preserves shared borough borders, simplifies the display to
+roughly 10 metres, and creates an index of GeoNames reference points inside
+the original NYC boundaries. Citywide and borough reference points are also
+retained when they fall in water excluded by the shoreline. Nearby towns
+outside NYC are excluded. The map preserves the provider's reported location
+labels and counts; citywide entries are not assigned to a particular borough.
+
 Umami's `/api/reports/breakdown` endpoint groups US visitors by city and region
 in a single request, capped upstream at 500 rows. Country totals use the separate
 country metrics endpoint, so they are not calculated from the limited city data.

@@ -16,6 +16,16 @@
 	font-weight: 750;
 }
 
+.geographic-reach-actions {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.geographic-reach-actions .button {
+	width: 2.75rem;
+	padding: 0;
+}
+
 .geographic-reach-header p,
 .geographic-reach-note,
 .geographic-reach-credit {
@@ -30,6 +40,10 @@
 	height: clamp(12rem, 40vw, 30rem);
 	margin: 1rem 0;
 	overflow: hidden;
+}
+
+.geographic-reach-plot--nyc {
+	height: clamp(20rem, 55vw, 32rem);
 }
 
 .geographic-reach small {

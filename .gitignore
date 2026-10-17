@@ -49,3 +49,6 @@ vite.config.ts.timestamp-*
 
 # Docker overrides
 docker-compose.override.yml
+
+# Operator-managed provider lookup data and Python tools
+infra/data/
