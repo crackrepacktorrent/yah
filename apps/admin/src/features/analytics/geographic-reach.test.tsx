@@ -13,6 +13,7 @@ import { GeographicReach } from './geographic-reach';
 
 const chart = { setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn() };
 const observer = { observe: vi.fn(), disconnect: vi.fn() };
+let notifyResize: () => void;
 const cities: AnalyticsCity[] = [
 	{ label: 'Austin, TX', region: 'TX', coordinates: [-97.743, 30.267], visitors: 20 },
 	{ label: 'Anchorage, AK', region: 'AK', coordinates: [-149.9, 61.218], visitors: 4 },
@@ -23,9 +24,15 @@ let dispose: () => void;
 
 beforeEach(() => {
 	renderer.init.mockReturnValue(chart);
-	vi.stubGlobal('ResizeObserver', class { observe = observer.observe; disconnect = observer.disconnect; });
+	vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(800);
+	vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(400);
+	vi.stubGlobal('ResizeObserver', class {
+		observe = observer.observe;
+		disconnect = observer.disconnect;
+		constructor(callback: () => void) { notifyResize = callback; }
+	});
 });
-afterEach(() => { dispose(); document.body.replaceChildren(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { dispose(); document.body.replaceChildren(); vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 function mount(initial = cities) {
 	let update!: Setter<AnalyticsCity[]>;
@@ -39,6 +46,25 @@ function mount(initial = cities) {
 }
 
 describe('GeographicReach', () => {
+	it('waits for a visible container and uses the latest data after route loading finishes', () => {
+		const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(0);
+		const update = mount();
+		expect(renderer.init).not.toHaveBeenCalled();
+		update([{ ...cities[0]!, visitors: 100 }]);
+		flush();
+		width.mockReturnValue(800);
+		notifyResize();
+		expect(renderer.init).toHaveBeenCalledOnce();
+		expect(chart.setOption.mock.calls.at(-1)![0].series[0].data[0].value).toEqual([-97.743, 30.267, 100]);
+		width.mockReturnValue(0);
+		notifyResize();
+		expect(chart.resize).not.toHaveBeenCalled();
+		width.mockReturnValue(500);
+		notifyResize();
+		expect(chart.resize).toHaveBeenCalledOnce();
+		expect(chart.setOption).toHaveBeenCalledOnce();
+	});
+
 	it('plots cities in the correct US view and retains unresolved locations in the accessible table', () => {
 		mount();
 		const options = chart.setOption.mock.calls.at(-1)![0];
