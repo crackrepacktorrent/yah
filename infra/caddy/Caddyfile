@@ -41,7 +41,8 @@ y4h.org, www.y4h.org {
 		reverse_proxy umami:3000
 	}
 	handle /api/t {
-		reverse_proxy umami:3000
+		# Enrich qualifying NYC labels before forwarding to Umami internally.
+		reverse_proxy sveltekit:3000
 	}
 
 	reverse_proxy sveltekit:3000
