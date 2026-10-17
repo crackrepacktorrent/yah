@@ -49,7 +49,7 @@ function countryName(code: string): string {
 
 export function GeographicReach(props: Props) {
 	const id = createUniqueId();
-	const [view, setView] = createSignal<MapView>('us');
+	const [view, setView] = createSignal<MapView>('nyc');
 	const cities = createMemo(() => view() === 'nyc'
 		? props.cities.filter(({ region, coordinates }) => region === 'NY' && coordinates && nycPoints.has(coordinates.join(',')))
 		: props.cities);

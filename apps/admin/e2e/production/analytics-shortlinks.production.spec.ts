@@ -57,6 +57,8 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	expect(breakdownRequests).toEqual([]);
 	await expect(page.getByRole('columnheader', { name: 'Visitors' })).toHaveCount(1);
 
+	await expect(page.getByRole('img', { name: 'New York City · visitors by reported location' })).toBeVisible();
+	await page.getByRole('button', { name: 'Zoom out to United States' }).click();
 	await expect(page.getByRole('img', { name: 'United States · visitors by city' })).toBeVisible();
 	const geography = page.locator('.geographic-reach');
 	await geography.scrollIntoViewIfNeeded();
@@ -122,7 +124,7 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	const graph = page.locator('.pageview-figure .time-series-chart-plot');
 	await graph.hover();
 	await page.setViewportSize({ width: 390, height: 844 });
-	await page.getByRole('button', { name: 'Zoom in to New York City' }).click();
+	await expect(page.getByRole('img', { name: 'New York City · visitors by reported location' })).toBeVisible();
 	await expectNoDocumentOverflow(page);
 });
 
