@@ -13,4 +13,16 @@ describe('US city coordinates', () => {
 		expect(locateUsCity('Unlisted town', 'US-TX', 8)).toEqual({ label: 'Unlisted town, TX', region: 'TX', visitors: 8, coordinates: null });
 		expect(locateUsCity('', '', 3)).toEqual({ label: 'Unknown city', region: '', visitors: 3, coordinates: null });
 	});
+
+	it('locates NYC aliases without merging boroughs or assuming New York state', () => {
+		const city = locateUsCity('New York City', 'NY', 8).coordinates;
+		expect(locateUsCity('New York', 'US-NY', 8)).toEqual({ label: 'New York, NY', region: 'NY', visitors: 8, coordinates: city });
+		expect(locateUsCity('NYC', 'NY', 8).coordinates).toEqual(city);
+		expect(locateUsCity('Bronx', 'US-NY', 3).coordinates).toEqual(locateUsCity('The Bronx', 'NY', 3).coordinates);
+		const boroughs = ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island'].map((name) => locateUsCity(name, 'NY', 1).coordinates);
+		expect(boroughs.every((point) => point !== null)).toBe(true);
+		expect(new Set(boroughs.map((point) => JSON.stringify(point))).size).toBe(5);
+		expect(locateUsCity('New York', '', 8).coordinates).toBeNull();
+		expect(locateUsCity('Bronx', 'NJ', 3).coordinates).toBeNull();
+	});
 });
