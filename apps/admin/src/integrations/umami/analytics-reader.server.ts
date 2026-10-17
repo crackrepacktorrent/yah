@@ -20,9 +20,10 @@ const statsSchema = v.object({
 	totaltime: count,
 });
 const pointSchema = v.object({ x: v.string(), y: count });
+const timePointSchema = v.object({ x: v.pipe(v.string(), v.transform(normalizeTimestamp)), y: count });
 const pageviewsSchema = v.object({
-	pageviews: v.array(pointSchema),
-	sessions: v.array(pointSchema),
+	pageviews: v.array(timePointSchema),
+	sessions: v.array(timePointSchema),
 });
 const metricsSchema = v.array(pointSchema);
 const activeVisitorsSchema = v.object({ visitors: count });
@@ -41,6 +42,19 @@ type PeriodRange = {
 	endAt: number;
 	unit: 'hour' | 'day';
 };
+
+function normalizeTimestamp(value: string): string {
+	// Umami can return SQL-style timestamps without an offset. We request UTC
+	// buckets, so normalize them here before browsers apply their local timezone.
+	const match = /^(\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))(?:[ T]((?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?)(Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)?)?$/.exec(value);
+	if (!match || new Date(`${match[1]}T00:00:00Z`).toISOString().slice(0, 10) !== match[1]) {
+		throw providerInvariantError('Umami returned an invalid pageview timestamp.');
+	}
+	const explicit = `${match[1]}T${match[2] ?? '00:00:00'}${match[3] ?? 'Z'}`;
+	const instant = Date.parse(explicit);
+	if (!Number.isFinite(instant)) throw providerInvariantError('Umami returned an invalid pageview timestamp.');
+	return new Date(instant).toISOString();
+}
 
 function periodRange(period: AnalyticsPeriod, endAt: number): PeriodRange {
 	const day = 24 * 60 * 60 * 1000;
@@ -149,7 +163,7 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 			const websitePath = `/websites/${encodeURIComponent(config.UMAMI_WEBSITE_ID)}`;
 			const [stats, pageviews, pages, referrers, browsers, operatingSystems, devices, cities, active] = await Promise.all([
 				get(`${websitePath}/stats`, params, statsSchema, 'stats'),
-				get(`${websitePath}/pageviews`, { ...params, unit: range.unit }, pageviewsSchema, 'pageviews'),
+				get(`${websitePath}/pageviews`, { ...params, unit: range.unit, timezone: 'UTC' }, pageviewsSchema, 'pageviews'),
 				get(`${websitePath}/metrics`, { ...params, type: 'path', limit: '10' }, metricsSchema, 'page metrics'),
 				get(`${websitePath}/metrics`, { ...params, type: 'referrer', limit: '10' }, metricsSchema, 'referrer metrics'),
 				get(`${websitePath}/metrics`, { ...params, type: 'browser', limit: '5' }, metricsSchema, 'browser metrics'),
@@ -161,12 +175,10 @@ export function createUmamiAnalyticsReader(config: UmamiConfig, dependencies: Re
 
 			return {
 				period,
+				range: { startAt: range.startAt, endAt: range.endAt },
 				stats: {
-					pageviews: stats.pageviews,
-					visitors: stats.visitors,
+					...mapOverviewPeriod(stats),
 					visits: stats.visits,
-					bounceRate: stats.visits > 0 ? Math.round((stats.bounces / stats.visits) * 100) : 0,
-					averageVisitSeconds: stats.visits > 0 ? Math.round(stats.totaltime / stats.visits) : 0,
 				},
 				activeVisitors: active.visitors,
 				pageviews: pageviews.pageviews.map(({ x, y }) => ({ timestamp: x, pageviews: y })),

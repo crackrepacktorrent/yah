@@ -15,7 +15,8 @@ import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
+import { createPreviewTask } from '~/ui/preview-task';
+import { createPublicError } from '~/platform/errors';
 
 export const route = defineFileRoute('/emails/campaigns/:id', {
 	matchFilters: { id: (segment) => decodeCampaignRouteId(segment) > 0 },
@@ -62,23 +63,13 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 	const canViewTemplates = createMemo(() => can(session(), 'template', 'view'));
 	const lists = createMemo(() => canEdit() ? listMailingLists() : []);
 	const templates = createMemo(() => canEdit() && canViewTemplates() ? listEmailTemplates() : []);
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const updateTask = createCommandTask();
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 	const deleteTask = createCommandTask();
 	const [transitionOpen, setTransitionOpen] = createSignal(false);
 	const [selectedTransition, setSelectedTransition] = createSignal<CampaignTransition>('start');
 	const transitionTask = createCommandTask();
-	const [previewPending, setPreviewPending] = createSignal(false);
-	const [previewDocument, setPreviewDocument] = createSignal('');
-	const [previewError, setPreviewError] = createSignal('');
-	let previewGeneration = 0;
-	function clearPreview(): void {
-		previewGeneration += 1;
-		setPreviewPending(false);
-		setPreviewDocument('');
-		setPreviewError('');
-	}
+	const preview = createPreviewTask();
 
 	const formInitial = createMemo<CampaignFormValues>(() => ({
 		type: props.campaign.type,
@@ -103,12 +94,11 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 	}
 
 	async function handleUpdate(values: CampaignFormValues): Promise<void> {
-		setError('');
-		setPending(true);
-		try {
+		const campaign = props.campaign;
+		await updateTask.run(async () => {
 			await updateCampaign({
-				id: props.campaign.id,
-				expectedUpdatedAt: props.campaign.updatedAt,
+				id: campaign.id,
+				expectedUpdatedAt: campaign.updatedAt,
 				name: values.name,
 				subject: values.subject,
 				fromEmail: values.fromEmail,
@@ -119,19 +109,14 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 				tags: values.tags,
 				sendAt: values.sendAt,
 			});
-			clearPreview();
+			preview.clear();
 			try {
-				await refresh(props.campaign.id);
+				await refresh(campaign.id);
 			} catch {
-				setError('The campaign draft was saved, but its latest provider state could not be reloaded. Reload this page before editing again.');
-				return;
+				throw createPublicError('The campaign draft was saved, but its latest provider state could not be reloaded. Reload this page before editing again.', 503);
 			}
 			toast.success('Campaign draft updated.');
-		} catch (caught) {
-			setError(visibleError(caught, 'The campaign draft could not be updated.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The campaign draft could not be updated.');
 	}
 
 	async function handleDelete(): Promise<void> {
@@ -169,19 +154,11 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 	}
 
 	async function loadPreview(): Promise<void> {
-		const generation = ++previewGeneration;
-		setPreviewPending(true);
-		setPreviewError('');
-		try {
-			const document = await previewCampaign(props.campaign.id);
-			if (generation === previewGeneration) {
-				setPreviewDocument(props.campaign.contentType === 'plain' ? escapePlainPreview(document) : document);
-			}
-		} catch (caught) {
-			if (generation === previewGeneration) setPreviewError(visibleError(caught, 'The saved campaign preview could not be rendered.'));
-		} finally {
-			if (generation === previewGeneration) setPreviewPending(false);
-		}
+		const campaign = props.campaign;
+		await preview.load(async () => {
+			const document = await previewCampaign(campaign.id);
+			return campaign.contentType === 'plain' ? escapePlainPreview(document) : document;
+		}, 'The saved campaign preview could not be rendered.');
 	}
 
 	const transition = createMemo(() => transitionCopy(props.campaign, selectedTransition()));
@@ -194,7 +171,7 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 				description={<>{campaignTypeLabel(props.campaign.type)} · <span class={`badge campaign-status campaign-status--${props.campaign.status}`}>{campaignStatusLabel(props.campaign.status)}</span></>}
 			>
 				<div class="campaign-detail-actions">
-					<button class="button button--secondary" type="button" onClick={() => void loadPreview()} disabled={previewPending()}>{previewPending() ? 'Rendering…' : 'Preview saved campaign'}</button>
+					<button class="button button--secondary" type="button" onClick={() => void loadPreview()} disabled={preview.pending()}>{preview.pending() ? 'Rendering…' : 'Preview saved campaign'}</button>
 					<Show when={canSend() && props.campaign.status === 'draft' && props.campaign.sendAt === null}><button class="button" type="button" onClick={() => requestTransition('start')}>Send now</button></Show>
 					<Show when={canSend() && props.campaign.status === 'draft' && props.campaign.sendAt !== null}><button class="button" type="button" onClick={() => requestTransition('schedule')}>Schedule</button></Show>
 					<Show when={canSend() && props.campaign.status === 'scheduled'}><button class="button button--secondary" type="button" onClick={() => requestTransition('unschedule')}>Return to draft</button></Show>
@@ -203,12 +180,12 @@ function CampaignDetailView(props: { campaign: CampaignDetail }) {
 					<Show when={canDelete()}><button class="button button--danger-secondary" type="button" onClick={() => setDeleteOpen(true)}>Delete</button></Show>
 				</div>
 			</PageHeader>
-			<Show when={error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
-			<Show when={previewError()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
-				<Show when={previewDocument()}>{(document) => <div class="campaign-preview"><div class="campaign-preview-header"><h2>Saved preview</h2><button class="button button--secondary" type="button" onClick={clearPreview}>Close preview</button></div><iframe srcdoc={document()} sandbox="" referrerpolicy="no-referrer" title="Rendered saved campaign preview" /></div>}</Show>
+			<Show when={updateTask.error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
+			<Show when={preview.error()}>{(message) => <p class="field-error" role="alert">{message()}</p>}</Show>
+				<Show when={preview.html()}>{(document) => <div class="campaign-preview"><div class="campaign-preview-header"><h2>Saved preview</h2><button class="button button--secondary" type="button" onClick={preview.clear}>Close preview</button></div><iframe srcdoc={document()} sandbox="" referrerpolicy="no-referrer" title="Rendered saved campaign preview" /></div>}</Show>
 
 			<Show when={canEdit()} fallback={<ReadOnlyCampaign campaign={props.campaign} />}>
-				<CampaignForm mode="edit" initial={formInitial()} lists={lists()} templates={templates()} pending={pending()} error="" cancelHref="/emails/campaigns" onSubmit={(values) => void handleUpdate(values)} />
+				<CampaignForm mode="edit" initial={formInitial()} lists={lists()} templates={templates()} pending={updateTask.pending()} error="" cancelHref="/emails/campaigns" onSubmit={(values) => void handleUpdate(values)} />
 			</Show>
 
 			<ConfirmDialog open={deleteOpen()} title="Delete campaign draft?" description={`Permanently delete ${props.campaign.name}? This cannot be undone.`} confirmLabel="Delete campaign" pending={deleteTask.pending()} error={deleteTask.error()} onConfirm={() => void handleDelete()} onOpenChange={setDeleteOpen} />

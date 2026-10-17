@@ -103,8 +103,7 @@
 
 .campaign-analytics-filter-error,
 .campaign-analytics-empty,
-.campaign-metric-loading,
-.campaign-metric-empty {
+.campaign-metric-loading {
 	margin: 1rem 0 0;
 	padding: 1rem;
 	border-radius: var(--admin-radius-control);
@@ -116,8 +115,7 @@
 }
 
 .campaign-analytics-empty,
-.campaign-metric-loading,
-.campaign-metric-empty {
+.campaign-metric-loading {
 	background: var(--admin-surface-subtle);
 }
 
@@ -154,49 +152,6 @@
 	margin: 0;
 }
 
-.campaign-metric-figure {
-	margin: 0;
-}
-
-.campaign-metric-figure figcaption {
-	margin-bottom: 0.85rem;
-	font-weight: 700;
-}
-
-.campaign-metric-figure ul {
-	display: grid;
-	gap: 0.65rem;
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.campaign-metric-figure li {
-	display: grid;
-	grid-template-columns: minmax(7rem, auto) max-content minmax(5rem, 1fr);
-	gap: 0.75rem;
-	align-items: center;
-}
-
-.campaign-metric-figure strong {
-	font-variant-numeric: tabular-nums;
-}
-
-.campaign-metric-track {
-	display: block;
-	height: 0.7rem;
-	overflow: hidden;
-	border-radius: 999px;
-	background: oklch(0.9 0.02 67.7);
-}
-
-.campaign-metric-track > span {
-	display: block;
-	height: 100%;
-	border-radius: inherit;
-	background: var(--admin-action);
-}
-
 @media (max-width: 58rem) {
 	.campaign-analytics-filters,
 	.campaign-analytics-results {
@@ -210,11 +165,4 @@
 		grid-template-columns: 1fr;
 	}
 
-	.campaign-metric-figure li {
-		grid-template-columns: minmax(0, 1fr) max-content;
-	}
-
-	.campaign-metric-track {
-		grid-column: 1 / -1;
-	}
 }

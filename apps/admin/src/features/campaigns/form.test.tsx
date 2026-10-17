@@ -85,6 +85,7 @@ describe('CampaignForm', () => {
 		flush();
 
 		const archived = container.querySelector<HTMLInputElement>('input[value="13"]')!;
+		expect(container.querySelector('textarea[name="body"]')?.getAttribute('aria-label')).toBe('Campaign content');
 		expect(archived.checked).toBe(true);
 		expect(archived.disabled).toBe(false);
 		expect(container.textContent).toContain('Archived · Remove before saving');

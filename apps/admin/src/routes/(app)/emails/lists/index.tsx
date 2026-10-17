@@ -1,7 +1,7 @@
 import { can } from '@yah/admin-core/permissions';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo } from 'solid-js';
-import { mailingListKindLabel, mailingListStatusLabel } from '~/features/mailing-lists/form';
+import { mailingListKindLabel, mailingListStatusLabel } from '~/features/mailing-lists/presentation';
 import { mailingListHref } from '~/features/mailing-lists/routing';
 import { listMailingLists } from '~/features/mailing-lists/server';
 import { requireSession } from '~/platform/auth/session';

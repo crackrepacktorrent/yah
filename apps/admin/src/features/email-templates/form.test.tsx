@@ -72,5 +72,16 @@ describe('EmailTemplateForm preview lifecycle', () => {
 		await vi.waitFor(() => expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe('<p>Current</p>'));
 		expect(onPreview).toHaveBeenNthCalledWith(1, { kind: 'tx', body: '<p>First</p>' });
 		expect(onPreview).toHaveBeenNthCalledWith(2, { kind: 'tx', body: '<p>Second</p>' });
+
+		// Closing the existing preview also invalidates a render already in flight.
+		previewButton.click();
+		flush();
+		[...container.querySelectorAll('button')].find((button) => button.textContent === 'Close preview')!.click();
+		flush();
+		pending[2]?.('<p>Closed preview must stay closed</p>');
+		await Promise.resolve();
+		flush();
+		expect(container.querySelector('iframe')).toBeNull();
+		expect(previewButton.getAttribute('aria-busy')).toBeNull();
 	});
 });

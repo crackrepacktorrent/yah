@@ -57,12 +57,14 @@ export function analyticsPayload(url: URL): unknown {
 		};
 	}
 	if (url.pathname.endsWith('/pageviews')) {
+		const bucketSize = (url.searchParams.get('unit') === 'hour' ? 1 : 24) * 60 * 60 * 1000;
+		const last = Math.floor(Number(url.searchParams.get('endAt')) / bucketSize) * bucketSize;
 		return {
 			pageviews: [
-				{ x: '2026-08-25T12:00:00.000Z', y: factor * 8 },
-				{ x: '2026-08-26T12:00:00.000Z', y: factor * 12 },
+				{ x: new Date(last - 2 * bucketSize).toISOString(), y: factor * 8 },
+				{ x: new Date(last).toISOString(), y: factor * 12 },
 			],
-			sessions: [{ x: '2026-08-26T12:00:00.000Z', y: factor * 5 }],
+			sessions: [{ x: new Date(last).toISOString(), y: factor * 5 }],
 		};
 	}
 	if (url.pathname.endsWith('/metrics')) {

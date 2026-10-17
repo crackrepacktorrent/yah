@@ -2,15 +2,11 @@ import { can } from '@yah/admin-core/permissions';
 import { revalidate } from '@solidjs/router';
 import { Errored, For, Loading, Show, createMemo } from 'solid-js';
 import { getSiteOverview } from '~/features/analytics/server';
+import { formatDuration } from '~/features/analytics/presentation';
 import { shortlinkDetailHref } from '~/features/shortlinks/routing';
 import { getShortlinkOverview } from '~/features/shortlinks/server';
 import { requireSession } from '~/platform/auth/session';
 import './index.css';
-
-function formatDuration(seconds: number): string {
-	if (seconds < 60) return `${seconds}s`;
-	return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-}
 
 function PanelError(props: { title: string; retry: () => void }) {
 	return (

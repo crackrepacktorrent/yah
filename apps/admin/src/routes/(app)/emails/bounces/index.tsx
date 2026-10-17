@@ -13,6 +13,8 @@ import { requireSession } from '~/platform/auth/session';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { createCommandTask } from '~/ui/command-task';
 import { PageHeader } from '~/ui/page-header';
+import { Pagination } from '~/ui/pagination';
+import { createRowSelection } from '~/ui/row-selection';
 import { SelectionCheckbox } from '~/ui/selection-checkbox';
 import { toast } from '~/ui/toast';
 
@@ -60,21 +62,11 @@ function BounceResults(props: { page: BouncePage }) {
 	const [searchParams] = useSearchParams();
 	const session = createMemo(() => requireSession());
 	const canDelete = createMemo(() => can(session(), 'bounce', 'delete'));
-	const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
 	const [dialogOpen, setDialogOpen] = createSignal(false);
 	const deleteTask = createCommandTask();
-	const selected = createMemo(() => props.page.items.filter(({ id }) => selectedIds().includes(id)));
-	const selectableIds = createMemo(() => canDelete() ? props.page.items.map(({ id }) => id) : []);
-	const allSelected = createMemo(() => selectableIds().length > 0 && selectableIds().every((id) => selectedIds().includes(id)));
-	const someSelected = createMemo(() => selected().length > 0 && !allSelected());
-	const totalPages = createMemo(() => Math.max(1, Math.ceil(props.page.total / BOUNCE_PAGE_SIZE)));
+	const selectable = createMemo(() => canDelete() ? props.page.items : []);
+	const selection = createRowSelection(selectable, { scope: () => props.page.requestedPage });
 
-	createEffect(
-		() => props.page.requestedPage,
-		(requestedPage, previous) => {
-			if (previous !== undefined && requestedPage !== previous) setSelectedIds([]);
-		},
-	);
 	createEffect(
 		() => ({ requested: decodeBounceListLocation(searchParams).page, page: props.page.page, responseFor: props.page.requestedPage }),
 		({ requested, page, responseFor }) => {
@@ -84,24 +76,18 @@ function BounceResults(props: { page: BouncePage }) {
 		},
 	);
 
-	function toggleBounce(id: number, checked: boolean): void {
-		setSelectedIds((current) => checked
-			? current.includes(id) ? current : [...current, id]
-			: current.filter((selectedId) => selectedId !== id));
-	}
-
 	function openDialog(): void {
 		deleteTask.clearError();
 		setDialogOpen(true);
 	}
 
 	async function clearRecords(): Promise<void> {
-		const ids = selected().map(({ id }) => id);
+		const ids = selection.selected().map(({ id }) => id);
 		const selectedCount = ids.length;
 		await deleteTask.run(async () => {
 			await deleteBounces({ ids });
 			setDialogOpen(false);
-			setSelectedIds([]);
+			selection.clear();
 			navigate('/emails/bounces', { replace: true });
 			revalidate(listBounces.key);
 			toast.success(`${selectedCount} bounce record${selectedCount === 1 ? '' : 's'} cleared.`);
@@ -110,29 +96,26 @@ function BounceResults(props: { page: BouncePage }) {
 
 	return (
 		<>
-			<Show when={selected().length > 0}>
+			<Show when={selection.selected().length > 0}>
 				<div class="bulk-actions bounce-selection" role="status">
-					<span>{selected().length} bounce record{selected().length === 1 ? '' : 's'} selected on this page</span>
+					<span>{selection.selected().length} bounce record{selection.selected().length === 1 ? '' : 's'} selected on this page</span>
 					<button class="button button--danger-secondary" type="button" onClick={openDialog}>Clear selected</button>
-					<button class="button button--secondary" type="button" onClick={() => setSelectedIds([])}>Cancel selection</button>
+					<button class="button button--secondary" type="button" onClick={selection.clear}>Cancel selection</button>
 				</div>
 			</Show>
 			<div class="data-table-scroll">
 				<table class="data-table">
 					<caption class="visually-hidden">Bounce records in newest-first provider order</caption>
-					<thead><tr><th scope="col"><SelectionCheckbox label="Select every bounce record on this page" checked={allSelected()} indeterminate={someSelected()} disabled={!canDelete() || props.page.items.length === 0} onChange={(event) => setSelectedIds(event.currentTarget.checked ? selectableIds() : [])} /></th><th scope="col">Subscriber</th><th scope="col">Campaign</th><th scope="col">Type</th><th scope="col">Source</th><th scope="col">Date</th></tr></thead>
+					<thead><tr><th scope="col"><SelectionCheckbox label="Select every bounce record on this page" checked={selection.all()} indeterminate={selection.some()} disabled={!canDelete() || props.page.items.length === 0} onChange={(event) => selection.setAll(event.currentTarget.checked)} /></th><th scope="col">Subscriber</th><th scope="col">Campaign</th><th scope="col">Type</th><th scope="col">Source</th><th scope="col">Date</th></tr></thead>
 					<tbody>
 						<Show when={props.page.items.length > 0} fallback={<tr><td colspan="6">No bounce records are available.</td></tr>}>
-							<For each={props.page.items}>{(bounce) => <tr><td><SelectionCheckbox label={`Select bounce record for ${bounce.email}`} checked={selectedIds().includes(bounce.id)} disabled={!canDelete()} onChange={(event) => toggleBounce(bounce.id, event.currentTarget.checked)} /></td><td><strong class="bounce-subscriber-cell">{bounce.email}</strong></td><td>{bounce.campaignName ?? '—'}</td><td><span class={`badge bounce-type bounce-type--${bounce.type}`}>{bounceTypeLabel(bounce.type)}</span></td><td>{bounce.source || '—'}</td><td>{new Date(bounce.createdAt).toLocaleString()}</td></tr>}</For>
+							<For each={props.page.items}>{(bounce) => <tr><td><SelectionCheckbox label={`Select bounce record for ${bounce.email}`} checked={selection.has(bounce.id)} disabled={!canDelete()} onChange={(event) => selection.toggle(bounce.id, event.currentTarget.checked)} /></td><td><strong class="bounce-subscriber-cell">{bounce.email}</strong></td><td>{bounce.campaignName ?? '—'}</td><td><span class={`badge bounce-type bounce-type--${bounce.type}`}>{bounceTypeLabel(bounce.type)}</span></td><td>{bounce.source || '—'}</td><td>{new Date(bounce.createdAt).toLocaleString()}</td></tr>}</For>
 						</Show>
 					</tbody>
 				</table>
 			</div>
-			<nav class="pagination" aria-label="Bounce pages">
-				<span>Page {props.page.page.toLocaleString()} of {totalPages().toLocaleString()} · {props.page.total.toLocaleString()} total</span>
-				<div><Show when={props.page.page > 1}><a class="button button--secondary" rel="prev" href={bounceListHref({ page: props.page.page - 1 })}>Previous</a></Show><Show when={props.page.page < totalPages()}><a class="button button--secondary" rel="next" href={bounceListHref({ page: props.page.page + 1 })}>Next</a></Show></div>
-			</nav>
-			<ConfirmDialog open={dialogOpen()} title="Clear selected bounce records?" description={`Permanently clear ${selected().length} bounce record${selected().length === 1 ? '' : 's'}? This removes history only and cannot be undone.`} confirmLabel="Clear bounce records" pending={deleteTask.pending()} error={deleteTask.error()} onConfirm={() => void clearRecords()} onOpenChange={setDialogOpen} />
+			<Pagination label="Bounce pages" page={props.page.page} pageSize={BOUNCE_PAGE_SIZE} total={props.page.total} href={(page) => bounceListHref({ page })} />
+			<ConfirmDialog open={dialogOpen()} title="Clear selected bounce records?" description={`Permanently clear ${selection.selected().length} bounce record${selection.selected().length === 1 ? '' : 's'}? This removes history only and cannot be undone.`} confirmLabel="Clear bounce records" pending={deleteTask.pending()} error={deleteTask.error()} onConfirm={() => void clearRecords()} onOpenChange={setDialogOpen} />
 		</>
 	);
 }

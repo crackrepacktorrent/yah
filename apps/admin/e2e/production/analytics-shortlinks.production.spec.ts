@@ -1,4 +1,4 @@
-import { expect, test, ownerEmail, ownerPassword, softNavigate, upstreamOrigin } from '../production-test';
+import { expect, test, ownerEmail, ownerPassword, softNavigate, upstreamOrigin, expectNoDocumentOverflow } from '../production-test';
 import type { Download, Page } from '@playwright/test';
 
 async function pngCornerColor(page: Page, download: Download): Promise<number[]> {
@@ -39,6 +39,11 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	await expect(page.getByLabel('7d')).toBeChecked();
 	await expect(pageviewStat).toHaveText('700');
 	await expect(page.getByRole('figure', { name: /Pageviews over the last 7 days/ })).toBeVisible();
+	await expect(page.locator('.pageview-figure .time-series-chart-plot svg')).toBeVisible();
+	await page.getByText('View data', { exact: true }).click();
+	await expect(page.getByRole('table', { name: 'Pageviews data' }).locator('tbody tr')).toHaveCount(8);
+	await expect(page.getByRole('table', { name: 'Pageviews data' }).locator('tbody tr').nth(6).locator('td')).toHaveText('0');
+	await page.getByText('View data', { exact: true }).click();
 	for (const caption of ['Top Pages', 'Referrers', 'Browsers', 'Operating Systems', 'Devices']) {
 		await expect(page.getByRole('table', { name: caption })).toBeVisible();
 	}
@@ -52,6 +57,7 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	await expect(page.getByRole('status').filter({ hasText: 'Updating analytics…' })).toHaveClass(/visually-hidden/);
 	await expect(pageviewStat).toHaveText('700');
 	await expect(pageviewStat).toHaveText('100');
+	await expect(page.locator('.pageview-figure .time-series-chart-plot svg')).toBeVisible();
 	await page.keyboard.press('ArrowLeft');
 	await expect(page.getByLabel('30d')).toBeChecked();
 	await expect(pageviewStat).toHaveText('3,000');
@@ -66,6 +72,10 @@ test('analytics is permission-discoverable, keyboard-selectable, semantic, and s
 	await page.getByRole('button', { name: 'Try again' }).click();
 	await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
 	await expect(pageviewStat).toHaveText('700');
+	const graph = page.locator('.pageview-figure .time-series-chart-plot');
+	await graph.hover();
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expectNoDocumentOverflow(page);
 });
 
 test('shortlinks preserve the typed CRUD workflow and dashboard panels fail independently', async ({ page, request }, testInfo) => {

@@ -3,7 +3,8 @@ import { revalidate, useNavigate, type RouteProps } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { Show, createMemo, createSignal } from 'solid-js';
 import type { MailingList } from '~/features/mailing-lists/contracts';
-import { MailingListForm, mailingListKindLabel, mailingListStatusLabel, type MailingListFormValues } from '~/features/mailing-lists/form';
+import { MailingListForm, type MailingListFormValues } from '~/features/mailing-lists/form';
+import { mailingListKindLabel, mailingListStatusLabel } from '~/features/mailing-lists/presentation';
 import { decodeMailingListRouteId } from '~/features/mailing-lists/routing';
 import { deleteMailingList, getMailingList, listMailingLists, updateMailingList } from '~/features/mailing-lists/server';
 import { requireSession } from '~/platform/auth/session';
@@ -12,7 +13,7 @@ import { PageHeader } from '~/ui/page-header';
 import { ConfirmDialog } from '~/ui/confirm-dialog';
 import { createCommandTask } from '~/ui/command-task';
 import { toast } from '~/ui/toast';
-import { visibleError } from '~/ui/visible-error';
+import { createPublicError } from '~/platform/errors';
 
 export const route = defineFileRoute('/emails/lists/:id', {
 	matchFilters: { id: (segment) => decodeMailingListRouteId(segment) > 0 },
@@ -34,29 +35,22 @@ function MailingListDetail(props: { list: MailingList }) {
 	const session = createMemo(() => requireSession());
 	const canEdit = createMemo(() => can(session(), 'list', 'edit') && props.list.kind !== 'temporary');
 	const canDelete = createMemo(() => can(session(), 'list', 'delete') && props.list.kind !== 'temporary');
-	const [pending, setPending] = createSignal(false);
-	const [error, setError] = createSignal('');
+	const updateTask = createCommandTask();
 	const [deleteOpen, setDeleteOpen] = createSignal(false);
 	const deleteTask = createCommandTask();
 
 	async function submit(values: MailingListFormValues): Promise<void> {
-		setError('');
-		setPending(true);
-		try {
-			await updateMailingList({ id: props.list.id, expectedUpdatedAt: props.list.updatedAt, ...values });
-			revalidate([getMailingList.keyFor(props.list.id), listMailingLists.key]);
+		const list = props.list;
+		await updateTask.run(async () => {
+			await updateMailingList({ id: list.id, expectedUpdatedAt: list.updatedAt, ...values });
+			revalidate([getMailingList.keyFor(list.id), listMailingLists.key]);
 			try {
-				await getMailingList(props.list.id);
+				await getMailingList(list.id);
 			} catch {
-				setError('The mailing list was saved, but its latest provider state could not be reloaded. Reload this page before editing again.');
-				return;
+				throw createPublicError('The mailing list was saved, but its latest provider state could not be reloaded. Reload this page before editing again.', 503);
 			}
 			toast.success('Mailing list updated.');
-		} catch (caught) {
-			setError(visibleError(caught, 'The mailing list could not be updated.'));
-		} finally {
-			setPending(false);
-		}
+		}, 'The mailing list could not be updated.');
 	}
 
 	async function remove(): Promise<void> {
@@ -80,8 +74,8 @@ function MailingListDetail(props: { list: MailingList }) {
 				<MailingListForm
 					mode="edit"
 					initial={{ name: props.list.name, kind: props.list.kind === 'public' ? 'public' : 'private', optIn: props.list.optIn, status: props.list.status, description: props.list.description }}
-					pending={pending()}
-					error={error()}
+					pending={updateTask.pending()}
+					error={updateTask.error()}
 					cancelHref="/emails/lists"
 					onSubmit={(values) => void submit(values)}
 				/>

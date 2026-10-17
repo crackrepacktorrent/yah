@@ -1,7 +1,7 @@
 import { can } from '@yah/admin-core/permissions';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo } from 'solid-js';
-import { emailTemplateKindLabel } from '~/features/email-templates/form';
+import { emailTemplateKindLabel } from '~/features/email-templates/presentation';
 import { emailTemplateHref } from '~/features/email-templates/routing';
 import { listEmailTemplates } from '~/features/email-templates/server';
 import { requireSession } from '~/platform/auth/session';

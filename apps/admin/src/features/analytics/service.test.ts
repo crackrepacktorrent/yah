@@ -4,6 +4,7 @@ import { readAuthorizedAnalytics, readAuthorizedSiteOverview } from './service';
 
 const snapshot: AnalyticsSnapshot = {
 	period: '7d',
+	range: { startAt: Date.UTC(2026, 7, 19, 12), endAt: Date.UTC(2026, 7, 26, 12) },
 	stats: { pageviews: 1, visitors: 1, visits: 1, bounceRate: 0, averageVisitSeconds: 1 },
 	activeVisitors: 0,
 	pageviews: [],

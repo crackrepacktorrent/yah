@@ -1,34 +1,8 @@
-import type { CampaignAnalyticsPoint } from './contracts';
+import type { CampaignAnalyticsQuery } from './contracts';
 
-function parsedTimestamp(timestamp: string): Date | null {
-	const date = new Date(timestamp);
-	return Number.isNaN(date.getTime()) ? null : date;
-}
-
-/** Daily Listmonk buckets are UTC midnight; hourly buckets need their time shown. */
-export function campaignAnalyticsNeedsTime(points: readonly Pick<CampaignAnalyticsPoint, 'timestamp'>[]): boolean {
-	const days = new Set<string>();
-	for (const point of points) {
-		const date = parsedTimestamp(point.timestamp);
-		if (!date) return true;
-		const day = date.toISOString().slice(0, 10);
-		if (days.has(day)) return true;
-		days.add(day);
-		if (date.getUTCHours() !== 0 || date.getUTCMinutes() !== 0 || date.getUTCSeconds() !== 0 || date.getUTCMilliseconds() !== 0) {
-			return true;
-		}
-	}
-	return false;
-}
-
-export function formatCampaignAnalyticsTimestamp(timestamp: string, includeTime: boolean): string {
-	const date = parsedTimestamp(timestamp);
-	if (!date) return timestamp;
-	return new Intl.DateTimeFormat('en-US', {
-		timeZone: 'UTC',
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-		...(includeTime ? { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' as const } : {}),
-	}).format(date);
+/** Listmonk 6.2 uses hourly buckets for ranges shorter than seven elapsed days. */
+export function campaignAnalyticsInterval(selection: Pick<CampaignAnalyticsQuery, 'from' | 'to'>): 'hour' | 'day' {
+	// The inclusive final day ends just before midnight: seven calendar dates
+	// are still less than seven elapsed days; eight calendar dates use days.
+	return Date.parse(selection.to) - Date.parse(selection.from) >= 7 * 24 * 60 * 60 * 1000 ? 'day' : 'hour';
 }

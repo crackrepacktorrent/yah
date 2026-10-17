@@ -3,7 +3,7 @@ import { revalidate } from '@solidjs/router';
 import { defineFileRoute } from '@solidjs/router/fs';
 import { For, Show, createMemo, createSignal, onCleanup } from 'solid-js';
 import type { MailingList } from '~/features/mailing-lists/contracts';
-import { mailingListKindLabel, mailingListStatusLabel } from '~/features/mailing-lists/form';
+import { mailingListKindLabel, mailingListStatusLabel } from '~/features/mailing-lists/presentation';
 import { mailingListHref } from '~/features/mailing-lists/routing';
 import {
 	getSubscriptionSharingConfig,

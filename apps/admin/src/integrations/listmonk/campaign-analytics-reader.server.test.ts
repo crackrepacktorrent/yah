@@ -102,6 +102,12 @@ describe('Listmonk campaign analytics reader', () => {
 			{
 				data: [
 					providerPoint(7, 1, '2026-08-01T00:00:00Z'),
+					providerPoint(7, 2, '2026-08-01T02:00:00+02:00'),
+				],
+			},
+			{
+				data: [
+					providerPoint(7, 1, '2026-08-01T00:00:00Z'),
 					providerPoint(7, 2, '2026-08-01T00:00:00Z'),
 				],
 			},

@@ -9,16 +9,6 @@ export type MailingListFormValues = {
 	description: string;
 };
 
-export function mailingListKindLabel(kind: 'public' | 'private' | 'temporary'): string {
-	if (kind === 'public') return 'Public';
-	if (kind === 'private') return 'Private';
-	return 'Temporary';
-}
-
-export function mailingListStatusLabel(status: MailingListStatus): string {
-	return status === 'active' ? 'Active' : 'Archived';
-}
-
 export function MailingListForm(props: {
 	mode: 'create' | 'edit';
 	initial?: MailingListFormValues;

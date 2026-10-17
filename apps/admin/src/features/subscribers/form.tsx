@@ -16,12 +16,6 @@ export type SubscriberProfileFormValues = {
 	status: SubscriberStatus;
 };
 
-export function subscriberStatusLabel(status: SubscriberStatus): string {
-	if (status === 'enabled') return 'Enabled';
-	if (status === 'disabled') return 'Disabled';
-	return 'Blocklisted';
-}
-
 function toggleId(current: number[], id: number, selected: boolean): number[] {
 	if (!selected) return current.filter((currentId) => currentId !== id);
 	return current.includes(id) ? current : [...current, id];
