@@ -251,8 +251,13 @@ mkdir -p infra/data/umami-geo
 if [ ! -f infra/data/umami-geo/GeoLite2-City.mmdb ]; then
   docker compose -f infra/docker-compose.yml cp umami:/app/geo/GeoLite2-City.mmdb infra/data/umami-geo/GeoLite2-City.mmdb
 fi
-python3 -m venv infra/data/geo-tools
-infra/data/geo-tools/bin/pip install maxminddb==3.2.0
+python3 -m venv --without-pip infra/data/geo-tools
+# The VPS Python omits ensurepip; bootstrap only this isolated environment.
+if ! infra/data/geo-tools/bin/python -m pip --version >/dev/null 2>&1; then
+  curl -fsSL https://bootstrap.pypa.io/get-pip.py -o infra/data/geo-tools/get-pip.py
+  infra/data/geo-tools/bin/python infra/data/geo-tools/get-pip.py pip==26.2.1
+fi
+infra/data/geo-tools/bin/python -m pip install maxminddb==3.2.0
 infra/data/geo-tools/bin/python infra/scripts/refresh-umami-geo.py infra/data/umami-geo
 # Umami caches the database in memory; recreating also applies the directory mount.
 docker compose -f infra/docker-compose.yml up -d --no-deps --pull never --force-recreate --wait umami
