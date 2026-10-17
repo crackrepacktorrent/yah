@@ -260,7 +260,7 @@ fi
 infra/data/geo-tools/bin/python -m pip install maxminddb==3.2.0
 infra/data/geo-tools/bin/python infra/scripts/refresh-umami-geo.py infra/data/umami-geo
 # Umami caches the database in memory; recreating also applies the directory mount.
-docker compose -f infra/docker-compose.yml up -d --no-deps --pull never --force-recreate --wait umami
+docker compose -f infra/docker-compose.yml up -d --no-deps --pull never --force-recreate --wait --wait-timeout 150 umami
 SH
 ```
 
