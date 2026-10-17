@@ -76,20 +76,32 @@ function GeographicPlot(props: Props & { worldView: boolean; labelledBy: string 
 	let container: HTMLDivElement | undefined;
 	let chart: EChartsType | undefined;
 	let observer: ResizeObserver | undefined;
+	let options: MapOptions | undefined;
+	let optionsChanged = false;
+
+	function renderChart() {
+		// Route loading can mount this component inside a hidden container.
+		// ECharts cannot invert a geographic transform with zero dimensions.
+		if (!container?.clientWidth || !container.clientHeight || !options) return;
+		if (!chart) chart = init(container, undefined, { renderer: 'svg' });
+		else chart.resize();
+		if (optionsChanged) {
+			chart.setOption(options, { notMerge: true });
+			optionsChanged = false;
+		}
+	}
 
 	createEffect(
 		() => ({ cities: props.cities, countries: props.countries, worldView: props.worldView }),
 		({ cities, countries, worldView }) => {
 			if (!container) return;
-			if (!chart) {
-				const instance = init(container, undefined, { renderer: 'svg' });
-				chart = instance;
-				observer = new ResizeObserver(() => instance.resize());
+			if (!observer) {
+				observer = new ResizeObserver(renderChart);
 				observer.observe(container);
 			}
 			const maximum = Math.max(1, ...(worldView ? countries : cities).map(({ visitors }) => visitors));
 			const land = { areaColor: '#eee5da', borderColor: '#b7a38e', borderWidth: 0.7 };
-			const options: MapOptions = {
+			options = {
 				animation: false,
 				textStyle: { fontFamily: getComputedStyle(container).fontFamily, color: '#655246' },
 				tooltip: {
@@ -129,7 +141,8 @@ function GeographicPlot(props: Props & { worldView: boolean; labelledBy: string 
 					})),
 				}),
 			};
-			chart.setOption(options, { notMerge: true });
+			optionsChanged = true;
+			renderChart();
 		},
 	);
 
