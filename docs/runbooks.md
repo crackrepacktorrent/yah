@@ -227,6 +227,45 @@ destinations afterward. Reopen only after every comparison succeeds:
 docker compose start yah-admin
 ```
 
+## Umami GeoIP refresh
+
+Umami v3.0.3 is pinned to the artifact audited in production. Its GeoIP lookup
+data is mounted separately from `infra/data/umami-geo` (gitignored). Prepare
+that directory before the first targeted Umami deploy; Compose intentionally
+refuses to create an empty mount automatically.
+
+The October 17, 2026 audit confirmed that Cloudflare forwards `CF-Connecting-IP`,
+`CF-IPCountry`, `CF-Region-Code`, and `CF-IPCity` to Umami. These provider headers
+take priority over GeoIP. Keep `SKIP_LOCATION_HEADERS` unset. The database refresh
+only updates the fallback for requests without provider location headers; it
+does not rewrite existing sessions or make citywide locations borough-specific.
+See [Umami's header configuration](https://docs.umami.is/docs/enable-cloudflare-headers).
+
+Refresh the fallback periodically without upgrading Umami or touching Postgres:
+
+```sh
+cd /home/deploy/yah
+flock .production-deploy.lock sh -eu <<'SH'
+mkdir -p infra/data/umami-geo
+# Preserve the bundled database on the first refresh.
+if [ ! -f infra/data/umami-geo/GeoLite2-City.mmdb ]; then
+  docker compose -f infra/docker-compose.yml cp umami:/app/geo/GeoLite2-City.mmdb infra/data/umami-geo/GeoLite2-City.mmdb
+fi
+python3 -m venv infra/data/geo-tools
+infra/data/geo-tools/bin/pip install maxminddb==3.2.0
+infra/data/geo-tools/bin/python infra/scripts/refresh-umami-geo.py infra/data/umami-geo
+# Umami caches the database in memory; recreating also applies the directory mount.
+docker compose -f infra/docker-compose.yml up -d --no-deps --pull never --force-recreate --wait umami
+SH
+```
+
+The refresh script uses the same upstream as the pinned Umami build, validates
+the database type, age and a lookup before replacing it atomically, and retains
+`GeoLite2-City.mmdb.previous`. Confirm Umami is healthy and `/t` still serves the
+tracker. To roll back the lookup data, copy `.previous` to a temporary file in
+the same directory, rename it to `GeoLite2-City.mmdb`, and recreate only Umami
+with the same flags under the same lock. No database restore is required.
+
 ## Admin runtime modes
 
 `ADMIN_RUNTIME` has two values. `platform-disabled` is the default and serves
